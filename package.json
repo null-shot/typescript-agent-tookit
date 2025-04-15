@@ -1,0 +1,18 @@
+{
+  "name": "typescript-agent-vibework",
+  "version": "0.1.0",
+  "main": "index.js",
+  "repository": "https://github.com/xava-labs/typescript-agent-vibework.git",
+  "author": "disturbing <hello@xavalabs.com>",
+  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "yarn workspaces run test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0"
+  }
+}

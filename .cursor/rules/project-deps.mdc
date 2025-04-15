@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Using yarn for package management
+
+- We are using yarn to add and manage dependencies
+- We are following the workspaces pattern with packages/{project}
