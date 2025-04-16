@@ -1,0 +1,33 @@
+{
+  "name": "@xava-labs/test-utils",
+  "version": "0.1.0",
+  "description": "Testing utilities for xava-labs projects",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "prepublishOnly": "yarn build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0"
+
+
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250416.0",
+    "@cloudflare/vitest-pool-workers": "^0.8.15",
+    "typescript": "^5.8.3",
+    "vitest": "3.0.x"
+  },
+  "peerDependencies": {
+    "@cloudflare/workers-types": "^4.20250410.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

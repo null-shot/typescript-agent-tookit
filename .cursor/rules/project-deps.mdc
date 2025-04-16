@@ -6,4 +6,6 @@ alwaysApply: true
 # Using yarn for package management
 
 - We are using yarn to add and manage dependencies
+- Use yarn test and yarn run commands when exeucting commands.
 - We are following the workspaces pattern with packages/{project}
+- Are example projects are in examples/{project}

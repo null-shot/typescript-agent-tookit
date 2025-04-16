@@ -1,9 +1,8 @@
 import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { WebSocketClientTransport } from "@modelcontextprotocol/sdk/client/websocket.js";
-import { WorkerSSEClientTransport } from './util/WorkerSSEClientTransport';
-import { WorkerWebSocketClientTransport } from './util/WorkerWebSocketClientTransport';
+import { WorkerSSEClientTransport } from '../../test-utils/src/mcp/WorkerSSEClientTransport';
+import { WorkerWebSocketClientTransport } from '../../test-utils/src/mcp/WorkerWebSocketClientTransport';
 
 // Define response type for clarity
 interface ToolResponse {

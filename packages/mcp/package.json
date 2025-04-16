@@ -1,8 +1,9 @@
 {
-	"name": "mcp",
+	"name": "@xava-labs/mcp",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",
+	"main": "src/index.ts",
 	"scripts": {
 		"deploy": "npx wrangler deploy",
 		"dev": "npx wrangler dev",

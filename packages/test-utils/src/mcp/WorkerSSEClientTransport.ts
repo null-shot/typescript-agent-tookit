@@ -2,8 +2,6 @@ import { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { env, SELF } from 'cloudflare:test';
 
-const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
-
 /**
  * WorkerSSEClientTransport is a wrapper around the official SSEClientTransport
  * that intercepts network requests and routes them to our Cloudflare Worker for testing.
@@ -71,9 +69,9 @@ export class WorkerSSEClientTransport extends SSEClientTransport {
       console.log(`Sending message to worker: ${JSON.stringify(message)}`);
       
       // Use our worker fetch instead of regular fetch
-      const request = new IncomingRequest(
+      const request = new Request(
         endpoint.toString(),
-        init as RequestInit<IncomingRequestCfProperties>
+        init,
       );
       
       const response = await SELF.fetch(request);
