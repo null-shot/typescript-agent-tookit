@@ -5,7 +5,9 @@ import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 const encoder = new TextEncoder();
 
 /**
- * SSE Transport that connects to a Durable Object and forwards messages to SSE clients
+ * SSE Transport that connects to a Durable Object and forwards messages to SSE clients.
+ * 
+ * This custom transport follows Cloudflare's best practices for SSE connections, without needing a nodejs_compaq enviornment.
  */
 export class SSETransport implements Transport {
     sessionId: string;
@@ -45,9 +47,6 @@ export class SSETransport implements Transport {
    * Start the transport - override to send initial endpoint info and handle SSE stream closure
    */
     async start(): Promise<void> {
-        console.debug(`SSE Transport start sessionId: ${this.sessionId}`);
-        console.debug(`SSE Transport endpointUrl: ${this.url}`);
-        
         try {
             // Send the endpoint event
             // This allows using URL/URLSearchParams for robust parameter handling.
@@ -62,8 +61,6 @@ export class SSETransport implements Transport {
             // Send the endpoint event
             const endpointMessage = `event: endpoint\ndata: ${relativeUrlWithSession}\n\n`;
             await this.writableStream.write(encoder.encode(endpointMessage));
-            
-            console.debug(`SSE Transport endpoint sent: ${relativeUrlWithSession}`);
         } catch (error) {
             console.error(`SSE Transport start error: ${error}`);
             this.onerror?.(error instanceof Error ? error : new Error(String(error)));
@@ -83,9 +80,7 @@ export class SSETransport implements Transport {
       
       // Validate that it's a JSONRPCMessage (could add more validation here)
       if (!message || typeof message !== 'object') {
-        const error = new Error(`Invalid JSONRPCMessage format: ${request.text()}`);
-        this.onerror?.(error);
-        return new Response(`Invalid message: ${error}`, { status: 400 });
+        throw new Error(`Invalid JSONRPCMessage format: ${request.text()}`);
       }
       
       this.onmessage?.(message);

@@ -10,7 +10,21 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
 		"enabled": true
-	}
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MCP_SERVER",
+				"class_name": "ExampleMcpServer"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["ExampleMcpServer"]
+		}
+	]
 
 	/**
 	 * Smart Placement

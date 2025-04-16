@@ -1,4 +1,4 @@
-# 🌐 Null Shot - AI Typscript Vibework
+# 🌐 Null Shot - Typescript Agent Framework
 
 <div align="center">
   <h3>Building the future of AI Agent Interoperability</h3>
