@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc",
     "deploy": "wrangler deploy",
     "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"vite dev\" \"wrangler dev\" --kill-others",
     "dev:vite": "vite dev",
