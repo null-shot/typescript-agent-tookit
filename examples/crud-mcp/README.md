@@ -63,6 +63,57 @@ The todo items are structured with the following fields:
    - Marks a todo as completed
    - Parameters: id
 
+#### MCP Prompts
+
+The application includes interactive prompts to help users understand and use the todo service effectively:
+
+1. `introduction`
+   - Overview of the todo service capabilities
+   - No parameters required
+   - Provides quick access to common actions
+
+2. `create_todo_help`
+   - Guide for creating new todos
+   - Parameters:
+     - title (optional): Example title for demonstration
+     - description (optional): Example description for demonstration
+
+3. `list_todos_help`
+   - Instructions for listing and filtering todos
+   - Parameters:
+     - filter (optional): Get specific help about 'status', 'date', 'search', or 'sorting' filters
+
+4. `update_todo_help`
+   - Guide for updating existing todos
+   - Parameters:
+     - field (optional): Get targeted help about updating 'title', 'description', 'status', or 'due_date'
+
+5. `statistics_help`
+   - Information about available todo statistics
+   - Parameters:
+     - metric (optional): Get specific help about 'total', 'by_status', 'overdue', 'upcoming', or 'completion_rate'
+
+6. `error_handling`
+   - Common error resolution guide
+   - Parameters:
+     - error_type (optional): Get specific help about 'not_found', 'invalid_status', 'invalid_date', or 'other' errors
+
+Example prompt usage:
+```typescript
+// Get general help about listing todos
+const listHelp = await client.getPrompt('list_todos_help');
+
+// Get specific help about date filtering
+const dateFilterHelp = await client.getPrompt('list_todos_help', {
+  filter: 'date'
+});
+
+// Get help about updating a specific field
+const updateHelp = await client.getPrompt('update_todo_help', {
+  field: 'status'
+});
+```
+
 #### MCP Resources
 
 1. `getTodo` (d1://database/todos/{id})
