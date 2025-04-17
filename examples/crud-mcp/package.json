@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0",
-    "@xava-labs/mcp": "workspace:../../packages/mcp",
+    "@xava-labs/mcp": "file:../../packages/mcp",
     "zod": "^3.23.8"
   }
 }
