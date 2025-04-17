@@ -4,6 +4,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { TodoRepository } from './repository';
 import { setupServerTools } from './tools';
 import { setupServerResources } from './resources';
+import { setupServerPrompts } from './prompts';
 
 /**
  * TodoMcpServer extends McpHonoServerDO for CRUD operations on todo items
@@ -33,9 +34,10 @@ export class TodoMcpServer extends McpHonoServerDO {
     this.ctx.blockConcurrencyWhile(async () => {
       repository.initializeDatabase();
     });
-    
+
     // Create and set up tools and resources with our repository
     setupServerTools(server, repository);
     setupServerResources(server, repository);
+    setupServerPrompts(server);
   }
 } 
