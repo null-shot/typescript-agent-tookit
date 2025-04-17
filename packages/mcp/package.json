@@ -1,19 +1,52 @@
 {
 	"name": "@xava-labs/mcp",
-	"version": "0.0.0",
-	"private": true,
+	"version": "0.1.0",
+	"description": "Model Context Protocol (MCP) server implementation for Cloudflare Workers",
 	"type": "module",
-	"main": "src/index.ts",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
 	"scripts": {
+		"build": "tsc",
+		"prepublishOnly": "npm run build",
 		"deploy": "npx wrangler deploy",
 		"dev": "npx wrangler dev",
 		"start": "npx wrangler dev",
 		"test": "vitest run",
-		"cf-typegen": "npx wrangler types --include-runtime=false"
+		"cf-typegen": "npx wrangler types --include-runtime=false",
+		"semantic-release": "semantic-release"
 	},
+	"keywords": [
+		"mcp",
+		"model-context-protocol",
+		"cloudflare",
+		"workers",
+		"hono",
+		"ai",
+		"llm"
+	],
+	"author": "Xava Labs",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/xava-labs/typescript-agent-framework.git"
+	},
+	"bugs": {
+		"url": "https://github.com/xava-labs/typescript-agent-framework/issues"
+	},
+	"homepage": "https://xavalabs.com",
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.15",
 		"@cloudflare/workers-types": "^4.20250410.0",
+		"@semantic-release/git": "^10.0.1",
+		"semantic-release": "^23.0.0",
 		"typescript": "^5.8.3",
 		"vitest": "3.0.x",
 		"wrangler": "^4.9.1"
