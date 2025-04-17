@@ -15,12 +15,12 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"prepublishOnly": "npm run build",
-		"deploy": "npx wrangler deploy",
-		"dev": "npx wrangler dev",
-		"start": "npx wrangler dev",
+		"prepublishOnly": "yarn run build",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
 		"test": "vitest run",
-		"cf-typegen": "npx wrangler types --include-runtime=false",
+		"cf-typegen": "wrangler types --include-runtime=false",
 		"semantic-release": "semantic-release"
 	},
 	"keywords": [
