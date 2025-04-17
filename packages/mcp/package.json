@@ -8,7 +8,7 @@
 		"deploy": "npx wrangler deploy",
 		"dev": "npx wrangler dev",
 		"start": "npx wrangler dev",
-		"test": "vitest",
+		"test": "vitest run",
 		"cf-typegen": "npx wrangler types --include-runtime=false"
 	},
 	"devDependencies": {

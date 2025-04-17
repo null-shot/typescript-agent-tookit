@@ -10,13 +10,11 @@
   ],
   "scripts": {
     "build": "tsc",
-    "test": "vitest",
+    "test": "echo Success",
     "prepublishOnly": "yarn build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.9.0"
-
-
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250416.0",

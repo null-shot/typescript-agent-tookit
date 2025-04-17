@@ -1,4 +1,4 @@
-import { TodoMcpServer } from './todo-server';
+import { TodoMcpServer } from './server';
 
 // Export the TodoMcpServer class for Durable Object binding
 export { TodoMcpServer };
