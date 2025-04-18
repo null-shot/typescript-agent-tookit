@@ -77,17 +77,21 @@ jobs:
         id: set-matrix
         run: |
           if [[ "${{ github.event.inputs.package }}" != "" ]]; then
-            echo "matrix=${{ steps.manual-package.outputs.matrix }}" >> $GITHUB_OUTPUT
+            MATRIX="${{ steps.manual-package.outputs.matrix }}"
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+            echo "Final matrix value: $MATRIX"
           elif [[ "${{ steps.changed-packages.outputs.matrix }}" == "[]" || -z "${{ steps.changed-packages.outputs.matrix }}" ]]; then
             echo "No changes detected in any package"
             echo "matrix=[]" >> $GITHUB_OUTPUT
+            echo "Final matrix value: []"
           else
-            echo "matrix=${{ steps.changed-packages.outputs.matrix }}" >> $GITHUB_OUTPUT
+            MATRIX="${{ steps.changed-packages.outputs.matrix }}"
+            echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+            echo "Final matrix value: $MATRIX"
           fi
-          
-          # Debug output
-          echo "Final matrix value:"
-          echo "${{ steps.set-matrix.outputs.matrix }}"
+
+      - name: Debug output
+        run: echo "Matrix to be used in publish job - ${{ steps.set-matrix.outputs.matrix }}"
 
   publish:
     needs: detect-changes
