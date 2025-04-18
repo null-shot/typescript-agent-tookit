@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'packages/**'
+      - '.github/workflows/test-publish.yml'
   workflow_dispatch:
     inputs:
       package:
