@@ -40,8 +40,19 @@ jobs:
       - name: Detect changed packages
         id: changed_packages
         run: |
-          CHANGED_PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | grep -o 'packages/[^/]*' | sort | uniq)
-          echo "packages=$CHANGED_PACKAGES" >> $GITHUB_OUTPUT
+          # Create a JSON array of packages
+          PACKAGES_JSON=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | 
+                          grep -o 'packages/[^/]*' | 
+                          sort | 
+                          uniq | 
+                          jq -R -s -c 'split("\n")[:-1]')
+          echo "packages=$PACKAGES_JSON" >> $GITHUB_OUTPUT
+          
+          # Also create a space-separated list for shell usage
+          CHANGED_PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | 
+                            grep -o 'packages/[^/]*' | 
+                            sort | 
+                            uniq)
           
           # Format for summary
           echo "## Packages to be released" >> $GITHUB_STEP_SUMMARY
@@ -57,9 +68,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHANGED_PACKAGES: ${{ steps.changed_packages.outputs.packages }}
         run: |
+          # Convert JSON array back to space-separated list for shell processing
+          PACKAGES_LIST=$(echo '${{ steps.changed_packages.outputs.packages }}' | jq -r 'join(" ")')
+          
           # Release each changed package
           RELEASE_SUMMARY=""
-          for PKG in $CHANGED_PACKAGES; do
+          for PKG in $PACKAGES_LIST; do
             echo "Publishing package: $PKG"
             cd $PKG
             

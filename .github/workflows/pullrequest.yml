@@ -33,16 +33,27 @@ jobs:
       - name: Find changed packages
         id: changed_packages
         run: |
-          CHANGED_DIRS=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -o 'packages/[^/]*' | sort | uniq)
+          # Get changed directories and format as JSON array
+          DIRS_JSON=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | 
+                      grep -o 'packages/[^/]*' | 
+                      sort | 
+                      uniq | 
+                      jq -R -s -c 'split("\n")[:-1]')
+          echo "dirs=$DIRS_JSON" >> $GITHUB_OUTPUT
+          
+          # For logging, get the space-separated list
+          CHANGED_DIRS=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | 
+                        grep -o 'packages/[^/]*' | 
+                        sort | 
+                        uniq)
           echo "Changed packages: $CHANGED_DIRS"
-          echo "dirs=$CHANGED_DIRS" >> $GITHUB_OUTPUT
 
       - name: Dry run semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get the space-separated list of changed directories
-          CHANGED_PACKAGES="${{ steps.changed_packages.outputs.dirs }}"
+          # Convert JSON array to space-separated list for shell processing
+          PACKAGES_LIST=$(echo '${{ steps.changed_packages.outputs.dirs }}' | jq -r 'join(" ")')
           
           # Create a release template if it doesn't exist
           if [ ! -f .github/release-template.json ]; then
@@ -50,7 +61,7 @@ jobs:
           fi
           
           # Perform dry run for each changed package
-          for PKG in $CHANGED_PACKAGES; do
+          for PKG in $PACKAGES_LIST; do
             echo "Testing release for package: $PKG"
             cd $PKG
             
@@ -67,13 +78,14 @@ jobs:
           done
           
       - name: Package information summary
-        env:
-          CHANGED_PACKAGES: ${{ steps.changed_packages.outputs.dirs }}
         run: |
+          # Convert JSON array to space-separated list for shell processing
+          PACKAGES_LIST=$(echo '${{ steps.changed_packages.outputs.dirs }}' | jq -r 'join(" ")')
+          
           echo "## Package Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          for PKG in $CHANGED_PACKAGES; do
+          for PKG in $PACKAGES_LIST; do
             echo "### ${PKG}" >> $GITHUB_STEP_SUMMARY
             cd $PKG
             CURRENT_VERSION=$(node -p "require('./package.json').version")
