@@ -57,6 +57,7 @@ jobs:
             echo "No changes detected in any package"
             echo "matrix=[]" >> $GITHUB_OUTPUT
           else
+            # Use jq to create a valid JSON array and ensure it's properly escaped
             JSON_ARRAY=$(printf '%s\n' "${CHANGED[@]}" | jq -R . | jq -c -s .)
             echo "Changed packages: $JSON_ARRAY"
             echo "matrix=$JSON_ARRAY" >> $GITHUB_OUTPUT
@@ -68,7 +69,9 @@ jobs:
         run: |
           PACKAGE="${{ github.event.inputs.package }}"
           echo "Publishing package: $PACKAGE"
-          echo "matrix=[\"$PACKAGE\"]" >> $GITHUB_OUTPUT
+          # Correctly format as valid JSON array with proper quotes
+          JSON_ARRAY=$(echo "$PACKAGE" | jq -R . | jq -c '[.]')
+          echo "matrix=$JSON_ARRAY" >> $GITHUB_OUTPUT
 
       - name: Set matrix
         id: set-matrix
@@ -81,12 +84,17 @@ jobs:
           else
             echo "matrix=${{ steps.changed-packages.outputs.matrix }}" >> $GITHUB_OUTPUT
           fi
+          
+          # Debug output
+          echo "Final matrix value:"
+          echo "${{ steps.set-matrix.outputs.matrix }}"
 
   publish:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.matrix != '[]' }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         package: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
     steps:
