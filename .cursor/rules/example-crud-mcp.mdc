@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# CRUD MCP Example
+
+The CRUD MCP example demonstrates how to build a Cloudflare Worker that implements the Model Context Protocol (MCP) for a simple CRUD application.
+
+## Key Files
+
+- **Entry Point**: [examples/crud-mcp/src/index.ts](mdc:examples/crud-mcp/src/index.ts) - Main entry point for the Worker
+- **Server**: [examples/crud-mcp/src/server.ts](mdc:examples/crud-mcp/src/server.ts) - Server implementation using the MCP package
+- **Tools**: [examples/crud-mcp/src/tools.ts](mdc:examples/crud-mcp/src/tools.ts) - Tool definitions for the MCP server
+- **Repository**: [examples/crud-mcp/src/repository.ts](mdc:examples/crud-mcp/src/repository.ts) - Data access layer for CRUD operations
+- **Resources**: [examples/crud-mcp/src/resources.ts](mdc:examples/crud-mcp/src/resources.ts) - Resource definitions
+- **Schema**: [examples/crud-mcp/src/schema.ts](mdc:examples/crud-mcp/src/schema.ts) - Schema definitions for data models
+- **Prompts**: [examples/crud-mcp/src/prompts.ts](mdc:examples/crud-mcp/src/prompts.ts) - Prompt templates for LLM interactions
