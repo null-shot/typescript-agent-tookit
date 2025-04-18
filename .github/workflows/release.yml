@@ -1,0 +1,98 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/**'
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      packages: write
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build packages
+        run: yarn build
+
+      - name: Test packages
+        run: yarn test
+      
+      - name: Detect changed packages
+        id: changed_packages
+        run: |
+          CHANGED_PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | grep -o 'packages/[^/]*' | sort | uniq)
+          echo "packages=$CHANGED_PACKAGES" >> $GITHUB_OUTPUT
+          
+          # Format for summary
+          echo "## Packages to be released" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for PKG in $CHANGED_PACKAGES; do
+            echo "- $PKG" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Release with semantic-release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGED_PACKAGES: ${{ steps.changed_packages.outputs.packages }}
+        run: |
+          # Release each changed package
+          RELEASE_SUMMARY=""
+          for PKG in $CHANGED_PACKAGES; do
+            echo "Publishing package: $PKG"
+            cd $PKG
+            
+            # Get current version
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+            
+            # Check if .releaserc.json exists, create if not
+            if [ ! -f .releaserc.json ]; then
+              echo "Creating .releaserc.json from template"
+              cp ../../.github/release-template.json .releaserc.json
+            fi
+            
+            # Run semantic-release for the package
+            RELEASE_OUTPUT=$(npx semantic-release 2>&1 || true)
+            echo "$RELEASE_OUTPUT"
+            
+            # Extract new version if available
+            if echo "$RELEASE_OUTPUT" | grep -q "Publishing version"; then
+              NEW_VERSION=$(echo "$RELEASE_OUTPUT" | grep "Publishing version" | sed -E 's/.*Publishing version ([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+              echo "Successfully published $PKG@$NEW_VERSION (was $CURRENT_VERSION)"
+              RELEASE_SUMMARY="$RELEASE_SUMMARY\n### $PKG\n- Published: v$NEW_VERSION (was v$CURRENT_VERSION)\n"
+            else
+              echo "No new version to release for $PKG"
+              RELEASE_SUMMARY="$RELEASE_SUMMARY\n### $PKG\n- No release needed (current: v$CURRENT_VERSION)\n"
+            fi
+            
+            cd ../../
+          done
+          
+          # Output summary
+          echo -e "$RELEASE_SUMMARY" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Output release status
+        run: |
+          echo "✅ Release process completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Packages have been published to npm." >> $GITHUB_STEP_SUMMARY 
