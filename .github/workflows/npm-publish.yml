@@ -6,7 +6,17 @@ on:
       - main
     paths:
       - 'packages/**'
-      - '.github/workflows/npm-publish.yml'
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to publish (leave empty to detect changes)'
+        required: false
+        type: string
+      force_publish:
+        description: 'Force publish even without version change'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   detect-changes:
@@ -21,6 +31,7 @@ jobs:
 
       - name: Find changed packages
         id: changed-packages
+        if: ${{ github.event.inputs.package == '' }}
         run: |
           # Get all packages
           PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | grep -o 'packages/[^/]*' | sort | uniq)
@@ -51,10 +62,20 @@ jobs:
             echo "matrix=$JSON_ARRAY" >> $GITHUB_OUTPUT
           fi
 
+      - name: Use manually specified package
+        id: manual-package
+        if: ${{ github.event.inputs.package != '' }}
+        run: |
+          PACKAGE="${{ github.event.inputs.package }}"
+          echo "Publishing package: $PACKAGE"
+          echo "matrix=[\"$PACKAGE\"]" >> $GITHUB_OUTPUT
+
       - name: Set matrix
         id: set-matrix
         run: |
-          if [ "${{ steps.changed-packages.outputs.matrix }}" = "[]" ] || [ -z "${{ steps.changed-packages.outputs.matrix }}" ]; then
+          if [[ "${{ github.event.inputs.package }}" != "" ]]; then
+            echo "matrix=${{ steps.manual-package.outputs.matrix }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.changed-packages.outputs.matrix }}" == "[]" || -z "${{ steps.changed-packages.outputs.matrix }}" ]]; then
             echo "No changes detected in any package"
             echo "matrix=[]" >> $GITHUB_OUTPUT
           else
@@ -93,6 +114,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          FORCE_PUBLISH: ${{ github.event.inputs.force_publish }}
         run: |
           cd packages/${{ matrix.package }}
           # Check if .releaserc.json exists, create if not
@@ -104,4 +126,10 @@ jobs:
           if ! grep -q "semantic-release" package.json; then
             yarn add --dev semantic-release @semantic-release/git
           fi
-          npx semantic-release 
+          
+          # Add force publish flag if specified
+          if [ "$FORCE_PUBLISH" == "true" ]; then
+            echo "Running with force publish flag"
+            npx semantic-release --no-ci
+          else
+            npx semantic-release 
