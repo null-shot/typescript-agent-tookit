@@ -85,8 +85,8 @@ jobs:
               cp ../../.github/release-template.json .releaserc.json
             fi
             
-            # Run semantic-release for the package
-            RELEASE_OUTPUT=$(npx semantic-release 2>&1 || true)
+            # Run semantic-release for the package with explicit branch config
+            RELEASE_OUTPUT=$(npx semantic-release --branches main 2>&1 || true)
             echo "$RELEASE_OUTPUT"
             
             # Extract new version if available
