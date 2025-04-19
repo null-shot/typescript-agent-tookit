@@ -1,5 +1,7 @@
 {
-  "branches": ["main"],
+  "branches": [
+    {"name": "main", "prerelease": "alpha"}
+  ],
   "plugins": [
     ["@semantic-release/commit-analyzer", {
       "preset": "angular",
@@ -17,7 +19,12 @@
       ]
     }],
     "@semantic-release/release-notes-generator",
-    "@semantic-release/npm",
-    "@semantic-release/github"
+    ["@semantic-release/npm", {
+      "npmPublish": true
+    }],
+    ["@semantic-release/github", {
+      "successComment": false,
+      "failComment": false
+    }]
   ]
 } 
