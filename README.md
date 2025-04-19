@@ -50,16 +50,6 @@ This project is in pre-alpha and actively evolving. Current focus areas:
 
 📚 Coming Soon! Comprehensive documentation and guides are under development.
 
-## Release Process
-
-This repository uses an automated release workflow following semantic versioning:
-
-1. **Pull Request Testing** - When you create a PR, it automatically runs tests and a semantic-release dry run
-2. **Automated Publishing** - When merged to main, changed packages are automatically published to npm
-3. **Versioning** - Package versions are determined by [Conventional Commits](https://www.conventionalcommits.org/) standards
-
-For detailed information about our release process, see [.github/RELEASE_PROCESS.md](.github/RELEASE_PROCESS.md).
-
 ## Contributing
 
 We welcome contributions! Our vision is to create a collaborative ecosystem where AI and human developers work together. Soon, we'll have an AI agent to audit and govern contributions based on our shared vision.
