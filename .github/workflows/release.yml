@@ -40,26 +40,39 @@ jobs:
       - name: Detect changed packages
         id: changed_packages
         run: |
-          CHANGED_PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | grep -o 'packages/[^/]*' | sort | uniq)
-          echo "packages=$CHANGED_PACKAGES" >> $GITHUB_OUTPUT
+          # Find all packages with changes and convert to JSON array format
+          PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | grep -o 'packages/[^/]*' | sort | uniq)
+          
+          # Convert to a JSON array for GitHub Actions
+          PACKAGES_JSON=$(echo "$PACKAGES" | jq -R . | jq -s -c .)
+          echo "packages=$PACKAGES_JSON" >> $GITHUB_OUTPUT
+          
+          # Debug output
+          echo "Detected packages: $PACKAGES_JSON"
           
           # Format for summary
           echo "## Packages to be released" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for PKG in $CHANGED_PACKAGES; do
+          for PKG in $PACKAGES; do
             echo "- $PKG" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
       
-      - name: Release with semantic-release
+      - name: Release packages
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CHANGED_PACKAGES: ${{ steps.changed_packages.outputs.packages }}
         run: |
-          # Release each changed package
+          # Get packages from output as JSON array
+          PACKAGES='${{ steps.changed_packages.outputs.packages }}'
+          echo "Packages to release: $PACKAGES"
+          
+          # Parse the JSON array
+          PACKAGES_ARRAY=$(echo "$PACKAGES" | jq -r '.[]')
+          
+          # Release each package
           RELEASE_SUMMARY=""
-          for PKG in $CHANGED_PACKAGES; do
+          for PKG in $PACKAGES_ARRAY; do
             echo "Publishing package: $PKG"
             cd $PKG
             
