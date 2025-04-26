@@ -1,0 +1,28 @@
+{
+	"name": "simple-prompt-agent",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types",
+		"build": "wrangler build",
+		"prebuild": "tools-registry-cli ./mcp.json",
+		"print-tools-registry": "tools-registry-cli --stdout"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.7.5",
+		"typescript": "^5.5.2",
+		"vitest": "~3.0.7",
+		"wrangler": "^4.13.0"
+	},
+	"dependencies": {
+		"@ai-sdk/anthropic": "^1.2.10",
+		"@ai-sdk/openai": "^1.3.20",
+		"@xava-labs/agent": "file:../../packages/agent",
+		"ai": "^4.3.9",
+		"hono": "^4.7.7"
+	}
+}

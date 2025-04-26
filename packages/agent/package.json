@@ -1,0 +1,52 @@
+{
+	"name": "@xava-labs/agent",
+	"version": "0.0.1",
+	"private": false,
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE",
+		"bin"
+	],
+	"bin": {
+		"tools-registry-cli": "./bin/tools-registry-cli.js"
+	},
+	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsc",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.7.5",
+		"@cloudflare/workers-types": "^4.20250422.0",
+		"@types/node": "^20.9.0",
+		"typescript": "^5.5.2",
+		"vitest": "~3.0.7",
+		"wrangler": "^4.12.0"
+	},
+	"dependencies": {
+		"ai": "^4.3.9",
+		"hono": "^4.7.7",
+		"zod": "^3.24.3"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./services": {
+			"types": "./dist/services/index.d.ts",
+			"import": "./dist/services/index.js"
+		}
+	}
+}

@@ -13,8 +13,7 @@ This project is structured as a monorepo using yarn workspaces. The main structu
 
 - `examples/`: Contains example implementations
   - `crud-mcp/`: An example CRUD application using the MCP framework
-
-- `src/`: Contains shared source files for the root project
+  - `simple-prompt-agent/`: An example agent that integrates agent framework with only a prompt for chatting.
 
 ## Key Files
 
