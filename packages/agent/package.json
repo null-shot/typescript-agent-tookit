@@ -35,6 +35,9 @@
 		"wrangler": "^4.12.0"
 	},
 	"dependencies": {
+		"@cloudflare/agents": "^0.0.16",
+		"agents": "^0.0.75",
+		"agents-sdk": "^0.0.36",
 		"ai": "^4.3.9",
 		"hono": "^4.7.7",
 		"zod": "^3.24.3"

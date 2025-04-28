@@ -10,14 +10,13 @@
 
 import { Hono } from 'hono';
 import { 
-	permissionlessAgentSessionRouter, 
-	AgentRouterBuilder, 
 	Agent,
 	AgentEnv,
+	applyPermissionlessAgentSessionRouter,
 } from '@xava-labs/agent';
 // Import the ToolsService directly 
 import { ToolboxService } from '@xava-labs/agent/services';
-import { CoreMessage, LanguageModel, streamText } from 'ai';
+import { CoreMessage, LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 
@@ -33,50 +32,56 @@ function isValidAIProvider(value: unknown): value is AIProvider {
 }
 
 // Use type assertion to make Hono app compatible with AgentRouterBuilder
-const app = new AgentRouterBuilder(new Hono<{ Bindings: EnvWithAgent }>())
-	.applyRoutes(permissionlessAgentSessionRouter)
-	.build();
+const app = new Hono<{ Bindings: EnvWithAgent }>();
+applyPermissionlessAgentSessionRouter(app);
 
 export class SimplePromptAgent extends Agent<EnvWithAgent> {
-	private model : LanguageModel;
+	private ToolboxService: ToolboxService;
 	constructor(state: DurableObjectState, env: EnvWithAgent) {
-		// TEMP COMMENTED OUT TO GET IT TO WORK
-		super(state, env, [])//, [new ToolboxService(env)]);
-		this.model = this.setupLanguageModel();
-	}
-
-	setupLanguageModel() : LanguageModel {
 		// Validate AI_PROVIDER before using it
-		if (!isValidAIProvider(this.env.AI_PROVIDER)) {
-			throw new Error(`Invalid AI provider: ${this.env.AI_PROVIDER}. Expected 'anthropic' or 'openai'.`);
+		if (!isValidAIProvider(env.AI_PROVIDER)) {
+			throw new Error(`Invalid AI provider: ${env.AI_PROVIDER}. Expected 'anthropic' or 'openai'.`);
 		}
 		
+		let model : LanguageModel;
 		// This is just an example, ideally you only want ot inlcude models that you plan to use for your agent itself versus multiple models
-		switch (this.env.AI_PROVIDER) {
+		switch (env.AI_PROVIDER) {
 			case 'anthropic':
 				const anthropic = createAnthropic({
-					apiKey: this.env.ANTHROPIC_API_KEY,
+					apiKey: env.ANTHROPIC_API_KEY,
 				});
-				return anthropic('claude-3-haiku-20240307');
+				model = anthropic('claude-3-haiku-20240307');
+				break;
 			case 'openai':
 				const openai = createOpenAI({
-					apiKey: this.env.OPEN_AI_API_KEY,
+					apiKey: env.OPEN_AI_API_KEY,
 				});
-				return openai('gpt-3.5-turbo');
+				model = openai('gpt-3.5-turbo');
+				break;
 			default:
 				// This should never happen due to validation above, but TypeScript requires this
-				throw new Error(`Unsupported AI provider: ${this.env.AI_PROVIDER}`);
+				throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
 		}
+
+		const toolboxService = new ToolboxService(env);
+
+		super(state, env, model, [toolboxService])
+		this.ToolboxService = toolboxService;
 	}
 
 	async processMessage(messages: CoreMessage[], sessionId: string): Promise<Response> {
 		console.log('Processing message', messages);
 
-		const result = streamText({
+		console.log('Tools', this.ToolboxService.getTools());
+		const result = await this.streamText(sessionId, {
 			model: this.model,
 			system: 'You are a helpful assistant.',
 			messages,
-			experimental_generateMessageId: () => `${sessionId}-${crypto.randomUUID()}`,
+			onError: (error) => {
+				console.error('Error processing message:', error);
+			},
+			tools: this.ToolboxService.getTools(),
+			maxSteps: 10,
 		});
 
 		return result.toDataStreamResponse();

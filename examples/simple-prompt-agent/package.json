@@ -4,18 +4,21 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "concurrently \"wrangler dev\" \"cd ../crud-mcp && npm run start -- --port 8788\"",
 		"start": "wrangler dev",
 		"test": "vitest",
 		"cf-typegen": "wrangler types",
 		"build": "wrangler build",
 		"prebuild": "tools-registry-cli ./mcp.json",
+		"predev": "npm run prebuild",
+		"prestart": "npm run prebuild",
 		"print-tools-registry": "tools-registry-cli --stdout"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.7.5",
 		"typescript": "^5.5.2",
 		"vitest": "~3.0.7",
+		"concurrently": "^9.1.2",
 		"wrangler": "^4.13.0"
 	},
 	"dependencies": {

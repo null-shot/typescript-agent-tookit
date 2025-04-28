@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "deploy": "wrangler deploy",
-    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"vite dev\" \"wrangler dev\" --kill-others",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
     "dev:vite": "vite dev",
     "start": "wrangler dev",
     "test": "vitest run",

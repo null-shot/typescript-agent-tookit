@@ -1,32 +1,29 @@
 import { Hono } from 'hono';
 import { ExternalService, MiddlewareService } from '../service';
 import { AgentEnv } from '../env';
-import { experimental_createMCPClient as createMCPClient } from 'ai';
+import { MCPClientManager } from 'agents/mcp/client';
+import { LanguageModelV1CallOptions, ToolSet } from 'ai';
 
 /**
  * Configuration for an MCP tool server
  */
 export interface MCPServerConfig {
+  url?: string;
   command?: string;
   args?: string[];
-  url?: string;
   env?: Record<string, string>;
 }
 
 /**
- * Interface for the tools registry configuration
+ * Simplified interface for MCP tool objects
  */
-export interface ToolsRegistry {
-  mcpServers: Record<string, MCPServerConfig>;
-}
-
-/**
- * Simplified interface for tool objects
- */
-interface ToolObject {
+interface MCPTool {
+  name: string;
   description?: string;
-  parameters?: Record<string, any>;
-  [key: string]: any;
+  serverId: string;
+  inputSchema?: {
+    properties?: Record<string, any>;
+  };
 }
 
 /**
@@ -34,14 +31,14 @@ interface ToolObject {
  */
 export class ToolboxService implements ExternalService, MiddlewareService {
   public name = '@xava-labs/agent/toolbox-service';
-  private registry: ToolsRegistry;
   private env: AgentEnv;
-  private mcpClients: Record<string, any> = {};
-  private toolNameToMcpMap: Record<string, string[]> = {};
+  private mcpClientManager: MCPClientManager;
+  // Map to track which server config name maps to which server ID
+  private serverNames: Map<string, string> = new Map();
 
   constructor(env: AgentEnv) {
     this.env = env;
-    this.registry = this.createToolsRegistry();
+    this.mcpClientManager = new MCPClientManager('agent-toolbox', '1.0.0');
   }
 
   isBase64(str: string): boolean {
@@ -57,78 +54,45 @@ export class ToolboxService implements ExternalService, MiddlewareService {
     return true;
   }
 
-  createToolsRegistry() : ToolsRegistry {
-
+  /**
+   * Parse the MCP servers configuration from environment variables
+   */
+  private parseServerConfig(): Record<string, MCPServerConfig> {
     const registryStr = this.env.TOOLBOX_SERVICE_MCP_SERVERS;
     if (!registryStr) {
-      throw new Error('TOOLS_REGISTRY environment variable is not set');
+      throw new Error('TOOLBOX_SERVICE_MCP_SERVERS environment variable is not set');
     }
 
-    // Try to load the tools registry from environment variables
     try {
       if (this.isBase64(registryStr)) {
         const decoded = atob(registryStr);
-        return JSON.parse(decoded) as ToolsRegistry;  
+        return JSON.parse(decoded).mcpServers || {};
       } else {
-        return JSON.parse(registryStr) as ToolsRegistry;
+        return JSON.parse(registryStr).mcpServers || {};
       }
     } catch (error) {
-      throw new Error(`Error initializing toolbox service: ${error}`);
+      throw new Error(`Error parsing MCP servers configuration: ${error}`);
     }
   }
 
   /**
-   * Initialize the tools service by parsing the tools registry from environment variables
+   * Initialize the tools service by connecting to configured MCP servers
    */
   async initialize(): Promise<void> {
-    // If we couldn't load a registry, create an empty one
-    if (!this.registry) {
-      this.registry = { mcpServers: {} };
-    }
-
-    console.log(`Tools service initialized with ${Object.keys(this.registry.mcpServers).length} tools`);
+    // Get the MCP server configurations
+    const mcpServers = this.parseServerConfig();
     
-    // Initialize MCP clients after loading the registry
-    await this.initializeMCPClients();
+    console.log(`Tools service initializing with ${Object.keys(mcpServers).length} servers`);
     
-    // Check for duplicate tool names
-    this.checkForDuplicateToolNames();
-  }
-  
-  /**
-   * Initialize MCP clients for servers with SSE transport
-   */
-  private async initializeMCPClients(): Promise<void> {
-    if (!this.registry) {
-      return;
-    }
-
-    // Create MCP clients for each server with 'sse' transport
-    for (const [name, config] of Object.entries(this.registry.mcpServers)) {
+    // Connect to each MCP server with a URL
+    for (const [name, config] of Object.entries(mcpServers)) {
       if (config.url) {
         try {
-          const mcpClient = await createMCPClient({
-            transport: {
-              type: 'sse',
-              url: config.url,
-            },
-          });
-          this.mcpClients[name] = mcpClient;
-          
-          // Track tool names for this MCP client
-          try {
-            const toolSet = await mcpClient.tools();
-            const toolNames = Object.keys(toolSet);
-            
-            for (const toolName of toolNames) {
-              if (!this.toolNameToMcpMap[toolName]) {
-                this.toolNameToMcpMap[toolName] = [];
-              }
-              this.toolNameToMcpMap[toolName].push(name);
-            }
-          } catch (error) {
-            console.error(`Failed to get tools from MCP client ${name}:`, error);
-          }
+          console.log(`Initializing MCP client for ${name} at ${config.url}`);
+          const { id } = await this.mcpClientManager.connect(config.url);
+          // Store the mapping between server ID and config name
+          this.serverNames.set(id, name);
+          console.log(`MCP client for ${name} initialized with ID: ${id}`);
         } catch (error) {
           console.error(`Failed to create MCP client for ${name}:`, error);
         }
@@ -136,102 +100,65 @@ export class ToolboxService implements ExternalService, MiddlewareService {
         console.warn(`Skipping MCP server ${name} with command transport. Only SSE transport is currently supported.`);
       }
     }
+    
+    // Log duplicate tool names
+    this.checkForDuplicateToolNames();
   }
   
   /**
    * Check for duplicate tool names across MCP servers and log warnings
    */
   private checkForDuplicateToolNames(): void {
-    for (const [toolName, mcpServers] of Object.entries(this.toolNameToMcpMap)) {
-      if (mcpServers.length > 1) {
-        console.warn(`Warning: Tool name '${toolName}' is duplicated across multiple MCP servers: ${mcpServers.join(', ')}`);
-      }
-    }
-  }
-
-  /**
-   * Get aggregated tools from all MCP clients
-   */
-  private async getAggregatedTools(): Promise<any> {
-    const aggregatedTools = {};
+    const toolsMap = new Map<string, string[]>();
     
-    for (const [name, client] of Object.entries(this.mcpClients)) {
-      try {
-        const tools = await client.tools();
-        Object.assign(aggregatedTools, tools);
-      } catch (error) {
-        console.error(`Failed to get tools from MCP client ${name}:`, error);
+    // Get all tools from the manager
+    const allTools = this.mcpClientManager.listTools();
+    
+    console.log('All tools:', allTools);
+    // Group tools by name and track which servers they come from
+    for (const tool of allTools) {
+      const name = tool.name;
+      if (!toolsMap.has(name)) {
+        toolsMap.set(name, []);
+      }
+      toolsMap.get(name)?.push(tool.serverId);
+    }
+    
+    // Log warnings for duplicate tools
+    for (const [name, serverIds] of toolsMap.entries()) {
+      if (serverIds.length > 1) {
+        console.warn(`Warning: Tool name '${name}' is duplicated across multiple MCP servers: ${serverIds.join(', ')}`);
       }
     }
-
-    return aggregatedTools;
   }
 
-  /**
-   * Transforms parameters before they are passed to the language model
-   * Implements the LanguageModelV1Middleware transformParams method
-   */
-  async transformParams(options: {
-    type: 'generate' | 'stream';
-    params: any; // Using any type to avoid TypeScript errors with tools property
-  }): Promise<any> {
-    const { params } = options;
 
-    // Get the aggregated tools
-    const mcpTools = await this.getAggregatedTools();
-
-    // If there are no tools or params doesn't have tools, return unchanged params
-    if (!mcpTools || Object.keys(mcpTools).length === 0) {
-      return params;
-    }
-
-    // Create a copy of the params
-    const newParams = { ...params };
-
-    // If tools doesn't exist, create it
-    if (!newParams.tools) {
-      newParams.tools = {};
-    }
-
-    // Add MCP tools to existing tools
-    newParams.tools = {
-      ...newParams.tools,
-      ...mcpTools,
-    };
-
-    return newParams;
+  getTools() : ToolSet {
+    return this.mcpClientManager.unstable_getAITools();
   }
-
+  
   /**
    * Register tool-related routes with the Hono app
    */
   registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
     // Register a route to get information about MCP servers
     app.get('/mcp', async (c) => {
-      if (!this.registry) {
-        return c.json({ mcpServers: [] }, 200);
-      }
-      
       // Gather information about MCP servers and their tools
       const mcpServers = [];
       
-      for (const [name, config] of Object.entries(this.registry.mcpServers)) {
-        const serverInfo: any = {
-          name,
-          url: config.url,
-          hasCommand: !!config.command,
-          tools: []
-        };
+      for (const [id, connection] of Object.entries(this.mcpClientManager.mcpConnections)) {
+        const serverName = this.serverNames.get(id) || id;
+        const serverUrl = connection.url ? connection.url.toString() : "";
         
-        // Get the tools for this MCP server if a client exists
-        if (this.mcpClients[name]) {
-          try {
-            const tools = await this.mcpClients[name].tools();
-            serverInfo.tools = Object.keys(tools);
-          } catch (error) {
-            console.error(`Failed to get tools from MCP client ${name}:`, error);
-          }
-        }
+        const serverInfo = {
+          id,
+          name: serverName,
+          url: serverUrl,
+          tools: this.mcpClientManager.listTools()
+            .filter(tool => tool.serverId === id)
+            .map(tool => tool.name),
+          connectionState: connection.connectionState
+        };
         
         mcpServers.push(serverInfo);
       }
@@ -241,34 +168,32 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 
     // Register a route to get all tools with details
     app.get('/tools', async (c) => {
-      if (!this.registry) {
-        return c.json({ tools: [] }, 200);
-      }
-      
       // Gather detailed information about all tools
       const toolsInfo = [];
       
-      for (const [mcpName, client] of Object.entries(this.mcpClients)) {
-        try {
-          const tools = await client.tools();
-          
-          for (const [toolName, toolData] of Object.entries(tools)) {
-            // Cast to our ToolObject interface to properly type it
-            const toolObj = toolData as ToolObject;
-            
-            toolsInfo.push({
-              name: toolName,
-              description: toolObj.description || 'No description available',
-              mcpServer: mcpName,
-              parameters: toolObj.parameters || {}
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to get tools from MCP client ${mcpName}:`, error);
-        }
+      // Get all tools from the manager
+      const allTools = this.mcpClientManager.listTools();
+      
+      for (const tool of allTools as MCPTool[]) {
+        const serverName = this.serverNames.get(tool.serverId) || tool.serverId;
+        
+        toolsInfo.push({
+          name: tool.name,
+          description: tool.description || 'No description available',
+          mcpServer: serverName,
+          parameters: tool.inputSchema?.properties || {}
+        });
       }
       
       return c.json({ tools: toolsInfo }, 200);
     });
+  }
+  
+  /**
+   * Clean up resources when service is shutdown
+   */
+  async shutdown(): Promise<void> {
+    // Close all MCP connections
+    await this.mcpClientManager.closeAllConnections();
   }
 } 

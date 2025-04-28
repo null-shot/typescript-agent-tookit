@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "todo-list": {
-      "url": "https://localhost:8787/sse"
+      "url": "http://localhost:8788/sse"
     }
   }
 }
