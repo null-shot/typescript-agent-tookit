@@ -1,8 +1,9 @@
 import { Hono } from 'hono';
-import { ExternalService, MiddlewareService } from '../service';
+import { ExternalService } from '../service';
 import { AgentEnv } from '../env';
 import { MCPClientManager } from 'agents/mcp/client';
 import { LanguageModelV1CallOptions, ToolSet } from 'ai';
+import { MiddlewareService } from '../aisdk/middleware';
 
 /**
  * Configuration for an MCP tool server
@@ -132,11 +133,6 @@ export class ToolboxService implements ExternalService, MiddlewareService {
     }
   }
 
-
-  getTools() : ToolSet {
-    return this.mcpClientManager.unstable_getAITools();
-  }
-  
   /**
    * Register tool-related routes with the Hono app
    */
@@ -195,5 +191,16 @@ export class ToolboxService implements ExternalService, MiddlewareService {
   async shutdown(): Promise<void> {
     // Close all MCP connections
     await this.mcpClientManager.closeAllConnections();
+  }
+
+  transformStreamTextTools(tools?: ToolSet): ToolSet {
+    if (!tools) {
+      return this.mcpClientManager.unstable_getAITools();
+    }
+    
+    return {
+      ...tools,
+      ...this.mcpClientManager.unstable_getAITools()
+    }
   }
 } 

@@ -50,6 +50,10 @@
 		"./services": {
 			"types": "./dist/services/index.d.ts",
 			"import": "./dist/services/index.js"
+		},
+		"./aisdk": {
+			"types": "./dist/aisdk/index.d.ts",
+			"import": "./dist/aisdk/index.js"
 		}
 	}
 }

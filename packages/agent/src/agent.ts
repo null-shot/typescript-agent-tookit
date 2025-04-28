@@ -1,50 +1,43 @@
-import { CoreMessage, LanguageModel, streamText, wrapLanguageModel, StreamTextResult, ToolSet } from 'ai';
 import { DurableObject } from 'cloudflare:workers';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { cors } from 'hono/cors';
 import { AgentEnv } from './env';
-import { ExternalService, Service, MiddlewareService, isExternalService, isMiddlewareService, StreamTextParams } from './service';
+import {  Service, isExternalService } from './service';
 
 
 /**
- * Base Agent class which processes messages for the given payload type
+ * The Null Shot Standard for Agents.
  */
-export abstract class Agent<E extends AgentEnv = AgentEnv> extends DurableObject {
-  protected env: E;
-  private app: Hono<{ Bindings: E }>;
+export abstract class XavaAgent<ENV extends AgentEnv = AgentEnv, MESSAGE extends any = any> extends DurableObject<ENV> {
+  protected state: DurableObjectState;
+  protected env: ENV;
+  protected app: Hono<{ Bindings: ENV }>;
   protected services: Service[];
-  protected middleware: MiddlewareService[] = [];
-  protected model: LanguageModel;
 
-  constructor(state: DurableObjectState, env: E, model: LanguageModel, services: Service[] = []) {
+  constructor(state: DurableObjectState, env: ENV, services: Service[] = []) {
     super(state, env);
+    this.state = state;
     this.env = env;
-    this.app = new Hono<{ Bindings: E }>();
+    this.app = new Hono<{ Bindings: ENV }>();
     this.services = services;
-    this.model = model;
-    
+
     // Setup routes
     this.setupRoutes(this.app);
-    this.model = model;
-
+    
+    // Since this is ran async, implementing classes below should be initialized prior to this running
     state.blockConcurrencyWhile(async () => {
       // Initialize services before setting up routes
       await this.initializeServices();
-
-      // Wrap the language model with middleware if needed
-      this.model = wrapLanguageModel({
-        model: this.model,
-        middleware: this.middleware
-      });
     });
   }
+
+  abstract processMessage(sessionId: string, messages: MESSAGE): Promise<Response>;
 
   /**
    * Setup services for the agent
    * This can be overridden by subclasses to add custom services
    */
-  protected async initializeServices(): Promise<void> {
+   protected async initializeServices(): Promise<void> {
     // Initialize all services
     for (const service of this.services) {
       console.log("Initializing service", service);
@@ -56,18 +49,13 @@ export abstract class Agent<E extends AgentEnv = AgentEnv> extends DurableObject
       if (isExternalService(service)) {
         service.registerRoutes(this.app);
       }
-
-      // Register middleware for middleware services
-      if (isMiddlewareService(service)) {
-        this.middleware.push(service);
-      }
     }
   }
 
   /**
    * Setup Hono routes
    */
-  protected setupRoutes(app: Hono<{ Bindings: E }>) {
+  protected setupRoutes(app: Hono<{ Bindings: ENV }>) {
     // Message processing route with sessionId as URL parameter
     app.post('/agent/chat/:sessionId', async (c) => {
       try {
@@ -81,15 +69,15 @@ export abstract class Agent<E extends AgentEnv = AgentEnv> extends DurableObject
         }
 
         // Get the payload from the request
-        const { messages } = await c.req.json();
+        const messages = await c.req.json<MESSAGE>();
 
-        if (!messages || messages.length === 0) {
+        if (!messages) {
           throw new HTTPException(400, {
             message: 'Payload must be a valid CoreMessage[] JSON Object CoreMessage[]'
           });
         }
         
-        const response =  await this.processMessage(messages, sessionId);
+        const response = await this.processMessage(sessionId, messages);
 
         response.headers.set('X-Session-Id', sessionId);
 
@@ -116,44 +104,10 @@ export abstract class Agent<E extends AgentEnv = AgentEnv> extends DurableObject
     });
   }
 
-  /**
+   /**
    * Main fetch handler for the Agent Durable Object
    */
-  async fetch(request: Request): Promise<Response> {
+   async fetch(request: Request): Promise<Response> {
     return this.app.fetch(request);
-  }
-
-  /**
-   * Process an incoming message
-   * This should be implemented by subclasses
-   */
-  abstract processMessage(message: CoreMessage[], sessionId: string): Promise<Response>;
-
-  /**
-   * Stream text with middleware support
-   * This method applies the tools transformation middleware
-   */
-  protected async streamText(
-    sessionId: string,
-    options: Partial<StreamTextParams> = {}
-  ): Promise<StreamTextResult<ToolSet, string>> {
-    // Create initial parameters
-    let params: StreamTextParams = {
-      model: this.model,
-      experimental_generateMessageId: () => `${sessionId}-${crypto.randomUUID()}`,
-      ...options
-    };
-
-    // If tools are provided, apply middleware transformations
-    if (params.tools) {
-      for (const middleware of this.middleware) {
-        if (middleware.transformStreamTextTools) {
-          params.tools = await middleware.transformStreamTextTools(params.tools);
-        }
-      }
-    }
-
-    // Call streamText with transformed parameters
-    return streamText(params);
   }
 }

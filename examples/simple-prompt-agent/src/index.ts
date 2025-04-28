@@ -10,7 +10,6 @@
 
 import { Hono } from 'hono';
 import { 
-	Agent,
 	AgentEnv,
 	applyPermissionlessAgentSessionRouter,
 } from '@xava-labs/agent';
@@ -19,7 +18,7 @@ import { ToolboxService } from '@xava-labs/agent/services';
 import { CoreMessage, LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
-
+import { AiSdkAgent } from '@xava-labs/agent/aisdk';
 // Define AI provider type
 type AIProvider = 'anthropic' | 'openai';
 
@@ -35,8 +34,7 @@ function isValidAIProvider(value: unknown): value is AIProvider {
 const app = new Hono<{ Bindings: EnvWithAgent }>();
 applyPermissionlessAgentSessionRouter(app);
 
-export class SimplePromptAgent extends Agent<EnvWithAgent> {
-	private ToolboxService: ToolboxService;
+export class SimplePromptAgent extends AiSdkAgent<EnvWithAgent> {
 	constructor(state: DurableObjectState, env: EnvWithAgent) {
 		// Validate AI_PROVIDER before using it
 		if (!isValidAIProvider(env.AI_PROVIDER)) {
@@ -63,25 +61,15 @@ export class SimplePromptAgent extends Agent<EnvWithAgent> {
 				throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
 		}
 
-		const toolboxService = new ToolboxService(env);
-
-		super(state, env, model, [toolboxService])
-		this.ToolboxService = toolboxService;
+		super(state, env, model, [new ToolboxService(env)]);
 	}
 
-	async processMessage(messages: CoreMessage[], sessionId: string): Promise<Response> {
+	async processMessage(sessionId: string, messages: CoreMessage[]): Promise<Response> {
 		console.log('Processing message', messages);
 
-		console.log('Tools', this.ToolboxService.getTools());
 		const result = await this.streamText(sessionId, {
 			model: this.model,
-			system: 'You are a helpful assistant.',
-			messages,
-			onError: (error) => {
-				console.error('Error processing message:', error);
-			},
-			tools: this.ToolboxService.getTools(),
-			maxSteps: 10,
+			prompt: 'You are a helpful assistant that can answer questions and help with managing a TODO list',
 		});
 
 		return result.toDataStreamResponse();
@@ -90,8 +78,8 @@ export class SimplePromptAgent extends Agent<EnvWithAgent> {
 
 // Export the worker handler
 export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+	async fetch(request: Request, env: EnvWithAgent, ctx: ExecutionContext): Promise<Response> {
 		// Bootstrap the agent worker with the namespace
-		return app.fetch(request, env as EnvWithAgent, ctx);
+		return app.fetch(request, env, ctx);
 	}
 };
