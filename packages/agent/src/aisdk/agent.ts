@@ -1,13 +1,21 @@
-import { CoreMessage, LanguageModel, StreamTextResult, ToolSet, streamText, wrapLanguageModel } from "ai";
+import { CoreMessage, JSONRPCMessage, LanguageModel, StreamTextResult, ToolSet, streamText, wrapLanguageModel } from "ai";
 import { isMiddlewareService, MiddlewareService, StreamTextParams } from "./middleware";
 import { XavaAgent } from "../agent";
 import { AgentEnv } from "../env";
 import { Service } from "../service";
 
 /**
+ * A message from the AI UI SDK - Could not find this in the ai package
+ */
+export interface AIUISDKMessage {
+    id: string;
+    messages: CoreMessage[];
+}
+
+/**
  * A wrapper around the AI SDK's to support AI UI SDK and enhanced middleware support
  */
-export abstract class AiSdkAgent<ENV extends AgentEnv> extends XavaAgent<ENV, CoreMessage[]> {
+export abstract class AiSdkAgent<ENV extends AgentEnv> extends XavaAgent<ENV, AIUISDKMessage> {
     protected model: LanguageModel;
     protected middleware: MiddlewareService[] = [];
 
@@ -52,8 +60,8 @@ export abstract class AiSdkAgent<ENV extends AgentEnv> extends XavaAgent<ENV, Co
         // TODO: consider all params to have a params transform function
         for (const middleware of this.middleware) {
             if (middleware.transformStreamTextTools) {
-                console.log("Transforming tools", params.tools);
                 params.tools = middleware.transformStreamTextTools(params.tools);
+                console.log("Transforming tools", params.tools);
             }
         }
 

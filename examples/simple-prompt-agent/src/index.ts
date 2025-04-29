@@ -15,10 +15,10 @@ import {
 } from '@xava-labs/agent';
 // Import the ToolsService directly 
 import { ToolboxService } from '@xava-labs/agent/services';
-import { CoreMessage, LanguageModel } from 'ai';
+import { LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
-import { AiSdkAgent } from '@xava-labs/agent/aisdk';
+import { AiSdkAgent, AIUISDKMessage } from '@xava-labs/agent/aisdk';
 // Define AI provider type
 type AIProvider = 'anthropic' | 'openai';
 
@@ -64,12 +64,14 @@ export class SimplePromptAgent extends AiSdkAgent<EnvWithAgent> {
 		super(state, env, model, [new ToolboxService(env)]);
 	}
 
-	async processMessage(sessionId: string, messages: CoreMessage[]): Promise<Response> {
-		console.log('Processing message', messages);
-
+	async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
 		const result = await this.streamText(sessionId, {
 			model: this.model,
-			prompt: 'You are a helpful assistant that can answer questions and help with managing a TODO list',
+			system: 'You are a helpful assistant that can answer questions and help with managing a TODO list',
+			messages: messages.messages, 
+			maxSteps: 10,
+			maxRetries: 3,
+			experimental_toolCallStreaming: true,
 		});
 
 		return result.toDataStreamResponse();

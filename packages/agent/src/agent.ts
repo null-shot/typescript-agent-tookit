@@ -76,7 +76,7 @@ export abstract class XavaAgent<ENV extends AgentEnv = AgentEnv, MESSAGE extends
             message: 'Payload must be a valid CoreMessage[] JSON Object CoreMessage[]'
           });
         }
-        
+                
         const response = await this.processMessage(sessionId, messages);
 
         response.headers.set('X-Session-Id', sessionId);
