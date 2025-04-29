@@ -1,15 +1,9 @@
 #!/bin/bash
 
-# Script to prepare all packages in the monorepo for semantic-release
+# Script to prepare all packages in the monorepo for changesets
 # Usage: ./scripts/prepare-packages.sh
 
 set -e
-
-# Check if the template file exists
-if [ ! -f ".github/release-template.json" ]; then
-  echo "Error: Template file .github/release-template.json not found!"
-  exit 1
-fi
 
 # Find all package directories
 PACKAGES=$(find packages -type f -name "package.json" -not -path "*/node_modules/*" | grep -o 'packages/[^/]*' | sort | uniq)
@@ -24,20 +18,6 @@ for PKG in $PACKAGES; do
     echo "  Skipping private package"
     cd - > /dev/null || exit 1
     continue
-  fi
-  
-  # Add semantic-release dev dependencies if not present
-  if ! grep -q '"semantic-release"' package.json; then
-    echo "  Adding semantic-release dependencies"
-    yarn add --dev semantic-release @semantic-release/git
-  fi
-  
-  # Add semantic-release script if not present
-  if ! grep -q '"semantic-release":' package.json; then
-    echo "  Adding semantic-release script"
-    # Use temporary file to avoid issues with in-place sed on macOS
-    jq '.scripts["semantic-release"] = "semantic-release"' package.json > package.json.tmp
-    mv package.json.tmp package.json
   fi
   
   # Check for main, types, and files fields
@@ -67,12 +47,6 @@ for PKG in $PACKAGES; do
     mv package.json.tmp package.json
   fi
   
-  # Create .releaserc.json if not exists
-  if [ ! -f .releaserc.json ]; then
-    echo "  Creating .releaserc.json from template"
-    cp ../../.github/release-template.json .releaserc.json
-  fi
-  
   # Ensure license file exists
   if [ ! -f LICENSE ]; then
     echo "  Copying LICENSE file"
@@ -89,7 +63,28 @@ for PKG in $PACKAGES; do
     echo "  WARNING: No tsconfig.json found, must be created for proper builds"
   fi
   
+  # Ensure we have a README.md
+  if [ ! -f README.md ]; then
+    echo "  Creating a basic README.md"
+    echo "# ${PKG##*/}" > README.md
+    echo "" >> README.md
+    echo "Part of the TypeScript Agent framework." >> README.md
+  fi
+  
   cd - > /dev/null || exit 1
 done
+
+# Ensure changesets is installed in the root package
+if ! grep -q '"@changesets/cli"' package.json; then
+  echo "Adding @changesets/cli to root package.json"
+  yarn add --dev @changesets/cli
+fi
+
+# Make sure we have a changeset release script in the root
+if ! grep -q '"release":' package.json; then
+  echo "Adding release script to root package.json"
+  jq '.scripts.release = "changeset publish"' package.json > package.json.tmp
+  mv package.json.tmp package.json
+fi
 
 echo "All packages processed! Review the changes before committing." 

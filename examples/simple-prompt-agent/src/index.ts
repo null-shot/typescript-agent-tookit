@@ -67,11 +67,13 @@ export class SimplePromptAgent extends AiSdkAgent<EnvWithAgent> {
 	async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
 		const result = await this.streamText(sessionId, {
 			model: this.model,
-			system: 'You are a helpful assistant that can answer questions and help with managing a TODO list',
+			system: 'You will use tools to help manage and mark off tasks on a todo list.',
 			messages: messages.messages, 
 			maxSteps: 10,
-			maxRetries: 3,
 			experimental_toolCallStreaming: true,
+			onError: (error) => {
+				console.error('Error processing message', error);
+			}
 		});
 
 		return result.toDataStreamResponse();

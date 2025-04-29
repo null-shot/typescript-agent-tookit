@@ -1,265 +1,287 @@
 # Cloudflare Worker AI Agent
 
-This package implements a Durable Object-based Agent architecture for building AI applications on Cloudflare Workers. It uses the Vercel AI SDK to interact with Claude via Anthropic's API.
+This package implements a Durable Object-based Agent architecture for building AI applications on Cloudflare Workers. It supports multiple AI providers through AI SDK integration.
 
 ## Architecture
 
-The agent architecture consists of the following components:
-
-- **Base Agent Class**: A Durable Object that provides basic message handling capabilities
-- **AIAgent Implementation**: Extends the base Agent to work with Anthropic's Claude model
-- **API Router**: Handles HTTP requests and routes them to the appropriate Agent
+```
+    USER                         AGENT GATEWAY                 AGENT
+┌──────────┐     HTTP        ┌─────────────────┐      ┌───────────────────────┐
+│          │ ──────────────> │     Worker      │      │    Durable Object     │
+│ Browser  │                 │ ┌─────────────┐ │ ───> │  ┌─────────────────┐  │
+│          │ <─ ─ ─ ─ ─ ─ ─  │ │   Router    │ │      │  │  Agent Router   │--│---> [STATE = D1/KV/etc.] 
+└──────────┘     Stream      │ │    (Auth)   │ │      │  │ Business Logic  │┐ |
+                             │ └─────────────┘ │      │  └─────────────────┘| │
+                             └─────────────────┘      │         │           | │
+                                                      │         │           | │
+                                                      │         ▼           | │
+                                                      │  ┌─────────────┐    | │
+                                                      │  │   Services  │    | │
+                                                      │  └─────┬───────┘    | │
+                                                      └───────────────────────┘
+                                                               │            │
+                                                               ▼            ▼
+                                                   ┌────────────────┐ ┌────────────────┐
+                                                   │   3rd Party    │ │   AI Provider  │
+                                                   │  MCP Services  │ │OpenAI/Anthropic│
+                                                   └────────────────┘ └────────────────┘
+```
 
 ## Features
 
-- Durable Objects for persistent agent state
-- Session-based conversations with AIAgent
-- Streaming responses using Vercel AI SDK
-- Cloudflare AI Gateway integration
-- Extensible agent architecture
+- **AI SDK Support**: Integrate with AI providers via the Vercel AI SDK
+- **Services**: Routes for 3rd party business logic via webhooks
+- **Middleware**: Dynamic tool injection, parameter modification, and response transformation
+- **Sessions**: Simple session generation and management
+- **Auth**: [Coming Soon] Authentication examples
+- **Events**: [Coming Soon] System event handling for agents
+- **Cloudflare Agent**: [Coming Soon] Native integration with Cloudflare Agent platform
 
-## Setup
+## Installation
 
-1. Clone the repository
-2. Install dependencies: `npm install`
-3. Configure environment variables in `wrangler.jsonc` or use `.dev.vars`
-4. Run the development server: `npm run dev`
-
-## Environment Variables
-
-- `ANTHROPIC_API_KEY`: Your Anthropic API key
-- `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare account ID
-- `CLOUDFLARE_AI_GATEWAY_ID`: Your Cloudflare AI Gateway ID
-
-## API Endpoints
-
-### `/api/chat`
-
-POST endpoint for creating a new chat session with the AI Agent.
-
-Example request:
-```json
-{
-  "messages": [
-    { "role": "user", "content": "Hello, how are you?" }
-  ]
-}
+```bash
+npm install @xava-labs/agent
 ```
 
-### `/agent/:id/message`
+## Packages
 
-POST endpoint for sending a message to a specific agent instance.
+The framework consists of the following packages:
 
-Example request:
-```json
-{
-  "sessionId": "optional-session-id", 
-  "message": [
-    { "role": "user", "content": "Tell me more about that." }
-  ]
-}
-```
+- `@xava-labs/agent` - Core agent framework
+- `@xava-labs/agent/aisdk` - AI SDK integration layer
+- `@xava-labs/agent/services` - Services for extending agent functionality
 
-## Extending with New Agent Types
-
-To create a new agent type:
-
-1. Create a new class that extends the `Agent<T>` class
-2. Implement the `processMessage(message: T, sessionId: string)` method
-3. Export the new agent class in `index.ts`
-4. Add the agent class to the Durable Objects configuration in `wrangler.jsonc`
-
-## Deployment
-
-To deploy to Cloudflare Workers:
-
-1. Update your secrets in Cloudflare:
-   ```
-   npx wrangler secret put ANTHROPIC_API_KEY
-   ```
-
-2. Deploy with Wrangler:
-   ```
-   npm run deploy
-   ```
-
-## Development
-
-- `npm run dev` - Start the development server
-- `npm test` - Run tests
-- `npm run deploy` - Deploy to Cloudflare Workers
-
-# Agent SDK
-
-This package provides a base implementation for building AI agents using Cloudflare Workers.
-
-## Features
-
-- Base Agent class for implementing custom AI agents
-- Routing and session management
-- Tools service for integrating with external MCP (Model Context Protocol) servers
-
-## Usage
-
-### Basic Usage
+## Basic Usage
 
 ```typescript
-import { Agent, AgentEnv } from '@xava-labs/agent';
-import { streamText } from 'ai';
+import { XavaAgent, AgentEnv } from '@xava-labs/agent';
+import { AiSdkAgent } from '@xava-labs/agent/aisdk';
+import { ToolboxService } from '@xava-labs/agent/services';
+import { createOpenAI } from '@ai-sdk/openai';
 
-export class MyAgent extends Agent<MyEnv> {
-  async processMessage(messages, sessionId) {
-    // Process messages and return a response
-    const result = streamText({
-      model: 'some-model',
-      messages,
+// Define your environment type
+type MyEnv = Env & AgentEnv;
+
+// Create your agent class
+export class MyAgent extends AiSdkAgent<MyEnv> {
+  constructor(state: DurableObjectState, env: MyEnv) {
+    // Initialize the AI model
+    const openai = createOpenAI({
+      apiKey: env.OPENAI_API_KEY,
     });
+    const model = openai('gpt-4');
     
+    // Initialize with services
+    super(state, env, model, [new ToolboxService(env)]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const result = await this.streamText(sessionId, {
+      model: this.model,
+      system: 'You are a helpful assistant.',
+      messages: messages.messages,
+      maxSteps: 10,
+    });
+
     return result.toDataStreamResponse();
+  }
+}
+
+// Worker handler
+export default {
+  async fetch(request, env, ctx) {
+    // Apply router
+    applyPermissionlessAgentSessionRouter(app);
+    return app.fetch(request, env, ctx);
+  }
+};
+```
+
+## Services
+
+Services extend agent capabilities by providing specific functionality. They allow you to:
+
+1. Expose APIs for 3rd party services (admin, webhooks, etc.)
+2. Inject context for LLMs (tools, prompts, current_time, etc.)
+3. Modify LLM responses (prompt retries, quality control, reactive events)
+4. [Coming Soon] Fire dynamic events from 3rd party systems
+
+### Built-in Services
+
+- **Toolbox**: Leverages `mcp.json` to manage tool injection to AI agents
+- **Time Context**: [Coming Soon] Provides time-related context to agents
+
+### Creating a Custom Service
+
+Services implement the `Service` interface or extend it with additional capabilities:
+
+```typescript
+import { Service, AgentEnv } from '@xava-labs/agent';
+import { Hono } from 'hono';
+
+// Basic service
+export class MyService implements Service {
+  name = '@my-org/agent/my-service';
+  
+  async initialize(): Promise<void> {
+    // Initialize service resources
+    console.log('Initializing my service');
+  }
+}
+
+// External service with HTTP routes
+export class MyExternalService implements ExternalService {
+  name = '@my-org/agent/external-service';
+  
+  registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
+    app.get('/my-service/status', (c) => {
+      return c.json({ status: 'ok' });
+    });
+  }
+}
+
+// Middleware service for AI interactions
+export class MyMiddlewareService implements MiddlewareService {
+  name = '@my-org/agent/middleware-service';
+  middlewareVersion = '1.0.0';
+  
+  transformStreamTextTools(tools) {
+    // Add or modify tools
+    return {
+      ...tools,
+      myTool: {
+        description: 'My custom tool',
+        execute: async (params) => {
+          // Tool implementation
+          return { result: 'success' };
+        }
+      }
+    };
+  }
+  
+  transformParams(params) {
+    // Modify parameters for AI requests
+    return {
+      ...params,
+      temperature: 0.7,
+    };
   }
 }
 ```
 
-### Using the Tools Service
+### Registering Services with an Agent
 
-The Tools Service allows you to integrate with external MCP (Model Context Protocol) servers. Here's how to use it:
+Register services when creating an agent instance:
 
-1. First, create a configuration file for your MCP servers (e.g., `mcp-config.json`):
+```typescript
+constructor(state: DurableObjectState, env: MyEnv) {
+  const services = [
+    new ToolboxService(env),
+    new MyCustomService(),
+    new MyMiddlewareService()
+  ];
+  
+  super(state, env, model, services);
+}
+```
+
+## Routers
+
+Routers act as an API gateway for agents, handling CORS, routing logic, and authentication. They will likely be renamed to "gateways" in a future release.
+
+### Built-in Routers
+
+- **`applyPermissionlessAgentSessionRouter()`**: Creates new sessions automatically or reuses sessions based on the `/agent/chat/:sessionId` endpoint.
+
+```typescript
+import { Hono } from 'hono';
+import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@xava-labs/agent';
+
+// Create Hono app
+const app = new Hono<{ Bindings: MyEnv }>();
+// Apply routers / custom config
+applyPermissionlessAgentSessionRouter(app);
+// Export worker handler
+export default {
+  fetch: app.fetch,
+};
+```
+
+## Agent Environment
+
+The `AgentEnv` interface provides default Durable Object naming and toolbox service configuration:
+
+```typescript
+interface AgentEnv {
+  AgentDurableObject: DurableObjectNamespace;
+  TOOLBOX_SERVICE_MCP_SERVERS?: string;
+}
+```
+
+### Custom Environments
+
+Implement custom environments by extending `AgentEnv`:
+
+```typescript
+// Define a custom environment
+type MyEnv = {
+  OPENAI_API_KEY: string;
+  MY_CUSTOM_BINDING: string;
+} & AgentEnv;
+
+// Use it in your agent
+export class MyAgent extends AiSdkAgent<MyEnv> {
+  // ...
+}
+```
+
+## Tools Management with MCP.json
+
+The framework includes a CLI tool for managing Model Context Protocol (MCP) configurations.
+
+### MCP.json Structure
 
 ```json
 {
   "mcpServers": {
     "todo-list": {
-      "url": "https://example.com/sse"
+      "url": "http://localhost:8788/sse"
     },
     "github": {
-      "command": "some-command",
-      "args": ["arg1", "arg2"],
+      "command": "npx mcp-github",
+      "args": ["--port", "9000"],
       "env": {
-        "API_KEY": "${GITHUB_TOKEN}"
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
       }
     }
   }
 }
 ```
 
-2. Generate the tools registry and update your environment variables:
+### Tools Registry CLI
+
+The `tools-registry-cli` processes `mcp.json` files and updates environment variables:
 
 ```bash
-# By default, this updates .dev.vars in the current directory
-npx tools-registry-cli ./mcp-config.json
+# Install globally
+npm install -g @xava-labs/agent
 
-# To output to a specific file
-npx tools-registry-cli ./mcp-config.json --file .env.tools
+# Process mcp.json in current directory and update .dev.vars
+npx tools-registry-cli
 
-# To output to stdout (for piping to other commands)
-npx tools-registry-cli ./mcp-config.json --stdout
-```
+# Specify custom input file
+npx tools-registry-cli ./my-config.json
 
-3. Add the tools service to your agent:
-
-```typescript
-import { Agent, AgentEnv } from '@xava-labs/agent';
-import { ToolsService } from '@xava-labs/agent/src/services/tools-service';
-
-export class MyAgent extends Agent<EnvWithAgent> {
-  private toolsService: ToolsService;
-
-  constructor(state, env) {
-    super(state, env);
-    
-    // Create and initialize the tools service
-    this.toolsService = new ToolsService(env);
-    this.initializeToolsService();
-  }
-  
-  private async initializeToolsService() {
-    await this.toolsService.initialize();
-    
-    // Access the Hono app for registering routes
-    if ('registerRoutes' in this.toolsService) {
-      const app = (this as any).app;
-      if (app) {
-        this.toolsService.registerRoutes(app);
-      }
-    }
-  }
-  
-  // ...
-}
-```
-
-## CLI Tools
-
-### tools-registry-cli
-
-Converts an MCP configuration file to a base64-encoded string and updates your environment variables.
-
-```bash
-npx tools-registry-cli <configFile> [options]
-```
-
-Options:
-- `--format, -f <format>`: Output format ('json' or 'base64', default: 'base64')
-- `--file, -o <file>`: Output file (default: .dev.vars in current directory)
-- `--stdout`: Output to stdout instead of a file
-
-Examples:
-```bash
-# Update .dev.vars in current directory
-npx tools-registry-cli ./mcp-config.json
-
-# Specify a different output file
-npx tools-registry-cli ./mcp-config.json --file .env.custom
+# Output to custom file
+npx tools-registry-cli --file .env.tools
 
 # Output as JSON instead of base64
-npx tools-registry-cli ./mcp-config.json --format json
+npx tools-registry-cli --format json
 
-# Output to stdout for piping
-npx tools-registry-cli ./mcp-config.json --stdout
+# Output to stdout
+npx tools-registry-cli --stdout
 ```
 
-## API
+## Community and Support
 
-### Agent
-
-Base class for implementing custom AI agents.
-
-### ToolsService
-
-Service for managing tools configurations and endpoints.
-
-### Services Import
-
-You can import the services directly in your project:
-
-```typescript
-// Import the full services module
-import { ToolsService } from '@xava-labs/agent/services';
-
-// Use the service in your application
-const toolsService = new ToolsService(env);
-```
-
-This is made possible through the package exports configuration that specifically exposes the services path.
-
-### Tools Registry
-
-The tools registry is a JSON object that contains the configuration for MCP servers. It is stored in the `TOOLS_SERVICE_DEFAULT_REGISTRY` environment variable.
-
-Example:
-
-```json
-{
-  "mcpServers": {
-    "tool-name": {
-      "command": "command-to-execute",
-      "args": ["arg1", "arg2"],
-      "url": "server-url",
-      "env": {
-        "ENV_VAR": "value"
-      }
-    }
-  }
-}
-``` 
+Join our community on [Discord](https://discord.gg/acwpp6zWEc) to discuss features and contributions for this package in the #agent channel.

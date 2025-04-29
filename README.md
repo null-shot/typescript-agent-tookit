@@ -32,14 +32,16 @@ This project is in pre-alpha and actively evolving. Current focus areas:
 
 - ✅ Core MCP Framework
 - ✅ Multi Session & Authentication Patterns
+- ✅ Official MCP WebSocket Support and HTTP Streaming Support
+- ✅ Agent Framework (AI SDK)
+- ✅ Seamless MCP Plugins (mcp.json) for Agents
+= ✅ Playground UI for LLMs + MCPs
 
 ### In Development
 
-- 🔄 Official MCP WebSocket Support and HTTP Streaming Support
 - ☁️ Cloudflare Service Examples (KV, D1, DO state, Analytics, Workflows, Schema Migrations)
-- 🤖 Agent Framework (AI SDK, LangChain Examples)
+- 🤖 LangChain and Agent SDK examples coming soon
 - 📄 Cloudflare Pages (SSE / Fullstack) Examples
-- 🔌 MCP Plugins
 - 🔑 Authentication (OAuth, JWT)
 
 ## Quick Start
