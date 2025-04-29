@@ -10,10 +10,6 @@
     "lint": "next lint",
     "release": "changeset publish"
   },
-  "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.10",
-    "@radix-ui/react-dropdown-menu": "^2.1.12"
-  },
   "devDependencies": {
     "@changesets/cli": "^2.29.2"
   }
