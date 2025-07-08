@@ -1,0 +1,17 @@
+{
+  "name": "mcp-worker",
+  "compatibility_date": "2025-07-08",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "durable_objects": {
+    "bindings": []
+  },
+  "services": [
+    {
+      "name": "MCP_GITHUB",
+      "service": "github"
+    }
+  ],
+  "vars": {}
+}

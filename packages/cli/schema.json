@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MCP Server Configuration",
+  "description": "Configuration schema for MCP servers with Cloudflare Workers integration",
+  "type": "object",
+  "properties": {
+    "servers": {
+      "type": "object",
+      "description": "Map of server names to their configurations",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "object",
+          "description": "MCP server configuration",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "URL to the project to install (NPM standard format, e.g., github:xyz/abc#branch)",
+              "pattern": "^(github:|git\\+https?:|https?:|file:|[a-zA-Z0-9@][a-zA-Z0-9._/-]*)"
+            },
+            "command": {
+              "type": "string",
+              "description": "Command to use for startup",
+              "minLength": 1
+            },
+            "env": {
+              "type": "array",
+              "description": "Optional environment variables to provide",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Environment variable name",
+                    "pattern": "^[A-Z_][A-Z0-9_]*$"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Environment variable value. If omitted, read from process.env"
+                  }
+                },
+                "required": ["name"],
+                "additionalProperties": false
+              }
+            },
+            "auth": {
+              "type": "object",
+              "description": "Authentication configuration",
+              "properties": {
+                "headers": {
+                  "type": "object",
+                  "description": "HTTP headers for authentication",
+                  "patternProperties": {
+                    "^[a-zA-Z][a-zA-Z0-9-_]*$": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "required": ["source", "command"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["servers"],
+  "additionalProperties": false
+}
