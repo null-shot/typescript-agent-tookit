@@ -6,8 +6,9 @@ import { ModelSelectorDropdown } from "./model-selector-dropdown";
 import { ChatInput } from "./chat-input";
 import { DateDivider } from "./date-divider";
 import { ChatSettingsModal } from "./chat-settings-modal";
+import { NewChatConfirmationModal } from "./new-chat-confirmation-modal";
 import { useChat, type Message as UIMessage } from "@ai-sdk/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   saveAIModelConfig, 
   loadAIModelConfig, 
@@ -109,6 +110,7 @@ export function EnhancedChatContainer({
   enabledMCPServerCount = 0
 }: EnhancedChatContainerProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
@@ -133,6 +135,7 @@ export function EnhancedChatContainer({
   const [validationResult, setValidationResult] = useState<ProxyIdValidationResult | null>(null);
   const [showDockerModal, setShowDockerModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
   
   // Ref for auto-scrolling messages container
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -221,6 +224,33 @@ export function EnhancedChatContainer({
     };
     setModelConfig(modelConfig);
     onModelConfigChange?.(modelConfig);
+  };
+
+  const handleNewChatClick = () => {
+    // Check if there are existing messages
+    const hasMessages = aiMessages.length > 0;
+    
+    if (hasMessages) {
+      // Show confirmation modal
+      setShowNewChatModal(true);
+    } else {
+      // No messages, directly create new chat
+      handleCreateNewChat();
+    }
+  };
+
+  const handleCreateNewChat = () => {
+    if (enableSessionManagement) {
+      // Navigate to new chat page
+      router.push('/chat/new');
+    } else {
+      // For non-session management, just refresh the current chat
+      window.location.reload();
+    }
+  };
+
+  const handleNewChatModalClose = () => {
+    setShowNewChatModal(false);
   };
 
   // Chat hook - only initialize if we have a valid model config
@@ -593,7 +623,11 @@ export function EnhancedChatContainer({
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 cursor-pointer">
+              <div 
+                className="w-6 h-6 cursor-pointer hover:bg-white/10 rounded p-1 transition-colors"
+                onClick={handleNewChatClick}
+                title="Start new chat"
+              >
                 <MessageSquare 
                   size={24} 
                   stroke="white" 
@@ -603,6 +637,7 @@ export function EnhancedChatContainer({
               <div 
                 className="w-6 h-6 cursor-pointer hover:bg-white/10 rounded p-1 transition-colors"
                 onClick={() => setShowSettingsModal(true)}
+                title="Settings"
               >
                 <Settings2 
                   size={24} 
@@ -698,6 +733,13 @@ export function EnhancedChatContainer({
         isOpen={showSettingsModal}
         onClose={handleSettingsModalClose}
         onConfigUpdate={handleSettingsConfigUpdate}
+      />
+      
+      {/* New Chat Confirmation Modal */}
+      <NewChatConfirmationModal
+        isOpen={showNewChatModal}
+        onClose={handleNewChatModalClose}
+        onConfirm={handleCreateNewChat}
       />
     </div>
   );

@@ -153,6 +153,26 @@ interface PlaygroundConfig {
 }
 ```
 
+### Environment Variables
+
+The playground supports the following environment variables:
+
+```bash
+# MCP Registry Configuration
+NEXT_PUBLIC_MCP_REGISTRY_URL=https://mcp-registry.nullshot.ai/latest.json  # Default registry URL
+NEXT_PUBLIC_MCP_PROXY_URL=http://localhost:6050                             # MCP proxy HTTP URL
+NEXT_PUBLIC_MCP_PROXY_WS_URL=ws://localhost:6050/client/ws                  # MCP proxy WebSocket URL
+
+# API Keys (for model providers)
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+```
+
+The `NEXT_PUBLIC_MCP_REGISTRY_URL` environment variable allows you to override the default MCP registry URL. This is useful for:
+- Using a custom/private MCP registry
+- Testing with a local registry during development
+- Using alternative registry endpoints
+
 ### Playground Component Props
 
 ```typescript

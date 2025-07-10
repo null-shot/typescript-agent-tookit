@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { MCPServer, MCPServerConfigData } from "@/types/mcp-server";
 import { MCPServerItem } from "./mcp-server-item";
 import { MCPConfigurationDrawer } from "./mcp-configuration-drawer";
+import { RegistryLoadingScreen } from "./registry-loading-screen";
 import { 
   saveMCPDirectory, 
   loadMCPDirectory,
@@ -19,7 +20,7 @@ import {
   initializeSearch, 
   MCPServerSearch 
 } from "@/lib/search";
-import { mockMCPDirectory } from "@/data/mock-mcp-servers";
+import { fetchMCPRegistry, isRegistryCached } from "@/lib/mcp-registry";
 import { useMcpServerManager } from "@/hooks/use-mcp-server-manager";
 
 export interface MCPServerDirectoryProps {
@@ -38,6 +39,10 @@ export function MCPServerDirectory({
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [searchInstance, setSearchInstance] = useState<MCPServerSearch | null>(null);
+  const [registryError, setRegistryError] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState('Initializing...');
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [contentReady, setContentReady] = useState(false);
   
   // Configuration drawer state
   const [configDrawerOpen, setConfigDrawerOpen] = useState(false);
@@ -68,31 +73,83 @@ export function MCPServerDirectory({
   useEffect(() => {
     const initializeData = async () => {
       setIsLoading(true);
+      setRegistryError(null);
       
-      // Try to load from localStorage first
-      let directory = loadMCPDirectory();
-      
-      // If no cached data, use mock data
-      if (!directory) {
-        directory = mockMCPDirectory;
-        saveMCPDirectory(directory);
+      try {
+        setLoadingStatus('Checking cache...');
+        
+        // Check if data is already cached
+        if (isRegistryCached()) {
+          setLoadingStatus('Loading cached data...');
+        } else {
+          setLoadingStatus('Fetching registry data...');
+        }
+        
+        // Fetch registry data (will use cache if available)
+        const directory = await fetchMCPRegistry();
+        
+        setLoadingStatus('Initializing search...');
+        setServers(directory.servers);
+        
+        // Initialize search
+        const search = initializeSearch(directory.servers);
+        setSearchInstance(search);
+        
+        setLoadingStatus('Complete!');
+        setIsLoading(false);
+        
+        // Mark content as ready after a short delay to ensure DOM is rendered
+        setTimeout(() => {
+          setContentReady(true);
+        }, 100);
+        
+      } catch (error) {
+        console.error('Failed to initialize MCP registry:', error);
+        setRegistryError(error instanceof Error ? error.message : 'Unknown error occurred');
+        setIsLoading(false);
       }
-      
-      // For now, always use fresh mock data to ensure we have the latest inputs
-      directory = mockMCPDirectory;
-      saveMCPDirectory(directory);
-      
-      setServers(directory.servers);
-      
-      // Initialize search
-      const search = initializeSearch(directory.servers);
-      setSearchInstance(search);
-      
-      setIsLoading(false);
     };
     
     initializeData();
   }, []);
+
+  // Retry function for when registry loading fails
+  const handleRetry = () => {
+    setRegistryError(null);
+    setIsLoading(true);
+    
+    // Trigger the effect again by calling initializeData
+    const initializeData = async () => {
+      setIsLoading(true);
+      setRegistryError(null);
+      
+      try {
+        setLoadingStatus('Retrying...');
+        const directory = await fetchMCPRegistry();
+        
+        setLoadingStatus('Initializing search...');
+        setServers(directory.servers);
+        
+        const search = initializeSearch(directory.servers);
+        setSearchInstance(search);
+        
+        setLoadingStatus('Complete!');
+        setIsLoading(false);
+        
+        // Mark content as ready after a short delay to ensure DOM is rendered
+        setTimeout(() => {
+          setContentReady(true);
+        }, 100);
+        
+      } catch (error) {
+        console.error('Failed to initialize MCP registry:', error);
+        setRegistryError(error instanceof Error ? error.message : 'Unknown error occurred');
+        setIsLoading(false);
+      }
+    };
+    
+    initializeData();
+  };
 
   // Get filtered and searched servers
   const filteredServers = useMemo(() => {
@@ -326,28 +383,24 @@ export function MCPServerDirectory({
     setSelectedCategory("");
   };
 
-  if (isLoading) {
-    return (
-      <div className={cn("p-6 space-y-6 max-w-7xl mx-auto w-full", className)}>
-        <div className="animate-pulse space-y-6">
-          <div className="space-y-3">
-            <div className="h-8 bg-[#17181A] rounded-lg" />
-            <div className="h-4 bg-[#17181A] rounded-lg w-3/4" />
-          </div>
-          <div className="h-10 bg-[#17181A] rounded-lg" />
-          <div className="h-8 bg-[#17181A] rounded-lg" />
-          <div className="space-y-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-[#17181A] rounded-lg" />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Hide loading screen after content is ready and fade completes
+  useEffect(() => {
+    if (!isLoading && !registryError && contentReady) {
+      // Content is ready, now start the fade animation
+      const timer = setTimeout(() => {
+        setShowLoadingScreen(false);
+      }, 2200); // 1600ms min animation + 500ms fade + 100ms buffer
+      
+      return () => clearTimeout(timer);
+    } else if (isLoading || registryError) {
+      // Show loading screen when loading starts or error occurs
+      setShowLoadingScreen(true);
+      setContentReady(false);
+    }
+  }, [isLoading, registryError, contentReady]);
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn("flex flex-col h-full relative", className)}>
       {/* Header */}
       <div className="p-6 max-w-7xl mx-auto w-full">
         
@@ -436,7 +489,7 @@ export function MCPServerDirectory({
             <p className="text-sm">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),400px))] gap-4 justify-center">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),400px))] gap-4 justify-start">
             {filteredServers.map((server) => {
               const serverState = getServerState(server);
               return (
@@ -468,6 +521,18 @@ export function MCPServerDirectory({
         onSave={handleConfigurationSave}
         isLoading={selectedServer ? isServerLoading(selectedServer.id) : false}
       />
+
+      {/* Loading Screen Overlay */}
+      {showLoadingScreen && (
+        <div className="absolute inset-0 z-50">
+          <RegistryLoadingScreen
+            isLoading={isLoading}
+            status={loadingStatus}
+            error={registryError || undefined}
+            onRetry={registryError ? handleRetry : undefined}
+          />
+        </div>
+      )}
     </div>
   );
 } 
