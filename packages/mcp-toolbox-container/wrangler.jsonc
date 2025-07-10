@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mcp-toolbox-container",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "containers": [
+    {
+      "class_name": "McpToolboxContainer",
+      "image": "../../mcp-toolbox.Dockerfile",
+      "max_instances": 10,
+      "name": "mcp-toolbox-container",
+      "environment": {
+        "PORT": "11990",
+        "NODE_ENV": "production"
+      }
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "McpToolboxContainer",
+        "name": "MCP_TOOLBOX"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "new_sqlite_classes": ["McpToolboxContainer"],
+      "tag": "v1"
+    }
+  ]
+}

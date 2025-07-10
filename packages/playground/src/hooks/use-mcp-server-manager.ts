@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { getOrCreateProxyId, buildProxyUrl } from '@/lib/storage';
+import { buildProxyUrl } from '@/lib/storage';
 
 export interface McpServer {
   uniqueName: string;

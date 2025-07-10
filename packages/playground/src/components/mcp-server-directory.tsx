@@ -7,14 +7,10 @@ import { MCPServerItem } from "./mcp-server-item";
 import { MCPConfigurationDrawer } from "./mcp-configuration-drawer";
 import { RegistryLoadingScreen } from "./registry-loading-screen";
 import { 
-  saveMCPDirectory, 
-  loadMCPDirectory,
   updateMCPConfigStatus,
   loadMCPConfig,
   getMCPServerState,
-  isServerEnabled as getIsServerEnabled,
-  isServerInstalled,
-  canServerBeEnabled
+  isServerEnabled as getIsServerEnabled
 } from "@/lib/storage";
 import { 
   initializeSearch, 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ChatConfiguration } from "./chat-configuration";
 import { ChatMessage } from "./chat-message";
@@ -592,9 +593,11 @@ export function ChatContainer({
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
-                <img 
+                <Image 
                   src="/images/badge_light_bg.png" 
                   alt="Playground Chat"
+                  width={32}
+                  height={32}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -649,7 +652,7 @@ export function ChatContainer({
           }}
         >
           <div className="space-y-8">
-            {(enableSessionManagement ? messagesWithDates : messagesWithThinking).map((item, index) => {
+            {(enableSessionManagement ? messagesWithDates : messagesWithThinking).map((item) => {
               // Handle date dividers (only for session management)
               if (enableSessionManagement && 'type' in item && item.type === 'date-divider') {
                 return (

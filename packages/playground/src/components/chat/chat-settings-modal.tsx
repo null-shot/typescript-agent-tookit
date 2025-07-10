@@ -6,12 +6,10 @@ import { X, Info, ChevronDown, Settings, RefreshCw, Database, Clock, Hash } from
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   loadAIModelConfig, 
-  saveAIModelConfig, 
-  getCurrentProvider,
-  loadProviderConfig,
+  saveAIModelConfig,
   AIModelConfig 
 } from "@/lib/storage";
-import { getModels, refreshModelsCache, clearModelCache, type AIModel } from "@/lib/model-service";
+import { getModels, refreshModelsCache, type AIModel } from "@/lib/model-service";
 import { fetchMCPRegistry, clearRegistryCache, isRegistryCached } from "@/lib/mcp-registry";
 
 interface ChatSettingsModalProps {

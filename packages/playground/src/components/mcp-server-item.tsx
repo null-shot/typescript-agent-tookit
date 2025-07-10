@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { MCPServer } from "@/types/mcp-server";
 import { loadMCPConfig } from "@/lib/storage";
-import { MoreVertical, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -42,7 +42,6 @@ export function MCPServerItem({
   // Check if server requires configuration and is configured
   const requiresConfiguration = server.inputs && server.inputs.length > 0;
   const configuration = requiresConfiguration ? loadMCPConfig(server.id) : null;
-  const isConfigured = configuration?.isConfigured || false;
   
   // Track local loading state for toggle operations
   const [isToggleLoading, setIsToggleLoading] = React.useState(false);
@@ -76,9 +75,7 @@ export function MCPServerItem({
     onInstall?.(server);
   };
 
-  const handleConfigure = () => {
-    onConfigure?.(server);
-  };
+
 
   // Map tags to badge variants - using parsedTags from the new format
   const getTagVariant = (tag: string): "raspberry" | "brown" | "violet" | "productivity" | "devtools" | "data" => {

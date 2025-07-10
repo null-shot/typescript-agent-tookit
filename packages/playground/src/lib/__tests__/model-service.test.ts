@@ -30,10 +30,10 @@ describe('Model Service', () => {
         ]
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
-      });
+      } as Response);
 
       const models = await getModels('openai', 'test-api-key');
       
@@ -58,10 +58,10 @@ describe('Model Service', () => {
         ]
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
-      });
+      } as Response);
 
       const models = await getModels('anthropic', 'test-api-key');
       
@@ -83,12 +83,12 @@ describe('Model Service', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
         json: async () => ({ error: 'Invalid API key' }),
-      });
+      } as Response);
 
       await expect(getModels('openai', 'invalid-key')).rejects.toThrow('Invalid API key');
     });

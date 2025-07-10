@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { loadAIModelConfig } from "@/lib/storage";
 import { getModels, type AIModel } from "@/lib/model-service";
@@ -98,9 +99,11 @@ export function ChatConfiguration({ onContinue, className }: ChatConfigurationPr
       <div className="flex justify-between items-center gap-6 border-b border-[rgba(255,255,255,0.12)] p-6">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
-            <img 
+            <Image 
               src="/images/badge_light_bg.png" 
               alt="Playground Chat"
+              width={32}
+              height={32}
               className="w-full h-full object-cover"
             />
           </div>

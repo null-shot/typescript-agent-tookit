@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Package } from "lucide-react";
 import { Button } from "./ui/button";
 import { LocalToolboxStatusBadge, LocalToolboxStatus } from "./ui/local-toolbox-status";
@@ -42,9 +43,11 @@ export function PlaygroundHeader({
           height: '342.59px'
         }}
       >
-        <img
+        <Image
           src="/images/ellipse.svg"
           alt=""
+          width={308}
+          height={343}
           className="w-full h-full"
           style={{ 
             width: '308.34px', 
@@ -57,9 +60,11 @@ export function PlaygroundHeader({
       <div className="flex items-center gap-6 z-10">
         {/* Gears icon */}
         <div className="w-20 h-20 flex items-center justify-center flex-shrink-0">
-          <img
+          <Image
             src="/images/gears.png"
             alt="Gears Icon"
+            width={80}
+            height={80}
             className="w-full h-full object-contain"
           />
         </div>

@@ -451,7 +451,7 @@ export function useConfigurableMcpServerManager(): UseMcpServerManagerReturn {
   // Check if a specific server is loading
   const isServerLoading = useCallback((uniqueName: string): boolean => {
     return state.loadingServers.has(uniqueName);
-  }, [state.loadingServers]);
+  }, [state.loadingServers, updateState]);
 
   // Auto-connect on mount and cleanup on unmount
   useEffect(() => {

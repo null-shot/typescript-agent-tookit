@@ -1,0 +1,22 @@
+{
+  "name": "@xava-labs/mcp-toolbox-container",
+  "description": "Cloudflare Container wrapper for MCP Toolbox WebSocket server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "codegen": "wrangler types",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.4",
+    "typescript": "5.8.3",
+    "wrangler": "4.24.0"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.19",
+    "hono": "4.8.2"
+  }
+}

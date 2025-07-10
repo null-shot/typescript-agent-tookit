@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { 
   loadAIModelConfig, 
@@ -46,7 +46,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Validate API key and fetch models
-  const validateAndFetchModels = async (provider: 'openai' | 'anthropic', apiKey: string) => {
+  const validateAndFetchModels = useCallback(async (provider: 'openai' | 'anthropic', apiKey: string) => {
     if (!apiKey.trim()) {
       setAvailableModels([]);
       setValidationError(null);
@@ -116,7 +116,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
     } finally {
       setIsValidating(false);
     }
-  };
+  }, [config, onModelChange]);
 
   // Debounced validation effect
   useEffect(() => {
@@ -125,7 +125,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [config.provider, config.apiKey]);
+  }, [config.provider, config.apiKey, validateAndFetchModels]);
 
   // Save config and notify parent
   useEffect(() => {
@@ -143,7 +143,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
     // Only pass config if we have at least an API key (even if validation failed)
     const configToSave = config.apiKey.trim().length > 0 ? configWithValidation : null;
     onModelChange?.(configToSave);
-  }, [config, availableModels, validationError]); // Added validationError to dependencies
+  }, [config, availableModels, validationError, onModelChange]); // Added validationError to dependencies
 
   const handleProviderChange = (provider: 'openai' | 'anthropic') => {
     // Load the saved config for this provider, or use empty values if none exists

@@ -28,7 +28,7 @@ export default function PlaygroundPage() {
   const [dockerToolboxOnline, setDockerToolboxOnline] = useState(false);
 
   // Use the existing WebSocket connection for MCP Proxy status
-  const { connected: mcpProxyConnected, error: mcpError, connect: connectMcp } = useMcpServerManager();
+  const { connected: mcpProxyConnected, connect: connectMcp } = useMcpServerManager();
 
   // Load installation state from localStorage on mount
   useEffect(() => {
@@ -75,8 +75,7 @@ export default function PlaygroundPage() {
   const determineToolboxStatus = useCallback((
     isInstalled: boolean, 
     dockerOnline: boolean, 
-    mcpConnected: boolean, 
-    mcpError: string | null
+    mcpConnected: boolean
   ): LocalToolboxStatus => {
     if (!isInstalled) {
       return 'disconnected';
@@ -99,8 +98,7 @@ export default function PlaygroundPage() {
     const newStatus = determineToolboxStatus(
       isToolboxInstalled, 
       dockerToolboxOnline, 
-      mcpProxyConnected, 
-      mcpError
+      mcpProxyConnected
     );
     setToolboxStatus(newStatus);
     
@@ -108,10 +106,9 @@ export default function PlaygroundPage() {
       isInstalled: isToolboxInstalled,
       dockerOnline: dockerToolboxOnline,
       mcpConnected: mcpProxyConnected,
-      mcpError,
       finalStatus: newStatus
     });
-  }, [isToolboxInstalled, dockerToolboxOnline, mcpProxyConnected, mcpError, determineToolboxStatus]);
+  }, [isToolboxInstalled, dockerToolboxOnline, mcpProxyConnected, determineToolboxStatus]);
 
   // Auto-connect to MCP Proxy WebSocket when component mounts
   useEffect(() => {

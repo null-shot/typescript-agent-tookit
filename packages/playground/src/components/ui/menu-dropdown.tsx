@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { 
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +39,7 @@ export const SVGIcon = ({
   className?: string 
 }) => {
   return (
-    <img
+    <Image
       src={src}
       alt={alt}
       width={width ?? 16}

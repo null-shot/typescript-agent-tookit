@@ -1,6 +1,5 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 
 export interface ChatMessageProps {
   content: string;
@@ -32,7 +31,6 @@ export function ChatMessage({
   variant,
   className,
   isThinking = false,
-  isStreaming = false,
   isCompleting = false,
   avatar = "/images/default-avatar.png",
   showTaskList = false,
@@ -40,11 +38,6 @@ export function ChatMessage({
   error,
 }: ChatMessageProps) {
   
-  // Format timestamp
-  const formattedTime = typeof timestamp === 'string' 
-    ? timestamp 
-    : timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
   // User message component with dynamic width
   const UserMessage = () => (
     <div 

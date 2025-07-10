@@ -1,5 +1,5 @@
-import sqlite3 from 'sqlite3'
-import { mkdirSync } from 'fs'
+import initSqlJs, { Database } from 'sql.js'
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { dirname } from 'path'
 
 export interface Package {
@@ -19,147 +19,157 @@ export interface PackageRepository {
   count(): Promise<number>
 }
 
-class SqlitePackageRepository implements PackageRepository {
-  private db: sqlite3.Database
+class SqlJsPackageRepository implements PackageRepository {
+  private db!: Database
+  private dbPath: string
+  private initialized = false
 
   constructor(dbPath: string) {
+    this.dbPath = dbPath
     // Ensure directory exists
     mkdirSync(dirname(dbPath), { recursive: true })
-    
-    this.db = new sqlite3.Database(dbPath)
-    this.initializeDatabase()
   }
 
-  private async initializeDatabase() {
-    return new Promise<void>((resolve, reject) => {
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS packages (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          uniqueName TEXT UNIQUE NOT NULL,
-          command TEXT NOT NULL,
-          args TEXT NOT NULL,
-          env TEXT NOT NULL,
-          installedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `, (err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
+  private async ensureInitialized() {
+    if (this.initialized) return
+    
+    const SQL = await initSqlJs()
+    
+    // Load existing database or create new one
+    if (existsSync(this.dbPath)) {
+      const filebuffer = readFileSync(this.dbPath)
+      this.db = new SQL.Database(filebuffer)
+    } else {
+      this.db = new SQL.Database()
+    }
+    
+    // Create table if it doesn't exist
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS packages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uniqueName TEXT UNIQUE NOT NULL,
+        command TEXT NOT NULL,
+        args TEXT NOT NULL,
+        env TEXT NOT NULL,
+        installedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    
+    this.saveDatabase()
+    this.initialized = true
+  }
+
+  private saveDatabase() {
+    const data = this.db.export()
+    writeFileSync(this.dbPath, data)
   }
 
   async create(data: Omit<Package, 'id' | 'installedAt'>): Promise<Package> {
-    const db = this.db // Capture reference
+    await this.ensureInitialized()
     
-    return new Promise((resolve, reject) => {
-      const stmt = db.prepare(`
-        INSERT INTO packages (uniqueName, command, args, env)
-        VALUES (?, ?, ?, ?)
-      `)
-      
-      stmt.run([
-        data.uniqueName,
-        data.command,
-        JSON.stringify(data.args),
-        JSON.stringify(data.env)
-      ], function(err: any) {
-        if (err) {
-          reject(err)
-        } else {
-          // Use captured db reference
-          const selectStmt = db.prepare('SELECT * FROM packages WHERE id = ?')
-          selectStmt.get([this.lastID], (err, row: any) => {
-            if (err) {
-              reject(err)
-            } else {
-              resolve({
-                id: row.id,
-                uniqueName: row.uniqueName,
-                command: row.command,
-                args: JSON.parse(row.args),
-                env: JSON.parse(row.env),
-                installedAt: row.installedAt
-              })
-            }
-          })
-        }
-      })
-    })
+    const stmt = this.db.prepare(`
+      INSERT INTO packages (uniqueName, command, args, env)
+      VALUES (?, ?, ?, ?)
+    `)
+    
+    stmt.run([
+      data.uniqueName,
+      data.command,
+      JSON.stringify(data.args),
+      JSON.stringify(data.env)
+    ])
+    
+    const selectStmt = this.db.prepare('SELECT * FROM packages WHERE id = last_insert_rowid()')
+    const result = selectStmt.getAsObject()
+    
+    if (!result || result.length === 0) {
+      throw new Error('Failed to create package')
+    }
+    
+    const row = result[0] as any
+    
+    this.saveDatabase()
+    
+    return {
+      id: row.id as number,
+      uniqueName: row.uniqueName as string,
+      command: row.command as string,
+      args: JSON.parse(row.args as string),
+      env: JSON.parse(row.env as string),
+      installedAt: row.installedAt as string
+    }
   }
 
   async findByUniqueName(uniqueName: string): Promise<Package | null> {
-    return new Promise((resolve, reject) => {
-      this.db.get(
-        'SELECT * FROM packages WHERE uniqueName = ?',
-        [uniqueName],
-        (err, row: any) => {
-          if (err) {
-            reject(err)
-          } else if (!row) {
-            resolve(null)
-          } else {
-            resolve({
-              id: row.id,
-              uniqueName: row.uniqueName,
-              command: row.command,
-              args: JSON.parse(row.args),
-              env: JSON.parse(row.env),
-              installedAt: row.installedAt
-            })
-          }
-        }
-      )
-    })
+    await this.ensureInitialized()
+    
+    const stmt = this.db.prepare('SELECT * FROM packages WHERE uniqueName = ?')
+    const result = stmt.getAsObject([uniqueName])
+    
+    if (!result || result.length === 0) {
+      return null
+    }
+    
+    const row = result[0] as any
+    
+    return {
+      id: row.id as number,
+      uniqueName: row.uniqueName as string,
+      command: row.command as string,
+      args: JSON.parse(row.args as string),
+      env: JSON.parse(row.env as string),
+      installedAt: row.installedAt as string
+    }
   }
 
   async findAll(): Promise<Package[]> {
-    return new Promise((resolve, reject) => {
-      this.db.all('SELECT * FROM packages ORDER BY installedAt DESC', (err, rows: any[]) => {
-        if (err) {
-          reject(err)
-        } else {
-          resolve(rows.map(row => ({
-            id: row.id,
-            uniqueName: row.uniqueName,
-            command: row.command,
-            args: JSON.parse(row.args),
-            env: JSON.parse(row.env),
-            installedAt: row.installedAt
-          })))
-        }
-      })
-    })
+    await this.ensureInitialized()
+    
+    const stmt = this.db.prepare('SELECT * FROM packages ORDER BY installedAt DESC')
+    const result = stmt.getAsObject()
+    
+    if (!result || !Array.isArray(result)) {
+      return []
+    }
+    
+    return result.map((row: any) => ({
+      id: row.id,
+      uniqueName: row.uniqueName,
+      command: row.command,
+      args: JSON.parse(row.args),
+      env: JSON.parse(row.env),
+      installedAt: row.installedAt
+    }))
   }
 
   async deleteByUniqueName(uniqueName: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'DELETE FROM packages WHERE uniqueName = ?',
-        [uniqueName],
-        function(err) {
-          if (err) {
-            reject(err)
-          } else {
-            resolve(this.changes > 0)
-          }
-        }
-      )
-    })
+    await this.ensureInitialized()
+    
+    const stmt = this.db.prepare('DELETE FROM packages WHERE uniqueName = ?')
+    stmt.run([uniqueName])
+    
+    this.saveDatabase()
+    return this.db.getRowsModified() > 0
   }
 
   async count(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      this.db.get('SELECT COUNT(*) as count FROM packages', (err, row: any) => {
-        if (err) reject(err)
-        else resolve(row.count)
-      })
-    })
+    await this.ensureInitialized()
+    
+    const stmt = this.db.prepare('SELECT COUNT(*) as count FROM packages')
+    const result = stmt.getAsObject()
+    
+    if (!result || result.length === 0) {
+      return 0
+    }
+    
+    const row = result[0] as any
+    return row.count as number
   }
 }
 
 export function createPackageRepository(type: 'sqlite', dbPath?: string): PackageRepository {
   if (type === 'sqlite') {
-    return new SqlitePackageRepository(dbPath || './data/packages.db')
+    return new SqlJsPackageRepository(dbPath || './data/packages.db')
   }
   throw new Error(`Unsupported repository type: ${type}`)
 }

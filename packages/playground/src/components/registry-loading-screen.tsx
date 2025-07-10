@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 interface RegistryLoadingScreenProps {
@@ -156,9 +157,11 @@ export function RegistryLoadingScreen({
             {/* Hourglass-style Loading Animation */}
             <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
               {/* Agent avatar with hourglass rotation */}
-              <img 
+              <Image 
                 src="/images/badge_light_bg.png" 
                 alt="Loading"
+                width={96}
+                height={96}
                 className="w-24 h-24 rounded-lg"
                 style={{
                   animation: "hourglassRotation 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1)",

@@ -26,8 +26,7 @@ export function ChatInput({
   onModelChange,
   availableModels = [],
   className,
-  error,
-  onClearError
+  error
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [showModelDropdown, setShowModelDropdown] = useState(false);

@@ -7,7 +7,7 @@ import { dirname } from 'path'
 import { z } from 'zod'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { WebSocketTransport } from '@xava-labs/mcp/dist/mcp/src/mcp/websocket-transport.js'
+import { WebSocketTransport } from '../../mcp/dist/mcp/src/mcp/websocket-transport.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import {
   CallToolRequestSchema,
