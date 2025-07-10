@@ -15,20 +15,26 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'yarn'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: yarn build
+        run: pnpm build
 
       - name: Test
-        run: yarn test
+        run: pnpm test
 
       - name: Find changed packages
         id: changed_packages
@@ -69,7 +75,7 @@ jobs:
           done
           
           if [ "$NEEDS_CHANGESET" = "true" ]; then
-            echo "::warning::Some packages have source changes but no changesets were found. Consider adding a changeset using 'yarn changeset'."
+            echo "::warning::Some packages have source changes but no changesets were found. Consider adding a changeset using 'pnpm changeset'."
           fi
       
       - name: Dry run changesets version
