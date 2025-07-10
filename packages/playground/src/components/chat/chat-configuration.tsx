@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 import { loadAIModelConfig } from "@/lib/storage";
+import { getModels, type AIModel } from "@/lib/model-service";
 import { MessageSquare, Settings2 } from "lucide-react";
 
 interface ModelResponse {
@@ -24,7 +25,7 @@ export function ChatConfiguration({ onContinue, className }: ChatConfigurationPr
   const [selectedVersion, setSelectedVersion] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [availableModels, setAvailableModels] = useState<Array<{id: string, name: string}>>([]);
+  const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
 
   // Load existing configuration on mount
@@ -49,31 +50,8 @@ export function ChatConfiguration({ onContinue, className }: ChatConfigurationPr
     setError(null);
 
     try {
-      const endpoint = provider.toLowerCase() === 'openai' 
-        ? '/api/models/openai' 
-        : '/api/models/anthropic';
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (provider.toLowerCase() === 'openai') {
-        headers['Authorization'] = `Bearer ${key}`;
-      } else {
-        headers['x-api-key'] = key;
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch models: ${response.statusText}`);
-      }
-
-      const data = await response.json() as ModelResponse;
-      setAvailableModels(data.data || []);
+      const models = await getModels(provider.toLowerCase() as 'openai' | 'anthropic', key);
+      setAvailableModels(models);
       
       // Reset selected version when models change
       setSelectedVersion("");

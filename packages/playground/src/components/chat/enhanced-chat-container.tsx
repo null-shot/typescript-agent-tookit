@@ -5,6 +5,7 @@ import { ChatMessage } from "./chat-message";
 import { ModelSelectorDropdown } from "./model-selector-dropdown";
 import { ChatInput } from "./chat-input";
 import { DateDivider } from "./date-divider";
+import { ChatSettingsModal } from "./chat-settings-modal";
 import { useChat, type Message as UIMessage } from "@ai-sdk/react";
 import { usePathname } from "next/navigation";
 import { 
@@ -18,6 +19,7 @@ import {
   ProxyIdValidationResult,
   generateDockerCommand
 } from "@/lib/storage";
+import { getAllAvailableModels, type AIModel } from "@/lib/model-service";
 import { MessageSquare, Settings2 } from "lucide-react";
 import { DockerInstallModal } from "@/components/docker-install-modal";
 
@@ -112,10 +114,11 @@ export function EnhancedChatContainer({
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<ModelOption>({
-    id: "claude-4-opus",
-    name: "Claude - 4 - Opus",
+    id: "claude-3-5-sonnet-20241022",
+    name: "Claude 3.5 Sonnet",
     provider: "Anthropic"
   });
+  const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
 
   // Session management (only if enabled)
   const urlSessionId = enableSessionManagement ? (propSessionId || getSessionIdFromPath(pathname || "")) : null;
@@ -129,6 +132,7 @@ export function EnhancedChatContainer({
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ProxyIdValidationResult | null>(null);
   const [showDockerModal, setShowDockerModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   
   // Ref for auto-scrolling messages container
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -199,6 +203,24 @@ export function EnhancedChatContainer({
     setShowDockerModal(false);
     // Trigger immediate health check
     validateProxyId().then(setValidationResult);
+  };
+
+  const handleSettingsModalClose = () => {
+    setShowSettingsModal(false);
+  };
+
+  const handleSettingsConfigUpdate = (config: AIModelConfig) => {
+    // Update the model config when settings are changed
+    const modelConfig: ModelConfig = {
+      provider: config.provider,
+      apiKey: config.apiKey,
+      model: config.model,
+      temperature: config.temperature || 0.7,
+      maxTokens: config.maxTokens || 2000,
+      systemPrompt: config.systemPrompt
+    };
+    setModelConfig(modelConfig);
+    onModelConfigChange?.(modelConfig);
   };
 
   // Chat hook - only initialize if we have a valid model config
@@ -333,6 +355,30 @@ export function EnhancedChatContainer({
       onModelConfigChange?.(modelConfig);
     }
   }, [onModelConfigChange]);
+
+  // Load available models when app starts
+  useEffect(() => {
+    const loadAvailableModels = async () => {
+      try {
+        const models = await getAllAvailableModels();
+        setAvailableModels(models);
+        
+        // If we have models and no selected model, pick the first one
+        if (models.length > 0 && !selectedModel.id) {
+          const firstModel = models[0];
+          setSelectedModel({
+            id: firstModel.id,
+            name: firstModel.name,
+            provider: firstModel.provider
+          });
+        }
+      } catch (error) {
+        console.error('Error loading available models:', error);
+      }
+    };
+
+    loadAvailableModels();
+  }, [selectedModel.id]);
 
   // Session management effects (only if enabled)
   useEffect(() => {
@@ -554,7 +600,10 @@ export function EnhancedChatContainer({
                   strokeWidth={1.2}
                 />
               </div>
-              <div className="w-6 h-6 cursor-pointer">
+              <div 
+                className="w-6 h-6 cursor-pointer hover:bg-white/10 rounded p-1 transition-colors"
+                onClick={() => setShowSettingsModal(true)}
+              >
                 <Settings2 
                   size={24} 
                   stroke="white" 
@@ -625,11 +674,11 @@ export function EnhancedChatContainer({
             disabled={status === 'submitted' || status === 'streaming'}
             selectedModel={selectedModel}
             onModelChange={handleModelSelect}
-            availableModels={[
-              { id: "claude-4-opus", name: "Claude - 4 - Opus", provider: "Anthropic" },
-              { id: "gpt-4", name: "GPT-4", provider: "OpenAI" },
-              { id: "claude-3.5-sonnet", name: "Claude - 3.5 - Sonnet", provider: "Anthropic" }
-            ]}
+            availableModels={availableModels.map(model => ({
+              id: model.id,
+              name: model.name,
+              provider: model.provider
+            }))}
             error={currentError || error?.message}
           />
         </div>
@@ -642,6 +691,13 @@ export function EnhancedChatContainer({
         onInstallationComplete={handleInstallationComplete}
         proxyId={validationResult?.frontendProxyId}
         reason={validationResult?.serverProxyId ? 'mismatch' : 'initial'}
+      />
+      
+      {/* Settings Modal */}
+      <ChatSettingsModal
+        isOpen={showSettingsModal}
+        onClose={handleSettingsModalClose}
+        onConfigUpdate={handleSettingsConfigUpdate}
       />
     </div>
   );

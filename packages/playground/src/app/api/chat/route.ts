@@ -250,7 +250,19 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const apiKey = authHeader?.replace('Bearer ', '');
     
+    console.log('🔍 Chat API Debug Info:', {
+      hasApiKey: !!apiKey,
+      apiKeyLength: apiKey?.length,
+      provider,
+      model,
+      enableMCPTools,
+      mcpProxyId: !!mcpProxyId,
+      mcpSessionId: !!mcpSessionId,
+      messagesCount: messages?.length
+    });
+    
     if (!apiKey) {
+      console.error('❌ No API key provided in Authorization header');
       return Response.json(
         { error: 'API key required in Authorization header' },
         { status: 401 }
@@ -258,22 +270,34 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the provider
+    console.log('🔧 Creating provider:', provider);
     const providerInstance = await createProvider(provider, apiKey);
 
     // Only get MCP client and tools if explicitly enabled
     let mcpTools = {};
     if (enableMCPTools && mcpProxyId && mcpSessionId) {
       try {
+        console.log('🛠️ Attempting to get MCP tools...');
         const client = await getMCPClient(mcpProxyId, mcpSessionId);
         mcpTools = await client.tools();
-        console.log('MCP tools retrieved successfully with proxyId:', mcpProxyId, 'sessionId:', mcpSessionId);
+        console.log('✅ MCP tools retrieved successfully with proxyId:', mcpProxyId, 'sessionId:', mcpSessionId);
+        console.log('🔧 Available tools:', Object.keys(mcpTools).length);
       } catch (mcpError) {
-        console.warn('MCP tools unavailable, continuing without tools:', mcpError);
+        console.warn('⚠️ MCP tools unavailable, continuing without tools:', mcpError);
         // Continue without tools rather than failing completely
       }
     } else {
-      console.log('MCP tools disabled for this request');
+      console.log('🚫 MCP tools disabled for this request');
     }
+
+    console.log('🚀 Starting streamText with:', {
+      model: model,
+      provider: provider,
+      hasSystemPrompt: !!otherParams.systemPrompt,
+      temperature: otherParams.temperature,
+      maxTokens: otherParams.maxTokens,
+      toolsCount: Object.keys(mcpTools).length
+    });
 
     const result = streamText({
       model: providerInstance(model),
@@ -289,6 +313,18 @@ export async function POST(request: NextRequest) {
 
     return result.toDataStreamResponse();
   } catch (error) {
+    console.error('💥 Chat API Error Details:', {
+      error: error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      requestBody: body ? {
+        provider: body.provider,
+        model: body.model,
+        enableMCPTools: body.enableMCPTools,
+        messagesCount: body.messages?.length
+      } : 'No body parsed'
+    });
+    
     // If there's a critical error with the MCP client, reset it
     if (error instanceof Error && error.message.includes('closed client')) {
       console.error('MCP client error detected, resetting client...');

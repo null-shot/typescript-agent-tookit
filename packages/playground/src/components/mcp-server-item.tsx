@@ -109,7 +109,7 @@ export function MCPServerItem({
     <TooltipProvider>
       <div
         className={cn(
-          "flex flex-col gap-3 p-5 rounded-xl transition-all duration-200",
+          "flex flex-col gap-3 p-5 rounded-xl transition-all duration-200 max-w-[400px] w-full",
           "bg-gradient-to-br from-white/[0.08] to-black/[0.08] border border-white/20",
           "hover:border-purple-500",
           displayState === 'installed-enabled' && "border-[#5CC489]",

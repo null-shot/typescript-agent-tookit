@@ -330,7 +330,7 @@
     background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%) !important;
   }
 
-  /* NEW: Gradient model selector button to match Figma design */
+  /* Model selector button to match screenshot design */
   .figma-model-selector-gradient {
     display: flex !important;
     align-items: center !important;
@@ -340,33 +340,20 @@
     border-radius: 4px !important;
     cursor: pointer !important;
     transition: opacity 0.2s ease !important;
-    /* Exact Figma gradient fill */
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0.2) 100%) !important;
-    /* Exact Figma gradient border */
-    border: 1px solid transparent !important;
-    background-clip: padding-box !important;
+    /* Dark background to match screenshot */
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     position: relative !important;
   }
 
+  /* Remove the gradient border effect since we're using a simpler design */
   .figma-model-selector-gradient::before {
-    content: '' !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    padding: 1px !important;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(0, 0, 0, 0.3) 100%) !important;
-    border-radius: 4px !important;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-    mask-composite: subtract !important;
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0) !important;
-    -webkit-mask-composite: subtract !important;
-    pointer-events: none !important;
+    display: none !important;
   }
 
   .figma-model-selector-gradient:hover:not(:disabled) {
-    opacity: 0.8 !important;
+    opacity: 0.9 !important;
+    background: rgba(255, 255, 255, 0.15) !important;
   }
 
   .figma-model-selector-gradient:disabled {
@@ -379,101 +366,23 @@
     font-family: 'Space Grotesk', sans-serif !important;
     font-size: 12px !important;
     font-weight: 500 !important;
-    line-height: 1.6666666666666667 !important; /* Exact Figma line height */
-    text-align: center !important;
-  }
-
-  /* NEW: Dropdown menu styles to match Figma design */
-  .figma-dropdown-menu {
-    background: #222531 !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 12px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
-    overflow: hidden !important;
-  }
-
-  /* Force opaque background for dropdown menu with higher specificity */
-  .figma-dropdown-menu,
-  .figma-dropdown-menu * {
-    background-color: #222531 !important;
-  }
-
-  .figma-dropdown-menu {
-    background: #222531 !important;
-    background-image: none !important;
-    background-attachment: initial !important;
-    background-origin: initial !important;
-    background-clip: initial !important;
-    background-size: initial !important;
-    background-position: initial !important;
-    background-repeat: initial !important;
-    backdrop-filter: none !important;
-  }
-
-  .figma-dropdown-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-    padding: 8px 16px !important;
-    display: flex !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
-    background: #222531 !important;
-    background-image: none !important;
-  }
-
-  .figma-dropdown-header-text {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 700 !important;
-    line-height: 1.276 !important;
-    color: #FFFFFF !important;
+    line-height: 1.67 !important;
     text-align: left !important;
-    flex: 1 !important;
+    white-space: nowrap !important;
   }
 
-  .figma-dropdown-content {
-    padding: 12px 4px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 8px !important;
-    background: #222531 !important;
-    background-image: none !important;
-  }
-
-  .figma-dropdown-item {
-    width: 100% !important;
-    text-align: left !important;
-    padding: 4px 12px !important;
-    border-radius: 6px !important;
-    transition: background-color 0.2s ease !important;
-    cursor: pointer !important;
-    border: none !important;
-    background: transparent !important;
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    line-height: 1.276 !important;
-    color: rgba(255, 255, 255, 0.8) !important;
-  }
-
-  .figma-dropdown-item:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-  }
-
-  .figma-dropdown-item:focus {
-    outline: none !important;
-    background-color: rgba(255, 255, 255, 0.1) !important;
-  }
-
+  /* FIXED: Send button to match screenshot design */
   .figma-send-button {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     width: 32px !important;
     height: 32px !important;
-    padding: 8px 12px !important;
+    padding: 8px !important;
     border-radius: 8px !important;
     border: 1px solid rgba(255,255,255,0.2) !important;
-    background: transparent !important;
+    /* Match screenshot gradient background */
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%) !important;
     cursor: pointer !important;
     transition: opacity 0.2s ease !important;
   }
@@ -511,11 +420,11 @@
     color: rgba(255, 255, 255, 0.4) !important;
   }
 
-  /* Reset default background for descendants except we keep specific gradient boxes */
+  /* Reset default background for descendants except we keep specific gradient boxes and dropdown */
   .figma-override input,
   .figma-override textarea,
   .figma-override button,
-  .figma-override div:not(.figma-comment-box):not(.figma-model-selector):not(.figma-model-selector-gradient) {
+  .figma-override div:not(.figma-comment-box):not(.figma-model-selector):not(.figma-model-selector-gradient):not(.figma-dropdown-menu):not(.figma-dropdown-header):not(.figma-dropdown-content) {
     background-color: initial !important;
     background-image: initial !important;
   }
@@ -530,5 +439,136 @@
   /* Special override for the gradient model selector */
   .figma-model-selector-gradient.figma-override {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(0, 0, 0, 0.2) 100%) !important;
+  }
+
+  /* FIXED: Dropdown menu styling to match Figma - HIGHER SPECIFICITY */
+  .figma-dropdown-menu,
+  .figma-dropdown-menu.figma-dropdown-menu {
+    background: #222531 !important; /* Exact Figma color */
+    background-image: none !important;
+    background-attachment: initial !important;
+    background-origin: initial !important;
+    background-clip: initial !important;
+    background-size: initial !important;
+    background-position: initial !important;
+    background-repeat: initial !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    overflow: hidden !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Force solid background for all children */
+  .figma-dropdown-menu *,
+  .figma-dropdown-menu.figma-dropdown-menu * {
+    background-color: transparent !important;
+    background-image: none !important;
+  }
+
+  .figma-dropdown-header,
+  .figma-dropdown-header.figma-dropdown-header {
+    padding: 8px 16px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    display: flex !important;
+    justify-content: stretch !important;
+    align-items: stretch !important;
+    align-self: stretch !important;
+    gap: 10px !important;
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  .figma-dropdown-header-text,
+  .figma-dropdown-header-text.figma-dropdown-header-text {
+    color: #FFFFFF !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    line-height: 1.276 !important; /* 17.86px / 14px = 1.276 */
+    text-align: left !important;
+    flex: 1 !important;
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  .figma-dropdown-content,
+  .figma-dropdown-content.figma-dropdown-content {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 12px 4px !important;
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  .figma-dropdown-item,
+  .figma-dropdown-item.figma-dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+    align-self: stretch !important;
+    gap: 8px !important;
+    padding: 4px 12px !important;
+    background: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1.276 !important; /* 17.86px / 14px = 1.276 */
+    text-align: left !important;
+    width: 100% !important;
+  }
+
+  .figma-dropdown-item:hover,
+  .figma-dropdown-item.figma-dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    background-image: none !important;
+    border-radius: 4px !important;
+  }
+
+  /* Override any competing styles */
+  .figma-override .figma-dropdown-menu,
+  .figma-override .figma-dropdown-menu * {
+    background-color: initial !important;
+    background-image: initial !important;
+  }
+
+  /* Ensure the main dropdown container has the right background */
+  .figma-override .figma-dropdown-menu.figma-dropdown-menu {
+    background: #222531 !important;
+    background-image: none !important;
+  }
+
+  /* Force dropdown background with maximum specificity */
+  .figma-chat-input-container .figma-dropdown-menu,
+  .figma-override .figma-chat-input-container .figma-dropdown-menu,
+  div.figma-dropdown-menu.figma-dropdown-menu.figma-dropdown-menu {
+    background: #222531 !important;
+    background-image: none !important;
+    background-attachment: initial !important;
+    background-origin: initial !important;
+    background-clip: initial !important;
+    background-size: initial !important;
+    background-position: initial !important;
+    background-repeat: initial !important;
+    backdrop-filter: none !important;
+    /* Force correct border color - override any Tailwind defaults */
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+  }
+
+  /* Override Tailwind border classes specifically */
+  .absolute.figma-dropdown-menu,
+  .absolute.figma-dropdown-menu.figma-dropdown-menu,
+  div.absolute.figma-dropdown-menu {
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
   }
 }

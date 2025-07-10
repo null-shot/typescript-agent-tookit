@@ -13,15 +13,17 @@ interface ModelSelectorDropdownProps {
   className?: string;
 }
 
-const availableModels: ModelOption[] = [
-  { id: "gpt-4.1", name: "GPT 4.1", provider: "OpenAI" },
-  { id: "claude-4-sonnet", name: "Claude -4 - Sonnet", provider: "Anthropic" },
-  { id: "claude-4-opus", name: "Claude - 4 - Opus", provider: "Anthropic" },
-  { id: "claude-3.5-sonnet", name: "Claude - 3.5 - Sonnet", provider: "Anthropic" },
+// Note: This component should receive availableModels as props from parent
+// instead of using hardcoded models. For backward compatibility, we provide
+// a fallback, but this should be updated to receive models dynamically.
+const fallbackModels: ModelOption[] = [
+  { id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet", provider: "Anthropic" },
+  { id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku", provider: "Anthropic" },
+  { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI" },
 ];
 
 export function ModelSelectorDropdown({ 
-  selectedModel = availableModels[2], // Default to Claude 4 Opus
+  selectedModel = fallbackModels[0], // Default to Claude 3.5 Sonnet
   onModelSelect,
   className 
 }: ModelSelectorDropdownProps) {
@@ -81,7 +83,7 @@ export function ModelSelectorDropdown({
             
             {/* Options */}
             <div className="py-3 px-1">
-              {availableModels.map((model) => (
+              {fallbackModels.map((model: ModelOption) => (
                 <button
                   key={model.id}
                   onClick={() => handleModelSelect(model)}

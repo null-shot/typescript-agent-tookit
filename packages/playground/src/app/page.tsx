@@ -180,7 +180,7 @@ export default function PlaygroundPage() {
             {/* Left Side - MCP Server Directory (flex-1 to take most space) */}
             <div className="flex-1 flex flex-col" style={{ paddingLeft: '60px', paddingTop: '24px', paddingBottom: '24px' }}>
               {/* Playground Header */}
-              <div className="pr-6 pb-5">
+              <div className="pr-6 pb-5 max-w-7xl mx-auto w-full">
                 <PlaygroundHeader 
                   isToolboxInstalled={isToolboxInstalled}
                   toolboxStatus={toolboxStatus}

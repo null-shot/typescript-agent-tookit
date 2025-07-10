@@ -328,7 +328,7 @@ export function MCPServerDirectory({
 
   if (isLoading) {
     return (
-      <div className={cn("p-6 space-y-6", className)}>
+      <div className={cn("p-6 space-y-6 max-w-7xl mx-auto w-full", className)}>
         <div className="animate-pulse space-y-6">
           <div className="space-y-3">
             <div className="h-8 bg-[#17181A] rounded-lg" />
@@ -349,7 +349,7 @@ export function MCPServerDirectory({
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Header */}
-      <div className="p-6">
+      <div className="p-6 max-w-7xl mx-auto w-full">
         
         {/* Search */}
         <div className="relative mb-4">
@@ -406,7 +406,7 @@ export function MCPServerDirectory({
       </div>
 
       {/* MCP Indicator */}
-      <div className="px-6 py-3">
+      <div className="px-6 py-3 max-w-7xl mx-auto w-full">
         <div className="flex items-center justify-between">
           <span className="font-['Space_Grotesk'] font-normal text-sm text-white">
             Showing {filteredServers.length} of {servers.length} MCPs
@@ -417,7 +417,7 @@ export function MCPServerDirectory({
       </div>
 
       {/* Server Cards Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 max-w-7xl mx-auto w-full">
         {filteredServers.length === 0 ? (
           <div className="text-center py-12 text-white/40">
             <svg
@@ -436,7 +436,7 @@ export function MCPServerDirectory({
             <p className="text-sm">Try adjusting your search or filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(min(320px,100%),400px))] gap-4 justify-center">
             {filteredServers.map((server) => {
               const serverState = getServerState(server);
               return (
