@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export interface ChatMessageProps {
@@ -7,7 +8,6 @@ export interface ChatMessageProps {
   variant: "user" | "agent" | "error";
   className?: string;
   isThinking?: boolean;
-  isStreaming?: boolean;
   isCompleting?: boolean; // New prop for completion animation
   avatar?: string;
   showTaskList?: boolean;
@@ -132,9 +132,11 @@ export function ChatMessage({
           flexShrink: 0
         }}
       >
-        <img 
+        <Image 
           src="/images/badge_light_bg.png" 
           alt="Agent"
+          width={32}
+          height={32}
           style={{
             width: "32px",
             height: "32px",

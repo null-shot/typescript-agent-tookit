@@ -41,7 +41,6 @@ export function DockerInstallModal({
   const [copied, setCopied] = useState(false);
   
   // Step completion states
-  const [dockerInstalled, setDockerInstalled] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'checking' | 'connected' | 'failed' | 'timeout'>('idle');
   const [connectionAttempts, setConnectionAttempts] = useState(0);
@@ -165,7 +164,6 @@ export function DockerInstallModal({
 
   const handleNext = () => {
     if (currentStep === 1) {
-      setDockerInstalled(true);
       setCurrentStep(2);
     } else if (currentStep === 2) {
       startConnectionCheck();
@@ -185,7 +183,6 @@ export function DockerInstallModal({
   const handleClose = () => {
     // Reset all states
     setCurrentStep(1);
-    setDockerInstalled(false);
     setIsConnecting(false);
     setConnectionStatus('idle');
     setConnectionAttempts(0);

@@ -251,8 +251,17 @@ export function ChatContainer({
       // Navigate to new chat page
       router.push('/chat/new');
     } else {
-      // For non-session management, just refresh the current chat
-      window.location.reload();
+      // For non-session management, stop any ongoing request and clear the chat state
+      stop(); // Cancel any ongoing streaming request
+      setMessages([]);
+      setCurrentError(null);
+      setErrorMessage(null);
+      
+      // Generate a new chat session ID for MCP connections
+      const newChatSessionId = crypto.randomUUID();
+      setChatSessionId(newChatSessionId);
+      
+      console.log('Started new chat with session ID:', newChatSessionId);
     }
   };
 
@@ -265,6 +274,8 @@ export function ChatContainer({
     messages: aiMessages,
     append,
     status,
+    setMessages,
+    stop,
   } = useChat({
     api: modelConfig ? '/api/chat' : undefined,
     id: enableSessionManagement ? 'session-chat' : 'chat-session',

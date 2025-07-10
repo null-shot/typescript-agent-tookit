@@ -389,7 +389,7 @@ export function useMcpServerManager(): UseMcpServerManagerReturn {
       });
       return false;
     }
-  }, [sendAddServerRequest]);
+  }, [sendAddServerRequest, updateState]);
 
   const deleteServer = useCallback(async (uniqueName: string): Promise<boolean> => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {

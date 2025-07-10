@@ -41,7 +41,6 @@ export function MCPServerItem({
 }: MCPServerItemProps) {
   // Check if server requires configuration and is configured
   const requiresConfiguration = server.inputs && server.inputs.length > 0;
-  const configuration = requiresConfiguration ? loadMCPConfig(server.id) : null;
   
   // Track local loading state for toggle operations
   const [isToggleLoading, setIsToggleLoading] = React.useState(false);

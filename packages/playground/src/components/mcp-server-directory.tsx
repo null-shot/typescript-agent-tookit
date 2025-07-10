@@ -47,7 +47,6 @@ export function MCPServerDirectory({
   // Use the WebSocket-based MCP server manager
   const { 
     servers: installedMcpServers, 
-    connected: isConnected, 
     addServer, 
     deleteServer,
     isServerLoading

@@ -11,7 +11,7 @@ import {
   generateDockerCommand,
   getOrCreateProxyId 
 } from "@/lib/storage";
-import { getModels, refreshModelsCache, type AIModel } from "@/lib/model-service";
+import { getModels, refreshModelsCache } from "@/lib/model-service";
 import { fetchMCPRegistry, clearRegistryCache, isRegistryCached } from "@/lib/mcp-registry";
 
 interface ChatSettingsModalProps {

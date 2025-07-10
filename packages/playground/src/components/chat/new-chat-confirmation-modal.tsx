@@ -67,7 +67,7 @@ export function NewChatConfirmationModal({
                   You currently have an active chat session with message history. 
                 </p>
                 <p className="text-white/80 text-sm leading-relaxed">
-                  Starting a new chat will create a fresh conversation, and your current chat history will remain saved but you'll navigate away from it.
+                  Starting a new chat will create a fresh conversation, and your current chat history will remain saved but you&apos;ll navigate away from it.
                 </p>
               </div>
             </div>

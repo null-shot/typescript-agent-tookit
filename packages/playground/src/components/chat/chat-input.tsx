@@ -16,7 +16,6 @@ interface ChatInputProps {
   availableModels?: Array<{ id: string; name: string; provider: string }>;
   className?: string;
   error?: string;
-  onClearError?: () => void; // Optional since we're not using it in the simplified error approach
 }
 
 export function ChatInput({

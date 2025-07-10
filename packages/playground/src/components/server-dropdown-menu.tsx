@@ -11,32 +11,33 @@ import {
 import { 
   MoreVertical, 
   Settings, 
-  Eye, 
-  Share, 
-  Download,
   ExternalLink,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Download,
 } from "lucide-react";
 import { MCPServer } from "@/types/mcp-server";
 import { Button } from "./ui/button";
-import { cn } from "@/lib/utils";
 
 interface ServerActionsDropdownProps {
   server: MCPServer;
   onConfigure?: (server: MCPServer) => void;
-  onViewDetails?: (server: MCPServer) => void;
-  onShare?: (server: MCPServer) => void;
   onUninstall?: (server: MCPServer) => void;
 }
 
 export function ServerActionsDropdown({
   server,
   onConfigure,
-  onViewDetails,
-  onShare,
   onUninstall
 }: ServerActionsDropdownProps) {
+  const handleOpenDocumentation = () => {
+    // Open GitHub repository in new tab
+    const githubUrl = server.git_repository || server.homepage;
+    if (githubUrl) {
+      window.open(githubUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -60,20 +61,9 @@ export function ServerActionsDropdown({
           Configure
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={() => onViewDetails?.(server)}
+          onClick={handleOpenDocumentation}
           className="text-white hover:bg-white/10 focus:bg-white/10"
         >
-          <Eye className="mr-2 h-4 w-4" />
-          View Details
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => onShare?.(server)}
-          className="text-white hover:bg-white/10 focus:bg-white/10"
-        >
-          <Share className="mr-2 h-4 w-4" />
-          Share
-        </DropdownMenuItem>
-        <DropdownMenuItem className="text-white hover:bg-white/10 focus:bg-white/10">
           <ExternalLink className="mr-2 h-4 w-4" />
           Open Documentation
         </DropdownMenuItem>
@@ -112,10 +102,7 @@ export function InstallDropdown({
           disabled={isLoading}
           variant="outline"
           size="sm"
-          className={cn(
-            "border-white/20 bg-transparent text-white hover:bg-white/10",
-            triggerClassName
-          )}
+          className={triggerClassName}
         >
           <ChevronDown className="h-4 w-4" />
         </Button>
