@@ -1,0 +1,127 @@
+# Cleanup old preview Docker images for mcp-toolbox
+name: Cleanup MCP Toolbox Preview Images
+
+on:
+  schedule:
+    # Run daily at 2:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/mcp-toolbox
+
+jobs:
+  cleanup-preview-images:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up old preview images
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const packageName = '${{ env.IMAGE_NAME }}'.split('/').pop();
+            
+            // Calculate cutoff date (7 days ago)
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.setDate() - 7);
+            
+            let deletedCount = 0;
+            let totalChecked = 0;
+            
+            try {
+              // Get all versions of the package
+              const { data: versions } = await github.rest.packages.getAllPackageVersionsForPackageOwnedByOrg({
+                package_type: 'container',
+                package_name: packageName,
+                org: owner,
+                per_page: 100
+              });
+              
+              console.log(`Found ${versions.length} total package versions`);
+              
+              for (const version of versions) {
+                totalChecked++;
+                
+                // Check if this is a preview image (has pr- prefix in tags)
+                const isPreviewImage = version.metadata?.container?.tags?.some(tag => 
+                  tag.startsWith('pr-') || tag.includes('-pr-')
+                );
+                
+                if (!isPreviewImage) {
+                  console.log(`Skipping non-preview version: ${version.id} (tags: ${version.metadata?.container?.tags?.join(', ') || 'none'})`);
+                  continue;
+                }
+                
+                const versionDate = new Date(version.created_at);
+                
+                if (versionDate < cutoffDate) {
+                  try {
+                    await github.rest.packages.deletePackageVersionForOrg({
+                      package_type: 'container',
+                      package_name: packageName,
+                      org: owner,
+                      package_version_id: version.id
+                    });
+                    
+                    deletedCount++;
+                    console.log(`✅ Deleted preview image version ${version.id} (created: ${version.created_at}, tags: ${version.metadata?.container?.tags?.join(', ') || 'none'})`);
+                  } catch (error) {
+                    console.log(`❌ Failed to delete version ${version.id}: ${error.message}`);
+                  }
+                } else {
+                  console.log(`⏭️ Keeping recent preview version ${version.id} (created: ${version.created_at})`);
+                }
+              }
+              
+              // Generate summary
+              const summary = `## 🧹 MCP Toolbox Preview Image Cleanup
+              
+              **Cleanup Summary:**
+              - **Total versions checked:** ${totalChecked}
+              - **Preview images deleted:** ${deletedCount}
+              - **Cutoff date:** ${cutoffDate.toISOString()}
+              
+              **Retention Policy:**
+              - Preview images older than 7 days are automatically deleted
+              - Production images (\`latest\`, \`main-*\`, version tags) are preserved
+              
+              ${deletedCount > 0 ? '✅ Cleanup completed successfully' : 'ℹ️ No preview images needed cleanup'}
+              `;
+              
+              console.log(summary);
+              
+              // Write to job summary
+              require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
+              
+            } catch (error) {
+              console.error('Error during cleanup:', error);
+              
+              const errorSummary = `## ❌ MCP Toolbox Preview Image Cleanup Failed
+              
+              **Error:** ${error.message}
+              
+              **Details:**
+              - Package: \`${packageName}\`
+              - Registry: \`${{ env.REGISTRY }}\`
+              - Organization: \`${owner}\`
+              `;
+              
+              require('fs').appendFileSync(process.env.GITHUB_STEP_SUMMARY, errorSummary);
+              throw error;
+            } 

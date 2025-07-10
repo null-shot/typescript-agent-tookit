@@ -1,0 +1,117 @@
+# Build and push preview Docker images for the mcp-toolbox package
+name: MCP Toolbox Preview Build
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'packages/mcp-toolbox/**'
+      - 'packages/mcp/**'
+      - 'packages/mcp-proxy/**'
+      - '.github/workflows/mcp-toolbox-preview.yml'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/mcp-toolbox
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=pr
+            type=sha,prefix=pr-${{ github.event.number }}-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/mcp-toolbox/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+      - name: Comment PR with image info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('🐳 Preview MCP Toolbox Docker Image')
+            );
+
+            const commentBody = `🐳 **Preview MCP Toolbox Docker Image Built**
+
+            **Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}\`
+
+            **Tags:**
+            ${{ steps.meta.outputs.tags }}
+
+            **Usage:**
+            \`\`\`bash
+            # Pull the preview image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}
+            
+            # Run the MCP Toolbox server
+            docker run -p 11990:11990 \\
+              -e PROXY_ID=preview-toolbox-${{ github.event.number }} \\
+              -e MCP_SERVER_HOST=host.docker.internal:6050 \\
+              --add-host host.docker.internal:host-gateway \\
+              -v \$(pwd)/data:/app/packages/mcp-toolbox/data \\
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:pr-${{ github.event.number }}
+            \`\`\`
+
+            **Health Check:**
+            \`\`\`bash
+            curl http://localhost:11990/health
+            \`\`\`
+
+            **Note:** Preview images are automatically cleaned up after 7 days.
+            `;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                comment_id: botComment.id,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            } 
