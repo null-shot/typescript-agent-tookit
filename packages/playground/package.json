@@ -4,8 +4,10 @@
 	"private": false,
 	"main": "./dist/index.js",
 	"module": "./dist/index.mjs",
+	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
+			"types": "./dist/index.d.ts",
 			"import": "./dist/index.mjs",
 			"require": "./dist/index.js"
 		},
@@ -19,7 +21,7 @@
 		"dev": "wrangler dev -c ../mcp-proxy/wrangler.jsonc --port 6050 & next dev",
 		"build": "next build",
 		"build:lib": "npm run build:components && npm run build:styles",
-		"build:components": "tsup src/lib/exports/index.ts --format cjs,esm --clean",
+		"build:components": "tsup src/lib/exports/index.ts --format cjs,esm --dts --clean --tsconfig tsconfig.lib.json",
 		"build:styles": "mkdir -p dist && cp ./src/lib/exports/styles.css ./dist/styles.css",
 		"start": "next start",
 		"lint": "next lint",

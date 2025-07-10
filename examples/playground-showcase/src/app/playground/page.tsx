@@ -22,7 +22,7 @@ export default function PlaygroundPage() {
           className="h-screen"
           layout="horizontal"
           showModelSelector={true}
-          showMcpServerDirectory={true}
+          showMCPDirectory={true}
         />
       </PlaygroundProvider>
     </div>

@@ -1,5 +1,5 @@
 import { Implementation } from '@modelcontextprotocol/sdk/types.js';
-import { McpHonoServerDO } from '@xava-labs/mcp';
+import { McpHonoServerDO } from '@xava-labs/mcp/dist/mcp/src/mcp/hono-server.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { TodoRepository } from './repository';
 import { setupServerTools } from './tools';
