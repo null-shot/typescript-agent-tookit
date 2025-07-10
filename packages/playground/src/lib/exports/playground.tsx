@@ -125,7 +125,8 @@ export function Playground({
                     title={chatTitle}
                     showHeader={true}
                     className="h-full"
-                    modelConfig={modelConfig}
+                    enabledMCPServerCount={enabledServerCount}
+                    onModelConfigChange={handleModelChange}
                   />
                 </div>
               </div>
@@ -171,7 +172,8 @@ export function Playground({
                     title={chatTitle}
                     showHeader={true}
                     className="h-full"
-                    modelConfig={modelConfig}
+                    enabledMCPServerCount={enabledServerCount}
+                    onModelConfigChange={handleModelChange}
                   />
                 </div>
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { EnhancedChatContainer } from "@/components/chat";
+import { ChatContainer } from "@/components/chat";
 import { MCPServerDirectory } from "@/components/mcp-server-directory";
 import { ModelSelector } from "@/components/model-selector";
 import { DockerInstallModal } from "@/components/docker-install-modal";
@@ -202,7 +202,7 @@ export default function PlaygroundPage() {
               className="flex-shrink-0 bg-[#14161D] border-l border-[rgba(255,255,255,0.12)] pb-6"
               style={{ width: '460px' }}
             >
-              <EnhancedChatContainer 
+                              <ChatContainer 
                 title={chatTitle}
                 showHeader={true}
                 className="h-full"

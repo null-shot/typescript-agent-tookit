@@ -1,7 +1,7 @@
 // Component exports for @xava-labs/playground
 
 // Chat components
-export { ChatContainer } from '../../components/chat/chat-container';
+export { ChatContainer } from '../../components/chat';
 export { ChatHeader } from '../../components/chat/chat-header';
 export { ChatInput } from '../../components/chat/chat-input';
 export { ChatMessage } from '../../components/chat/chat-message';

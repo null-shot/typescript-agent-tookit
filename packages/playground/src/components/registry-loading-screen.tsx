@@ -153,15 +153,15 @@ export function RegistryLoadingScreen({
         ) : (
           // Loading state
           <div className="space-y-8">
-            {/* Chat-style Loading Animation */}
+            {/* Hourglass-style Loading Animation */}
             <div className="w-24 h-24 mx-auto relative flex items-center justify-center">
-              {/* Agent avatar with animated logo - same as chat */}
+              {/* Agent avatar with hourglass rotation */}
               <img 
                 src="/images/badge_light_bg.png" 
                 alt="Loading"
                 className="w-24 h-24 rounded-lg"
                 style={{
-                  animation: "iconThinking 1.6s infinite ease-in-out",
+                  animation: "hourglassRotation 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1)",
                   filter: "drop-shadow(0 0 12px rgba(120, 73, 239, 0.6))",
                   transition: "filter 0.3s ease"
                 }}
@@ -202,47 +202,33 @@ export function RegistryLoadingScreen({
         )}
       </div>
 
-      {/* CSS Animation - Same as chat component */}
-      <style jsx>{`
-        @keyframes iconThinking {
-          0% {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
+      {/* CSS Animation - Smooth Hourglass effect */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes hourglassRotation {
+            0% {
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
+            40% {
+              transform: scale(1.02) rotate(0deg);
+              opacity: 0.95;
+            }
+            60% {
+              transform: scale(1.08) rotate(180deg);
+              opacity: 0.9;
+            }
+            90% {
+              transform: scale(1.02) rotate(180deg);
+              opacity: 0.95;
+            }
+            100% {
+              transform: scale(1) rotate(360deg);
+              opacity: 1;
+            }
           }
-          12.5% {
-            transform: scale(1.08) rotate(45deg);
-            opacity: 0.85;
-          }
-          25% {
-            transform: scale(1.05) rotate(90deg);
-            opacity: 0.9;
-          }
-          37.5% {
-            transform: scale(1.08) rotate(135deg);
-            opacity: 0.85;
-          }
-          50% {
-            transform: scale(1.02) rotate(180deg);
-            opacity: 0.95;
-          }
-          62.5% {
-            transform: scale(1.08) rotate(225deg);
-            opacity: 0.85;
-          }
-          75% {
-            transform: scale(1.05) rotate(270deg);
-            opacity: 0.9;
-          }
-          87.5% {
-            transform: scale(1.08) rotate(315deg);
-            opacity: 0.85;
-          }
-          100% {
-            transform: scale(1) rotate(360deg);
-            opacity: 1;
-          }
-        }
-      `}</style>
+        `
+      }} />
     </div>
   );
 } 

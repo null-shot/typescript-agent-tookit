@@ -373,61 +373,63 @@ export function ChatMessage({
       {variant === "error" && <ErrorMessage />}
       
       {/* Add CSS animations */}
-      <style jsx>{`
-        @keyframes iconThinking {
-          0% {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes iconThinking {
+            0% {
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
+            12.5% {
+              transform: scale(1.08) rotate(45deg);
+              opacity: 0.85;
+            }
+            25% {
+              transform: scale(1.05) rotate(90deg);
+              opacity: 0.9;
+            }
+            37.5% {
+              transform: scale(1.08) rotate(135deg);
+              opacity: 0.85;
+            }
+            50% {
+              transform: scale(1.02) rotate(180deg);
+              opacity: 0.95;
+            }
+            62.5% {
+              transform: scale(1.08) rotate(225deg);
+              opacity: 0.85;
+            }
+            75% {
+              transform: scale(1.05) rotate(270deg);
+              opacity: 0.9;
+            }
+            87.5% {
+              transform: scale(1.08) rotate(315deg);
+              opacity: 0.85;
+            }
+            100% {
+              transform: scale(1) rotate(360deg);
+              opacity: 1;
+            }
           }
-          12.5% {
-            transform: scale(1.08) rotate(45deg);
-            opacity: 0.85;
+          
+          @keyframes iconComplete {
+            0% {
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
+            50% {
+              transform: scale(1.3) rotate(180deg);
+              opacity: 0.7;
+            }
+            100% {
+              transform: scale(1) rotate(0deg);
+              opacity: 1;
+            }
           }
-          25% {
-            transform: scale(1.05) rotate(90deg);
-            opacity: 0.9;
-          }
-          37.5% {
-            transform: scale(1.08) rotate(135deg);
-            opacity: 0.85;
-          }
-          50% {
-            transform: scale(1.02) rotate(180deg);
-            opacity: 0.95;
-          }
-          62.5% {
-            transform: scale(1.08) rotate(225deg);
-            opacity: 0.85;
-          }
-          75% {
-            transform: scale(1.05) rotate(270deg);
-            opacity: 0.9;
-          }
-          87.5% {
-            transform: scale(1.08) rotate(315deg);
-            opacity: 0.85;
-          }
-          100% {
-            transform: scale(1) rotate(360deg);
-            opacity: 1;
-          }
-        }
-        
-        @keyframes iconComplete {
-          0% {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.3) rotate(180deg);
-            opacity: 0.7;
-          }
-          100% {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
-          }
-        }
-      `}</style>
+        `
+      }} />
     </div>
   );
 } 

@@ -1,4 +1,4 @@
-# @xava-labs/server
+# @xava-labs/mcp-toolbox
 
 A WebSocket server for managing MCP (Model Context Protocol) packages with SQLite persistence.
 
@@ -16,19 +16,19 @@ A WebSocket server for managing MCP (Model Context Protocol) packages with SQLit
 ### Usage
 
 ```bash
-# first, set .env file in packages/server (you can reference .env.example)
+# first, set .env file in packages/mcp-toolbox (you can reference .env.example)
 cd ../playground
 pnpm i
 # stop here and go to Docker Commands if you want to just do a Docker build, or continue on here for local dev
 pnpm dev
-cd ../server
+cd ../mcp-toolbox
 pnpm dev
 ```
 
 ### Docker Commands
 
 ```bash
-# Build the Docker image (run from packages/server directory - make sure you have done `pnpm i` in ../playground dir listed above)
+# Build the Docker image (run from packages/mcp-toolbox directory - make sure you have done `pnpm i` in ../playground dir listed above)
 yarn docker:build
 
 # Run the container with all necessary environment variables and volume mounts (refer to package.json if you want to edit this command)
@@ -51,7 +51,7 @@ yarn docker:dev
 ### Connection
 
 ```
-ws://localhost:3000/ws
+ws://localhost:11990/ws
 ```
 
 ### Message Format
@@ -216,7 +216,7 @@ All messages must be valid JSON with this structure:
 ### JavaScript/Node.js
 ```javascript
 const WebSocket = require('ws');
-const ws = new WebSocket('ws://localhost:3000/ws');
+const ws = new WebSocket('ws://localhost:11990/ws');
 
 ws.on('open', () => {
   // Add Figma MCP
@@ -248,7 +248,7 @@ ws.send(JSON.stringify({
 
 ### Browser
 ```javascript
-const ws = new WebSocket('ws://localhost:3000/ws');
+const ws = new WebSocket('ws://localhost:11990/ws');
 
 ws.onopen = () => {
   console.log('Connected to MCP server');
@@ -270,13 +270,13 @@ curl -L https://github.com/vi/websocat/releases/latest/download/websocat.x86_64-
 chmod +x websocat
 
 # Add package
-echo '{"verb":"add","data":{"unique-name":"test","command":"echo","args":["hello"],"env":{}}}' | ./websocat ws://localhost:3000/ws
+echo '{"verb":"add","data":{"unique-name":"test","command":"echo","args":["hello"],"env":{}}}' | ./websocat ws://localhost:11990/ws
 
 # List packages  
-echo '{"verb":"list"}' | ./websocat ws://localhost:3000/ws
+echo '{"verb":"list"}' | ./websocat ws://localhost:11990/ws
 
 # Delete package
-echo '{"verb":"delete","data":{"unique-name":"test"}}' | ./websocat ws://localhost:3000/ws
+echo '{"verb":"delete","data":{"unique-name":"test"}}' | ./websocat ws://localhost:11990/ws
 ```
 
 ---
@@ -304,7 +304,7 @@ The proxyId should be the same UUID used by the playground and must match the pr
 
 Configure via `.env`:
 ```env
-PORT=3000
+PORT=11990
 DB_PATH=./data/packages.db
 MCP_PROXY_URL=ws://localhost:6050/api/remote-container/ws
 PROXY_ID=your-uuid-here
@@ -341,13 +341,34 @@ yarn start --proxy-id your-uuid-here
 ## Health Check
 
 ```bash
-curl http://localhost:3000/
+curl http://localhost:11990/
 ```
 
 ```json
 {
   "status": "ok",
   "message": "MCP WebSocket Server",
-  "websocket": "ws://localhost:3000/ws",
+  "websocket": "ws://localhost:11990/ws",
   "version": "0.1.0"
 }
+```
+
+### Dedicated Health Endpoint
+
+For monitoring and load balancers:
+
+```bash
+curl http://localhost:11990/health
+```
+
+```json
+{
+  "status": "ok",
+  "message": "pong",
+  "timestamp": "2024-01-01T12:00:00.000Z",
+  "uptime": 3600.5,
+  "proxyId": "your-proxy-id",
+  "mcpProxyConnected": true,
+  "activeServers": 2
+}
+```

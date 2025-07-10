@@ -68,7 +68,7 @@ interface DateDividerItem {
   date: Date;
 }
 
-interface EnhancedChatContainerProps {
+interface ChatContainerProps {
   className?: string;
   title?: string;
   showHeader?: boolean;
@@ -99,7 +99,7 @@ function isDifferentDay(date1: Date, date2: Date): boolean {
   );
 }
 
-export function EnhancedChatContainer({
+export function ChatContainer({
   className,
   title = "Playground Chat",
   showHeader = true,
@@ -108,7 +108,7 @@ export function EnhancedChatContainer({
   enableSessionManagement = false,
   sessionId: propSessionId,
   enabledMCPServerCount = 0
-}: EnhancedChatContainerProps) {
+}: ChatContainerProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
@@ -263,7 +263,7 @@ export function EnhancedChatContainer({
     error,
   } = useChat({
     api: modelConfig ? '/api/chat' : undefined,
-    id: enableSessionManagement ? 'session-chat' : 'enhanced-chat-session',
+    id: enableSessionManagement ? 'session-chat' : 'chat-session',
     streamProtocol: 'data' as const,
     initialMessages: (enableSessionManagement && sessionId && !isNewChat(sessionId) ? loadChat(sessionId) : []) as UIMessage[],
     headers: modelConfig ? {

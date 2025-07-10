@@ -142,7 +142,7 @@ describe('MCP WebSocket Server Integration Tests', () => {
 
     // Start the server process with test configuration
     serverProcess = spawn('node', ['dist/index.js'], {
-      cwd: '/Users/coop/Workspace/typescript-agent-vibework/packages/server',
+      cwd: '/Users/coop/Workspace/typescript-agent-vibework/packages/mcp-toolbox',
       env: {
         ...process.env,
         PORT: SERVER_PORT.toString(),

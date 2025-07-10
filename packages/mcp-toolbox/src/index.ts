@@ -18,8 +18,7 @@ import {
 import { createPackageRepository, PackageRepository } from './persistence/index.js'
 
 // Environment configuration
-const PORT = parseInt(process.env.PORT || '3001')
-const HEALTH_CHECK_PORT = parseInt(process.env.HEALTH_CHECK_PORT || '11990')
+const PORT = parseInt(process.env.PORT || '11990')
 const DB_PATH = process.env.DB_PATH || './data/packages.db'
 
 // Parse command line arguments for proxyId and MCP proxy URL
@@ -485,6 +484,19 @@ app.get('/', (c) => {
   })
 })
 
+// Dedicated health endpoint for monitoring/load balancers
+app.get('/health', (c) => {
+  return c.json({ 
+    status: 'ok',
+    message: 'pong',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    proxyId: PROXY_ID,
+    mcpProxyConnected: globalWs?.readyState === WebSocket.OPEN,
+    activeServers: mcpClients.size
+  })
+})
+
 // Global WebSocket instance to prevent multiple connections
 let globalWs: WebSocket | null = null;
 let isConnecting = false;
@@ -939,39 +951,6 @@ serve({
 }, () => {
   console.log(`🚀 HTTP server started on port ${PORT}`)
   console.log(`📍 Health check: http://localhost:${PORT}`)
-})
-
-// Create and start health check server on port 11990
-const healthApp = new Hono()
-
-// Add CORS middleware to allow cross-origin requests
-healthApp.use('*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}))
-
-// Simple ping-pong health check endpoint
-healthApp.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok',
-    message: 'pong',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    proxyId: PROXY_ID,
-    mcpProxyConnected: globalWs?.readyState === WebSocket.OPEN,
-    activeServers: mcpClients.size
-  })
-})
-
-// Start the health check server
-serve({
-  fetch: healthApp.fetch,
-  port: HEALTH_CHECK_PORT
-}, () => {
-  console.log(`🏥 Health check server started on port ${HEALTH_CHECK_PORT}`)
-  console.log(`📍 Health endpoint: http://localhost:${HEALTH_CHECK_PORT}/health`)
 })
 
 // Initialize existing servers and connect to MCP proxy

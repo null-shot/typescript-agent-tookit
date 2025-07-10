@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useParams } from "next/navigation";
-import { EnhancedChatContainer } from "@/components/chat";
+import { ChatContainer } from "@/components/chat";
 
 export default function ChatPage() {
   const params = useParams();
@@ -10,7 +10,7 @@ export default function ChatPage() {
 
   return (
     <div className="h-screen w-full bg-[#14161D]">
-      <EnhancedChatContainer 
+      <ChatContainer 
         sessionId={sessionId}
         enableSessionManagement={true}
         showHeader={true}

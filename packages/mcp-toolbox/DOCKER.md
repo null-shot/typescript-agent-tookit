@@ -6,18 +6,18 @@ This document explains the Docker image build and deployment process for the MCP
 
 Docker images are automatically built and pushed to **GitHub Container Registry (GHCR)** at:
 ```
-ghcr.io/[owner]/[repo]/server
+ghcr.io/[owner]/[repo]/mcp-toolbox
 ```
 
 ## 🔄 Automated Workflows
 
 ### Preview Builds (Pull Requests)
 
-**Workflow:** `.github/workflows/server-preview.yml`
+**Workflow:** `.github/workflows/mcp-toolbox-preview.yml`
 
 **Triggers:**
 - Pull requests targeting `main` or `develop` branches
-- Changes to `packages/server/**` or `packages/mcp/**`
+- Changes to `packages/mcp-toolbox/**` or `packages/mcp/**`
 
 **Image Tags:**
 - `pr-[number]` - PR number based tag
@@ -31,7 +31,7 @@ ghcr.io/[owner]/[repo]/server
 
 ### Production Builds (Main Branch)
 
-**Workflow:** `.github/workflows/server-production.yml`
+**Workflow:** `.github/workflows/mcp-toolbox-production.yml`
 
 **Triggers:**
 - Push to `main` branch
@@ -67,13 +67,13 @@ ghcr.io/[owner]/[repo]/server
 ### Pull Latest Production Image
 
 ```bash
-docker pull ghcr.io/[owner]/[repo]/server:latest
+docker pull ghcr.io/[owner]/[repo]/mcp-toolbox:latest
 ```
 
 ### Pull Specific Preview Image
 
 ```bash
-docker pull ghcr.io/[owner]/[repo]/server:pr-123
+docker pull ghcr.io/[owner]/[repo]/mcp-toolbox:pr-123
 ```
 
 ### Run the Server
@@ -83,8 +83,8 @@ docker run -p 3001:3001 \
   -e PORT=3001 \
   -e DB_PATH=/app/data/packages.db \
   -e MCP_PROXY_URL=ws://your-proxy:6050/api/remote-container/ws \
-  -v $(pwd)/data:/workspace/packages/server/data \
-  ghcr.io/[owner]/[repo]/server:latest
+  -v $(pwd)/data:/workspace/packages/mcp-toolbox/data \
+  ghcr.io/[owner]/[repo]/mcp-toolbox:latest
 ```
 
 ### Using Docker Compose
@@ -94,8 +94,8 @@ docker run -p 3001:3001 \
 version: '3.8'
 
 services:
-  server:
-    image: ghcr.io/[owner]/[repo]/server:latest
+  mcp-toolbox:
+    image: ghcr.io/[owner]/[repo]/mcp-toolbox:latest
     ports:
       - "3001:3001"
     environment:
@@ -103,7 +103,7 @@ services:
       - DB_PATH=/app/data/packages.db
       - MCP_PROXY_URL=ws://your-proxy:6050/api/remote-container/ws
     volumes:
-      - ./data:/workspace/packages/server/data
+      - ./data:/workspace/packages/mcp-toolbox/data
     restart: unless-stopped
 ```
 
@@ -113,7 +113,7 @@ services:
 
 ```bash
 # From repository root
-docker build -f packages/server/Dockerfile -t mcp-server .
+docker build -f packages/mcp-toolbox/Dockerfile -t mcp-toolbox .
 ```
 
 ### Run Local Build
@@ -122,14 +122,14 @@ docker build -f packages/server/Dockerfile -t mcp-server .
 docker run -p 3001:3001 \
   -e PORT=3001 \
   -e DB_PATH=/app/data/packages.db \
-  -v $(pwd)/packages/server/data:/workspace/packages/server/data \
-  mcp-server
+  -v $(pwd)/packages/mcp-toolbox/data:/workspace/packages/mcp-toolbox/data \
+  mcp-toolbox
 ```
 
 ### Development with Docker Compose
 
 ```bash
-cd packages/server
+cd packages/mcp-toolbox
 docker-compose up --build
 ```
 
@@ -158,7 +158,7 @@ Check workflow status in the **Actions** tab of your GitHub repository.
 
 View all images and versions at:
 ```
-https://github.com/[owner]/[repo]/pkgs/container/server
+https://github.com/[owner]/[repo]/pkgs/container/mcp-toolbox
 ```
 
 ### Security Alerts
@@ -171,16 +171,16 @@ Security scan results are available in the **Security** tab under **Code scannin
 
 ```bash
 # Deploy new version
-docker pull ghcr.io/[owner]/[repo]/server:latest
-docker run -d --name server-green ghcr.io/[owner]/[repo]/server:latest
+docker pull ghcr.io/[owner]/[repo]/mcp-toolbox:latest
+docker run -d --name mcp-toolbox-green ghcr.io/[owner]/[repo]/mcp-toolbox:latest
 
 # Test the new version
 curl http://localhost:3001/
 
 # Switch traffic (update load balancer/proxy)
 # Stop old version
-docker stop server-blue
-docker rm server-blue
+docker stop mcp-toolbox-blue
+docker rm mcp-toolbox-blue
 ```
 
 ### Rolling Updates with Docker Swarm

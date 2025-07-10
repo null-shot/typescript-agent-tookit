@@ -1,5 +1,5 @@
 {
-  "name": "@xava-labs/server",
+  "name": "@xava-labs/mcp-toolbox",
   "version": "1.0.0",
   "description": "Hono websocket server with SQLite integration",
   "main": "dist/index.js",
@@ -9,10 +9,10 @@
     "start": "node dist/index.js",
     "send": "tsx send-message.ts",
     "test": "vitest run tests/websocket.test.ts",
-    "docker:build": "cd ../../ && docker build -f packages/server/Dockerfile -t xava-labs-server .",
-    "docker:run": "docker run --rm -p ${PORT:-3000}:3000 -e PORT=${PORT:-3000} -e DB_PATH=/app/data/packages.db -e MCP_PROXY_URL=ws://host.docker.internal:6050/api/remote-container/ws --add-host host.docker.internal:host-gateway -v $(pwd)/data:/workspace/packages/server/data xava-labs-server",
+    "docker:build": "docker build -f Dockerfile -t mcp-toolbox ../..",
+    "docker:run": "docker run --rm -p ${PORT:-11990}:11990 -e PROXY_ID=local-test-id --add-host host.docker.internal:host-gateway -v $(pwd)/data:/app/packages/mcp-toolbox/data mcp-toolbox",
     "docker:dev": "docker-compose up --build",
-    "docker:shell": "docker run --rm -it --entrypoint /bin/bash xava-labs-server",
+    "docker:shell": "docker run --rm -it --entrypoint /bin/sh mcp-toolbox",
     "proxy:test": "tsx src/test-figma-mcp.ts"
   },
   "dependencies": {
