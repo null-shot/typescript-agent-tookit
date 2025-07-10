@@ -63,3 +63,4 @@ tmp/
 .turbo 
 
 data/
+*.db
