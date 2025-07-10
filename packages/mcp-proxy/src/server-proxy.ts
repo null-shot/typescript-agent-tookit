@@ -252,14 +252,16 @@ export class McpServerProxyDO extends McpServerDO {
       const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
       console.log('MCP Proxy: Received message from remote container:', messageStr.substring(0, 200) + '...');
       
-      // First, forward to the MCP proxy for transport handling
-      this.mcpProxy.handleProxyMessage(data);
-      
       // Check if this is a system message (shutdown notification, etc.)
+      let isAdminMessage = false;
       try {
         const messageData = JSON.parse(messageStr);
-        if (messageData.type) {
-          switch (messageData.type) {
+        
+        // Check for admin/management messages that should only go to web clients
+        if (messageData.verb || messageData.type) {
+          isAdminMessage = true;
+          
+          switch (messageData.type || messageData.verb) {
             case 'client_ready':
               // Remote container client ready
               break;
@@ -268,16 +270,37 @@ export class McpServerProxyDO extends McpServerDO {
               this.broadcastConnectionStatus(false, 'Remote container shutting down gracefully');
               // Don't broadcast the raw shutdown message to clients
               return;
+            case 'add':
+            case 'remove':
+            case 'list':
+            case 'status':
+              // These are admin commands - only broadcast to web clients
+              break;
             default:
-              // Unknown system message type
+              // Unknown admin message type, still treat as admin
+              break;
           }
         }
+        // Check for JSON-RPC messages (these should go to MCP transports)
+        else if (messageData.jsonrpc || messageData.id !== undefined || messageData.method || messageData.result !== undefined || messageData.error !== undefined) {
+          isAdminMessage = false; // This is an MCP protocol message
+        }
       } catch (error) {
-        // Not JSON or not a system message, continue with normal broadcast
+        // If we can't parse it, assume it might be an MCP message
+        console.warn('Could not parse message from remote container:', error);
+        isAdminMessage = false;
       }
       
-      // Also broadcast to clients for admin interface
-      this.broadcastToClients(messageStr);
+      // Forward to MCP transport only if it's NOT an admin message
+      if (!isAdminMessage) {
+        this.mcpProxy.handleProxyMessage(data);
+      }
+      
+      // Always broadcast admin messages to web clients
+      // For MCP messages, broadcast only if there are web clients interested
+      if (isAdminMessage || this.clientConnections.size > 0) {
+        this.broadcastToClients(messageStr);
+      }
     }
     // Handle messages from clients
     else if (attachment && 'isClient' in attachment && attachment.isClient) {

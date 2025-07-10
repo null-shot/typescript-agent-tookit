@@ -7,6 +7,7 @@ import { ChatInput } from "./chat-input";
 import { DateDivider } from "./date-divider";
 import { ChatSettingsModal } from "./chat-settings-modal";
 import { NewChatConfirmationModal } from "./new-chat-confirmation-modal";
+import { ProxyMismatchPopup } from "../ui/proxy-mismatch-popup";
 import { useChat, type Message as UIMessage } from "@ai-sdk/react";
 import { usePathname, useRouter } from "next/navigation";
 import { 
@@ -132,6 +133,7 @@ export function ChatContainer({
   const [chatSessionId, setChatSessionId] = useState<string | null>(null);
   const [validationResult, setValidationResult] = useState<ProxyIdValidationResult | null>(null);
   const [showDockerModal, setShowDockerModal] = useState(false);
+  const [showProxyMismatchPopup, setShowProxyMismatchPopup] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   
@@ -176,7 +178,10 @@ export function ChatContainer({
               frontend: result.frontendProxyId,
               server: result.serverProxyId
             });
-            // Show Docker modal with correct command
+            // Show dedicated proxy mismatch popup
+            setShowProxyMismatchPopup(true);
+          } else if (!result.serverConnected) {
+            // Show Docker modal for initial setup when server is not connected
             setShowDockerModal(true);
           }
         } else {
@@ -204,6 +209,10 @@ export function ChatContainer({
     setShowDockerModal(false);
     // Trigger immediate health check
     validateProxyId().then(setValidationResult);
+  };
+
+  const handleProxyMismatchPopupClose = () => {
+    setShowProxyMismatchPopup(false);
   };
 
   const handleSettingsModalClose = () => {
@@ -710,13 +719,21 @@ export function ChatContainer({
         </div>
       </div>
       
-      {/* Docker Install Modal for ProxyId Mismatch */}
+      {/* Docker Install Modal for Initial Setup */}
       <DockerInstallModal
         isOpen={showDockerModal}
         onClose={handleDockerModalClose}
         onInstallationComplete={handleInstallationComplete}
         proxyId={validationResult?.frontendProxyId}
-        reason={validationResult?.serverProxyId ? 'mismatch' : 'initial'}
+        reason="initial"
+      />
+      
+      {/* Proxy Mismatch Popup */}
+      <ProxyMismatchPopup
+        isOpen={showProxyMismatchPopup}
+        onClose={handleProxyMismatchPopupClose}
+        frontendProxyId={validationResult?.frontendProxyId || ''}
+        serverProxyId={validationResult?.serverProxyId || ''}
       />
       
       {/* Settings Modal */}

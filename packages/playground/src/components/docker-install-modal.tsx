@@ -67,7 +67,7 @@ export function DockerInstallModal({
       }
       
       setCurrentProxyId(finalProxyId);
-      setDockerCommand(`docker run -d -p 11990:11990 --name mcp-toolbox --proxy-id ${finalProxyId} null-shot/mcp-toolbox:latest`);
+      setDockerCommand(`docker run -d -p 11990:11990 --name mcp-toolbox -e PROXY_ID=${finalProxyId} ghcr.io/null-shot/typescript-agent-framework/mcp-toolbox:pr-41`);
     }
   }, [isOpen, providedProxyId]);
 

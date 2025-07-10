@@ -436,9 +436,8 @@ export async function validateProxyId(): Promise<ProxyIdValidationResult> {
 }
 
 export function generateDockerCommand(proxyId: string): string {
-  return `docker run -d --name mcp-server \\
+  return `docker run -d --name mcp-toolbox \\
   -p 11990:11990 \\
-  -v $(pwd)/data:/app/data \\
-  your-mcp-server-image \\
-  --proxy-id ${proxyId}`;
+  -e PROXY_ID=${proxyId} \\
+  ghcr.io/null-shot/typescript-agent-framework/mcp-toolbox:pr-41`;
 } 

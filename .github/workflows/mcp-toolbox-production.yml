@@ -54,7 +54,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: packages/mcp-toolbox/Dockerfile
+          file: mcp-toolbox.Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -84,9 +84,9 @@ jobs:
           echo "  -e PROXY_ID=your-unique-proxy-id \\" >> $GITHUB_STEP_SUMMARY
           echo "  -e MCP_SERVER_HOST=host.docker.internal:6050 \\" >> $GITHUB_STEP_SUMMARY
           echo "  -e PORT=11990 \\" >> $GITHUB_STEP_SUMMARY
-          echo "  -e DB_PATH=/app/packages/mcp-toolbox/data/packages.db \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -e DB_PATH=/app/data/packages.db \\" >> $GITHUB_STEP_SUMMARY
           echo "  --add-host host.docker.internal:host-gateway \\" >> $GITHUB_STEP_SUMMARY
-          echo "  -v \$(pwd)/data:/app/packages/mcp-toolbox/data \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -v \$(pwd)/data:/app/data \\" >> $GITHUB_STEP_SUMMARY
           echo "  ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
@@ -101,7 +101,7 @@ jobs:
                 package_type: 'container',
                 package_name: packageName.split('/').pop(),
                 org: context.repo.owner,
-                description: 'MCP Toolbox - A WebSocket server for managing MCP (Model Context Protocol) packages with SQLite persistence',
+                description: 'MCP Toolbox - A lightweight, bundled WebSocket server for managing MCP (Model Context Protocol) packages with pure JavaScript SQLite persistence',
                 homepage_url: `https://github.com/${context.repo.owner}/${context.repo.repo}`,
                 public: true
               });

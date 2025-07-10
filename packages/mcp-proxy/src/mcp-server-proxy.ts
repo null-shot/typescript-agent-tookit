@@ -107,12 +107,12 @@ export class McpServerProxy implements IMcpServer {
       
       // Forward the message to the connected transport
       if (this.connectedTransport) {
-        console.log('McpServerProxy: Forwarding message to SSE transport');
+        console.log('McpServerProxy: Forwarding message to MCP transport');
         this.connectedTransport.send?.(message).catch((error: unknown) => {
           console.error('Error forwarding message to transport:', error);
         });
       } else {
-        console.warn('McpServerProxy: No connected transport to forward message to');
+        console.log('McpServerProxy: No MCP transport connected (this is normal if no MCP clients are connected)');
       }
     } catch (error) {
       console.error('Error parsing proxy message:', error);

@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { X, Info, ChevronDown, Settings, RefreshCw, Database, Clock, Hash } from "lucide-react";
+import { X, Info, ChevronDown, Settings, RefreshCw, Database, Clock, Hash, Container, Copy, Check } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   loadAIModelConfig, 
   saveAIModelConfig,
-  AIModelConfig 
+  AIModelConfig,
+  generateDockerCommand,
+  getOrCreateProxyId 
 } from "@/lib/storage";
 import { getModels, refreshModelsCache, type AIModel } from "@/lib/model-service";
 import { fetchMCPRegistry, clearRegistryCache, isRegistryCached } from "@/lib/mcp-registry";
@@ -85,6 +87,11 @@ export function ChatSettingsModal({
   });
   const [refreshingRegistry, setRefreshingRegistry] = useState(false);
 
+  // Docker state
+  const [dockerCommand, setDockerCommand] = useState<string>("");
+  const [proxyId, setProxyId] = useState<string>("");
+  const [copied, setCopied] = useState(false);
+
   // Load existing configuration on mount
   useEffect(() => {
     if (isOpen) {
@@ -102,6 +109,11 @@ export function ChatSettingsModal({
       
       // Load registry stats
       loadRegistryStats();
+      
+      // Initialize Docker state
+      const currentProxyId = getOrCreateProxyId();
+      setProxyId(currentProxyId);
+      setDockerCommand(generateDockerCommand(currentProxyId));
     }
   }, [isOpen]);
 
@@ -272,6 +284,17 @@ export function ChatSettingsModal({
     }
   };
 
+  // Copy Docker command to clipboard
+  const copyDockerCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(dockerCommand);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy Docker command:', err);
+    }
+  };
+
   // Force refresh registry data
   const handleRefreshRegistry = async () => {
     setRefreshingRegistry(true);
@@ -349,12 +372,18 @@ export function ChatSettingsModal({
               "transform transition-all duration-700 delay-200",
               isOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
             )}>
-              <TabsList className="grid w-full grid-cols-2 bg-[#323546] text-white">
+              <TabsList className="grid w-full grid-cols-3 bg-[#323546] text-white">
                 <TabsTrigger 
                   value="ai-model" 
                   className="data-[state=active]:bg-[#14161D] data-[state=active]:text-white"
                 >
                   AI Model
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="docker" 
+                  className="data-[state=active]:bg-[#14161D] data-[state=active]:text-white"
+                >
+                  Docker
                 </TabsTrigger>
                 <TabsTrigger 
                   value="storage" 
@@ -560,6 +589,137 @@ export function ChatSettingsModal({
               </div>
 
               {/* Fixed Action Buttons */}
+              <div className={cn(
+                "flex gap-4 p-6 border-t border-white/12 flex-shrink-0",
+                "transform transition-all duration-700 delay-400",
+                isOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              )}>
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 px-4 py-2 border border-white/20 text-white rounded-xl hover:bg-white/10 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-[#7849EF] to-[#326CD8] text-white rounded-xl hover:opacity-90 transition-opacity"
+                >
+                  Confirm Changes
+                </button>
+              </div>
+            </TabsContent>
+
+            {/* Docker Tab */}
+            <TabsContent value="docker" className="flex-1 flex flex-col min-h-0">
+              {/* Scrollable Content */}
+              <div className={cn(
+                "flex-1 overflow-y-auto p-6",
+                "transform transition-all duration-700 delay-300",
+                isOpen ? "translate-x-0 opacity-100" : "translate-x-8 opacity-0"
+              )}>
+                <div className="space-y-4">
+                  <div className="text-white text-lg font-semibold">Docker Configuration</div>
+                  
+                  {/* Docker Run Command */}
+                  <div className="bg-[#323546] rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Container size={16} className="text-white" />
+                      <div className="text-white font-medium">Docker Run Command</div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="text-xs text-white/60">
+                        Copy and run this command to start the MCP Toolbox container:
+                      </div>
+                      <div className="relative">
+                        <div className="bg-[#1a1b23] rounded-lg p-3 pr-12 font-mono text-sm text-white border border-white/10">
+                          {dockerCommand}
+                        </div>
+                        <button
+                          onClick={copyDockerCommand}
+                          className="absolute right-2 top-2 p-1 hover:bg-white/10 rounded transition-colors"
+                          title="Copy to clipboard"
+                        >
+                          {copied ? (
+                            <Check size={16} className="text-green-500" />
+                          ) : (
+                            <Copy size={16} className="text-white/60" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Proxy ID Information */}
+                  <div className="bg-[#323546] rounded-lg p-4 space-y-3">
+                    <div className="text-white font-medium">Proxy Configuration</div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Proxy ID:</span>
+                        <span className="text-white font-mono">{proxyId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Access Path:</span>
+                        <span className="text-white font-mono">@/playground</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Port:</span>
+                        <span className="text-white">11990</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-white/40 leading-relaxed">
+                      Use the proxy ID <code className="bg-white/10 px-1 rounded">@/playground</code> to access this toolbox instance in the future. 
+                      The container will be accessible at <code className="bg-white/10 px-1 rounded">localhost:11990</code>.
+                    </div>
+                  </div>
+
+                  {/* Docker Image Information */}
+                  <div className="bg-[#323546] rounded-lg p-4 space-y-3">
+                    <div className="text-white font-medium">Image Information</div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Registry:</span>
+                        <span className="text-white">GitHub Container Registry</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Image:</span>
+                        <span className="text-white font-mono text-xs">ghcr.io/null-shot/typescript-agent-framework/mcp-toolbox:pr-41</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Container Name:</span>
+                        <span className="text-white">mcp-toolbox</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-white/40 leading-relaxed">
+                      The Docker image is hosted on GitHub Container Registry and will be updated in future releases.
+                    </div>
+                  </div>
+
+                  {/* Quick Start Instructions */}
+                  <div className="bg-[#323546] rounded-lg p-4 space-y-3">
+                    <div className="text-white font-medium">Quick Start</div>
+                    <div className="space-y-2 text-sm text-white/80">
+                      <div className="flex items-start gap-2">
+                        <span className="text-white/60 font-mono">1.</span>
+                        <span>Ensure Docker Desktop is installed and running</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-white/60 font-mono">2.</span>
+                        <span>Copy the Docker run command above</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-white/60 font-mono">3.</span>
+                        <span>Run the command in your terminal</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-white/60 font-mono">4.</span>
+                        <span>Access the toolbox using proxy ID <code className="bg-white/10 px-1 rounded">@/playground</code></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fixed Action Buttons for Docker Tab */}
               <div className={cn(
                 "flex gap-4 p-6 border-t border-white/12 flex-shrink-0",
                 "transform transition-all duration-700 delay-400",
