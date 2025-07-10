@@ -4,13 +4,6 @@ import { loadAIModelConfig } from "@/lib/storage";
 import { getModels, type AIModel } from "@/lib/model-service";
 import { MessageSquare, Settings2 } from "lucide-react";
 
-interface ModelResponse {
-  data: Array<{
-    id: string;
-    name: string;
-  }>;
-}
-
 interface ChatConfigurationProps {
   onContinue: (config: {
     provider: string;

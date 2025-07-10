@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { ChatConfiguration } from "./chat-configuration";
 import { ChatMessage } from "./chat-message";
-import { ModelSelectorDropdown } from "./model-selector-dropdown";
 import { ChatInput } from "./chat-input";
 import { DateDivider } from "./date-divider";
 import { ChatSettingsModal } from "./chat-settings-modal";
@@ -17,8 +16,7 @@ import {
   loadChat,
   getOrCreateProxyId,
   validateProxyId,
-  ProxyIdValidationResult,
-  generateDockerCommand
+  ProxyIdValidationResult
 } from "@/lib/storage";
 import { getAllAvailableModels, type AIModel } from "@/lib/model-service";
 import { MessageSquare, Settings2 } from "lucide-react";
@@ -114,7 +112,6 @@ export function ChatContainer({
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
-  const [inputValue, setInputValue] = useState("");
   const [selectedModel, setSelectedModel] = useState<ModelOption>({
     id: "claude-3-5-sonnet-20241022",
     name: "Claude 3.5 Sonnet",
@@ -256,11 +253,8 @@ export function ChatContainer({
   // Chat hook - only initialize if we have a valid model config
   const {
     messages: aiMessages,
-    handleInputChange,
-    handleSubmit,
     append,
     status,
-    error,
   } = useChat({
     api: modelConfig ? '/api/chat' : undefined,
     id: enableSessionManagement ? 'session-chat' : 'chat-session',
@@ -451,12 +445,6 @@ export function ChatContainer({
   // Handle model selection
   const handleModelSelect = (model: ModelOption) => {
     setSelectedModel(model);
-  };
-
-  // Clear error
-  const handleClearError = () => {
-    setCurrentError(null);
-    setErrorMessage(null);
   };
 
   // Convert AI messages to display format
@@ -714,7 +702,7 @@ export function ChatContainer({
               name: model.name,
               provider: model.provider
             }))}
-            error={currentError || error?.message}
+            error={currentError || undefined}
           />
         </div>
       </div>

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { ChatContainer } from "@/components/chat";
 import { MCPServerDirectory } from "@/components/mcp-server-directory";
-import { ModelSelector } from "@/components/model-selector";
 import { DockerInstallModal } from "@/components/docker-install-modal";
 import { PlaygroundHeader } from "@/components/playground-header";
 import { MCPServer } from "@/types/mcp-server";
@@ -26,7 +25,6 @@ export default function PlaygroundPage() {
   const [toolboxStatus, setToolboxStatus] = useState<LocalToolboxStatus>('disconnected');
   const [enabledServerCount, setEnabledServerCount] = useState(0);
   const [isDockerModalOpen, setIsDockerModalOpen] = useState(false);
-  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [dockerToolboxOnline, setDockerToolboxOnline] = useState(false);
 
   // Use the existing WebSocket connection for MCP Proxy status
@@ -67,7 +65,7 @@ export default function PlaygroundPage() {
         setDockerToolboxOnline(false);
         return false;
       }
-    } catch (error) {
+    } catch {
       setDockerToolboxOnline(false);
       return false;
     }
@@ -166,7 +164,7 @@ export default function PlaygroundPage() {
   }, [connectMcp, setToolboxInstalled, checkDockerToolboxHealth]);
 
   const handleModelChange = useCallback((config: ModelConfig | null) => {
-    setModelConfig(config);
+    console.log('Model config changed:', config);
   }, []);
 
   // Display title (server-safe)

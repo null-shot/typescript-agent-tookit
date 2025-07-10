@@ -80,12 +80,13 @@ export function Playground({
     } : null;
     
     setModelConfig(baseConfig);
+    console.log('Previous model config:', modelConfig, 'New config:', baseConfig);
     
     // You can use config.isValid and config.validationError here for UI feedback
     if (config && !config.isValid && config.validationError) {
       console.warn('Model config validation failed:', config.validationError);
     }
-  }, []);
+  }, [modelConfig]);
 
   // Determine chat title based on selected server
   const chatTitle = enabledServerCount > 0
