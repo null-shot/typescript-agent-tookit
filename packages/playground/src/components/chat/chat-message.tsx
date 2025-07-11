@@ -27,7 +27,7 @@ export interface ChatMessageProps {
 
 export function ChatMessage({
   content,
-  timestamp: _timestamp,
+  timestamp, // eslint-disable-line @typescript-eslint/no-unused-vars
   variant,
   className,
   isThinking = false,
