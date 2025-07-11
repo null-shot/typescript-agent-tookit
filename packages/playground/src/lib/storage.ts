@@ -442,24 +442,24 @@ export function generateDockerCommand(proxyId: string): string {
   ghcr.io/null-shot/typescript-agent-framework/mcp-toolbox:pr-41`;
 }
 
-// Installer preference storage
-const INSTALLER_PREFERENCE_KEY = 'installer_preference';
+// Installer preference storage - per MCP server
+const INSTALLER_PREFERENCE_PREFIX = 'installer_preference_';
 
 export type InstallerType = 'local-toolbox' | 'cursor';
 
-export function saveInstallerPreference(installerType: InstallerType): void {
+export function saveInstallerPreference(serverId: string, installerType: InstallerType): void {
   try {
     if (typeof window === 'undefined') return;
-    localStorage.setItem(INSTALLER_PREFERENCE_KEY, installerType);
+    localStorage.setItem(`${INSTALLER_PREFERENCE_PREFIX}${serverId}`, installerType);
   } catch (error) {
     console.error('Failed to save installer preference:', error);
   }
 }
 
-export function getInstallerPreference(): InstallerType {
+export function getInstallerPreference(serverId: string): InstallerType {
   try {
     if (typeof window === 'undefined') return 'local-toolbox';
-    const stored = localStorage.getItem(INSTALLER_PREFERENCE_KEY) as InstallerType;
+    const stored = localStorage.getItem(`${INSTALLER_PREFERENCE_PREFIX}${serverId}`) as InstallerType;
     return stored || 'local-toolbox'; // Default to local-toolbox
   } catch (error) {
     console.error('Failed to get installer preference:', error);
@@ -467,7 +467,7 @@ export function getInstallerPreference(): InstallerType {
   }
 }
 
-// Cursor deeplink generation
+// Cursor deeplink generation - with proper base64 config encoding
 export function generateCursorDeeplink(server: MCPServer, config?: MCPServerConfigData): string {
   try {
     // Get the MCP server config (backward compatibility)
@@ -489,31 +489,27 @@ export function generateCursorDeeplink(server: MCPServer, config?: MCPServerConf
       });
     };
 
-    // Prepare the configuration object for Cursor
+    // Prepare the configuration object for Cursor (matching the expected format)
     const cursorConfig = {
-      mcpServers: {
-        [server.name || server.unique_name]: {
-          command: mcpConfig.command,
-          args: mcpConfig.args.map((arg: string) => substituteInputValues(arg)),
-          env: Object.fromEntries(
-            Object.entries(mcpConfig.env || {}).map(([key, value]) => [
-              key,
-              substituteInputValues(String(value))
-            ])
-          )
-        }
-      }
+      command: mcpConfig.command,
+      args: mcpConfig.args.map((arg: string) => substituteInputValues(arg)),
+      env: Object.fromEntries(
+        Object.entries(mcpConfig.env || {}).map(([key, value]) => [
+          key,
+          substituteInputValues(String(value))
+        ])
+      )
     };
 
     // Base64 encode the configuration
     const base64Config = btoa(JSON.stringify(cursorConfig));
     
-    // Generate the Cursor deeplink
+    // Generate the Cursor deeplink with both name and config
     const serverName = encodeURIComponent(server.name || server.unique_name);
-    return `@cursor://anysphere.cursor-deeplink/mcp/install?name=${serverName}&config=${base64Config}`;
+    return `cursor://anysphere.cursor-deeplink/mcp/install?name=${serverName}&config=${base64Config}`;
   } catch (error) {
     console.error('Failed to generate Cursor deeplink:', error);
     // Fallback to a simple URL that at least opens Cursor
-    return `@cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(server.name || server.unique_name)}`;
+    return `cursor://anysphere.cursor-deeplink/mcp/install?name=${encodeURIComponent(server.name || server.unique_name)}`;
   }
 } 

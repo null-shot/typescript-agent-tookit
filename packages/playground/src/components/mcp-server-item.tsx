@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { MCPServer } from "@/types/mcp-server";
-import { Star, Package, ExternalLink, Download } from "lucide-react";
+import { Star, Download } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -15,23 +15,36 @@ import {
   generateCursorDeeplink,
   loadMCPConfig 
 } from "@/lib/storage";
+import Image from "next/image";
 
-// Cursor icon component (using SVG since Lucid doesn't have it)
-function CursorIcon({ className = "h-4 w-4" }: { className?: string }) {
+// Docker icon component (SVG whale logo)
+function DockerIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg 
       className={className} 
       viewBox="0 0 24 24" 
       fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2"
-      strokeLinecap="round" 
-      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
-      <path d="M12 22V12"/>
-      <path d="M17 13L12 8L7 13"/>
+      <path 
+        d="M13.5 8.5h2v2h-2v-2zm-3 0h2v2h-2v-2zm-3 0h2v2h-2v-2zm6-3h2v2h-2v-2zm-3 0h2v2h-2v-2zm12.5 5.8c-.3-.2-.9-.3-1.4-.2-.1-.5-.4-.9-.8-1.2l-.3-.2-.2.3c-.4.5-.5 1.3-.1 1.9.1.2.2.3.3.4-.1 0-.3.1-.6.1H3.8l-.1.6c-.1.7.1 1.5.5 2.2.4.6 1 1.1 1.7 1.3.3.1.7.2 1.1.2 2.1 0 3.7-.9 4.7-2.6.6.1 1.9 0 2.6-1.4h.2c1 0 1.8-.3 2.3-1l.2-.3-.2-.2zm-19.3-2.1h2v2h-2v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2z" 
+        fill="currentColor"
+      />
     </svg>
+  );
+}
+
+// Cursor icon component using the provided logo (made much lighter)
+function CursorIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <Image 
+      src="/images/cursor-logo.svg"
+      alt="Cursor"
+      width={16}
+      height={16}
+      className={className}
+      style={{ filter: 'brightness(2.5) contrast(1.2) saturate(1.5)' }} // Much brighter and more visible
+    />
   );
 }
 
@@ -67,10 +80,10 @@ export function MCPServerItem({
   const [isToggleLoading, setIsToggleLoading] = React.useState(false);
   const [currentInstaller, setCurrentInstaller] = React.useState<InstallerType>('local-toolbox');
   
-  // Load installer preference on component mount
+  // Load installer preference on component mount - now per server
   React.useEffect(() => {
-    setCurrentInstaller(getInstallerPreference());
-  }, []);
+    setCurrentInstaller(getInstallerPreference(server.id));
+  }, [server.id]);
   
   // Determine display state based on serverState or fallback to props
   const displayState = serverState?.installationState || 
@@ -98,21 +111,27 @@ export function MCPServerItem({
   };
 
   const handleInstall = () => {
-    onInstall?.(server);
+    // Execute the appropriate installation method based on current installer preference
+    if (currentInstaller === 'cursor') {
+      handleInstallWithCursor();
+    } else {
+      // Default to local toolbox installation
+      onInstall?.(server);
+    }
   };
 
   const handleInstallWithCursor = () => {
     try {
-      // Get any existing configuration for this server
+      // Get any existing configuration for this server  
       const existingConfig = loadMCPConfig(server.id);
       
-      // Generate the Cursor deeplink
+      // Generate the simple Cursor deeplink
       const deeplink = generateCursorDeeplink(server, existingConfig || undefined);
       
-      // Open the deeplink
+      // Open the deeplink in a new tab
       window.open(deeplink, '_blank');
       
-      console.log(`Generated Cursor deeplink for ${server.name}:`, deeplink);
+      console.log(`Opening Cursor deeplink for ${server.name}:`, deeplink);
     } catch (error) {
       console.error('Failed to generate Cursor deeplink:', error);
       // Fallback to showing an alert with manual instructions
@@ -120,14 +139,19 @@ export function MCPServerItem({
     }
   };
 
+  const handleInstallerPreferenceChange = (installerType: InstallerType) => {
+    setCurrentInstaller(installerType);
+    // Note: saving is now handled by the dropdown component per server
+  };
+
   const getInstallerIcon = () => {
     switch (currentInstaller) {
       case 'local-toolbox':
-        return <Package className="w-3 h-3" />;
+        return <DockerIcon className="w-3 h-3" />;
       case 'cursor':
         return <CursorIcon className="w-3 h-3" />;
       default:
-        return <Package className="w-3 h-3" />;
+        return <DockerIcon className="w-3 h-3" />;
     }
   };
 
@@ -248,8 +272,10 @@ export function MCPServerItem({
                       {isLoading ? "Installing..." : "Install"}
                     </Button>
                     <InstallDropdown
+                      server={server}
                       onInstall={() => onInstall?.(server)}
                       onInstallWithCursor={handleInstallWithCursor}
+                      onInstallerPreferenceChange={handleInstallerPreferenceChange}
                       isLoading={isLoading}
                       triggerClassName="h-8 w-8 p-0 rounded-l-none border-white/20 bg-transparent text-white hover:bg-white/10"
                     />

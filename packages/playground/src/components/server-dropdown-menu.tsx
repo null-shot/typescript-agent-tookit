@@ -14,7 +14,6 @@ import {
   ExternalLink,
   Trash2,
   ChevronDown,
-  Package,
   Check,
 } from "lucide-react";
 import { MCPServer } from "@/types/mcp-server";
@@ -24,23 +23,36 @@ import {
   getInstallerPreference, 
   saveInstallerPreference 
 } from "@/lib/storage";
+import Image from "next/image";
 
-// Cursor icon component (using SVG since Lucid doesn't have it)
-function CursorIcon({ className = "h-4 w-4" }: { className?: string }) {
+// Docker icon component (SVG whale logo)
+function DockerIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg 
       className={className} 
       viewBox="0 0 24 24" 
       fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2"
-      strokeLinecap="round" 
-      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
     >
-      <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
-      <path d="M12 22V12"/>
-      <path d="M17 13L12 8L7 13"/>
+      <path 
+        d="M13.5 8.5h2v2h-2v-2zm-3 0h2v2h-2v-2zm-3 0h2v2h-2v-2zm6-3h2v2h-2v-2zm-3 0h2v2h-2v-2zm12.5 5.8c-.3-.2-.9-.3-1.4-.2-.1-.5-.4-.9-.8-1.2l-.3-.2-.2.3c-.4.5-.5 1.3-.1 1.9.1.2.2.3.3.4-.1 0-.3.1-.6.1H3.8l-.1.6c-.1.7.1 1.5.5 2.2.4.6 1 1.1 1.7 1.3.3.1.7.2 1.1.2 2.1 0 3.7-.9 4.7-2.6.6.1 1.9 0 2.6-1.4h.2c1 0 1.8-.3 2.3-1l.2-.3-.2-.2zm-19.3-2.1h2v2h-2v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2zm3 0h2v2h-2v-2z" 
+        fill="currentColor"
+      />
     </svg>
+  );
+}
+
+// Cursor icon component using the provided logo (made much lighter)
+function CursorIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <Image 
+      src="/images/cursor-logo.svg"
+      alt="Cursor"
+      width={16}
+      height={16}
+      className={className}
+      style={{ filter: 'brightness(2.5) contrast(1.2) saturate(1.5)' }} // Much brighter and more visible
+    />
   );
 }
 
@@ -106,30 +118,37 @@ export function ServerActionsDropdown({
 }
 
 interface InstallDropdownProps {
+  server: MCPServer;
   onInstall?: () => void;
   onInstallWithCursor?: () => void;
+  onInstallerPreferenceChange?: (installerType: InstallerType) => void;
   isLoading?: boolean;
   triggerClassName?: string;
 }
 
 export function InstallDropdown({
+  server,
   onInstall,
   onInstallWithCursor,
+  onInstallerPreferenceChange,
   isLoading = false,
   triggerClassName
 }: InstallDropdownProps) {
   const [currentInstaller, setCurrentInstaller] = useState<InstallerType>('local-toolbox');
 
-  // Load installer preference on component mount
+  // Load installer preference on component mount - now per server
   useEffect(() => {
-    setCurrentInstaller(getInstallerPreference());
-  }, []);
+    setCurrentInstaller(getInstallerPreference(server.id));
+  }, [server.id]);
 
   const handleInstallerChange = (installerType: InstallerType) => {
     setCurrentInstaller(installerType);
-    saveInstallerPreference(installerType);
+    saveInstallerPreference(server.id, installerType); // Save per server
     
-    // Execute the appropriate install action
+    // Notify parent component of the preference change
+    onInstallerPreferenceChange?.(installerType);
+    
+    // Execute the appropriate install action immediately
     if (installerType === 'local-toolbox') {
       onInstall?.();
     } else if (installerType === 'cursor') {
@@ -140,11 +159,11 @@ export function InstallDropdown({
   const getInstallerIcon = (installerType: InstallerType) => {
     switch (installerType) {
       case 'local-toolbox':
-        return <Package className="mr-2 h-4 w-4" />;
+        return <DockerIcon className="mr-2 h-4 w-4" />;
       case 'cursor':
         return <CursorIcon className="mr-2 h-4 w-4" />;
       default:
-        return <Package className="mr-2 h-4 w-4" />;
+        return <DockerIcon className="mr-2 h-4 w-4" />;
     }
   };
 
@@ -179,7 +198,7 @@ export function InstallDropdown({
           onClick={() => handleInstallerChange('local-toolbox')}
           className="text-white hover:bg-white/10 focus:bg-white/10"
         >
-          <Package className="mr-2 h-4 w-4" />
+          <DockerIcon className="mr-2 h-4 w-4" />
           <span className="flex-1">Local Toolbox</span>
           {currentInstaller === 'local-toolbox' && (
             <Check className="ml-2 h-4 w-4" />
