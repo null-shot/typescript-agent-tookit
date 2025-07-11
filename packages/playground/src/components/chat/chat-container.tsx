@@ -473,7 +473,6 @@ export function ChatContainer({
     
     return aiMessages.map((msg, index) => {
       const isLatestAssistantMessage = msg.role === "assistant" && msg === aiMessages[aiMessages.length - 1];
-      const isActivelyStreaming = status === 'streaming' && isLatestAssistantMessage && !!msg.content;
       const isThinking = status === 'submitted' && index === aiMessages.length - 1 && msg.role === 'assistant' && !msg.content;
       
       // Sample task steps for demo (would come from actual agent logic)

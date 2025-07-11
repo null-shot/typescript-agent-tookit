@@ -394,7 +394,7 @@ export function useConfigurableMcpServerManager(): UseMcpServerManagerReturn {
       });
       return false;
     }
-  }, [sendAddServerRequest]);
+  }, [sendAddServerRequest, updateState]);
 
   const deleteServer = useCallback(async (uniqueName: string): Promise<boolean> => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -451,7 +451,7 @@ export function useConfigurableMcpServerManager(): UseMcpServerManagerReturn {
   // Check if a specific server is loading
   const isServerLoading = useCallback((uniqueName: string): boolean => {
     return state.loadingServers.has(uniqueName);
-  }, [state.loadingServers, updateState]);
+  }, [state.loadingServers]);
 
   // Auto-connect on mount and cleanup on unmount
   useEffect(() => {

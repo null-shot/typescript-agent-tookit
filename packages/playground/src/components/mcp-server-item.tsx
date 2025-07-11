@@ -3,7 +3,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { MCPServer } from "@/types/mcp-server";
-import { loadMCPConfig } from "@/lib/storage";
 import { Star } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
@@ -39,9 +38,6 @@ export function MCPServerItem({
   onToggle,
   className
 }: MCPServerItemProps) {
-  // Check if server requires configuration and is configured
-  const requiresConfiguration = server.inputs && server.inputs.length > 0;
-  
   // Track local loading state for toggle operations
   const [isToggleLoading, setIsToggleLoading] = React.useState(false);
   

@@ -357,10 +357,6 @@ export function MCPServerDirectory({
     }
   };
 
-  const isServerEnabled = (server: MCPServer): boolean => {
-    return getIsServerEnabled(server.id, installedServers);
-  };
-
   const getServerState = (server: MCPServer) => {
     return getMCPServerState(server.id, installedServers);
   };
