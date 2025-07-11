@@ -156,27 +156,7 @@ export function InstallDropdown({
     }
   };
 
-  const getInstallerIcon = (installerType: InstallerType) => {
-    switch (installerType) {
-      case 'local-toolbox':
-        return <DockerIcon className="mr-2 h-4 w-4" />;
-      case 'cursor':
-        return <CursorIcon className="mr-2 h-4 w-4" />;
-      default:
-        return <DockerIcon className="mr-2 h-4 w-4" />;
-    }
-  };
 
-  const getInstallerLabel = (installerType: InstallerType) => {
-    switch (installerType) {
-      case 'local-toolbox':
-        return 'Local Toolbox';
-      case 'cursor':
-        return 'Cursor';
-      default:
-        return 'Local Toolbox';
-    }
-  };
 
   return (
     <DropdownMenu>

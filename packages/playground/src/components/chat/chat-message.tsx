@@ -27,7 +27,7 @@ export interface ChatMessageProps {
 
 export function ChatMessage({
   content,
-  timestamp,
+  timestamp: _timestamp,
   variant,
   className,
   isThinking = false,
