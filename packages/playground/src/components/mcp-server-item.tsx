@@ -3,12 +3,37 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { MCPServer } from "@/types/mcp-server";
-import { Star } from "lucide-react";
+import { Star, Package, ExternalLink, Download } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { ServerActionsDropdown, InstallDropdown } from "./server-dropdown-menu";
+import { 
+  InstallerType, 
+  getInstallerPreference, 
+  generateCursorDeeplink,
+  loadMCPConfig 
+} from "@/lib/storage";
+
+// Cursor icon component (using SVG since Lucid doesn't have it)
+function CursorIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg 
+      className={className} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
+      <path d="M12 22V12"/>
+      <path d="M17 13L12 8L7 13"/>
+    </svg>
+  );
+}
 
 export interface MCPServerItemProps {
   server: MCPServer;
@@ -40,6 +65,12 @@ export function MCPServerItem({
 }: MCPServerItemProps) {
   // Track local loading state for toggle operations
   const [isToggleLoading, setIsToggleLoading] = React.useState(false);
+  const [currentInstaller, setCurrentInstaller] = React.useState<InstallerType>('local-toolbox');
+  
+  // Load installer preference on component mount
+  React.useEffect(() => {
+    setCurrentInstaller(getInstallerPreference());
+  }, []);
   
   // Determine display state based on serverState or fallback to props
   const displayState = serverState?.installationState || 
@@ -70,7 +101,35 @@ export function MCPServerItem({
     onInstall?.(server);
   };
 
+  const handleInstallWithCursor = () => {
+    try {
+      // Get any existing configuration for this server
+      const existingConfig = loadMCPConfig(server.id);
+      
+      // Generate the Cursor deeplink
+      const deeplink = generateCursorDeeplink(server, existingConfig || undefined);
+      
+      // Open the deeplink
+      window.open(deeplink, '_blank');
+      
+      console.log(`Generated Cursor deeplink for ${server.name}:`, deeplink);
+    } catch (error) {
+      console.error('Failed to generate Cursor deeplink:', error);
+      // Fallback to showing an alert with manual instructions
+      alert(`Failed to generate Cursor deeplink. Please install the MCP server manually in Cursor.`);
+    }
+  };
 
+  const getInstallerIcon = () => {
+    switch (currentInstaller) {
+      case 'local-toolbox':
+        return <Package className="w-3 h-3" />;
+      case 'cursor':
+        return <CursorIcon className="w-3 h-3" />;
+      default:
+        return <Package className="w-3 h-3" />;
+    }
+  };
 
   // Map tags to badge variants - using parsedTags from the new format
   const getTagVariant = (tag: string): "raspberry" | "brown" | "violet" | "productivity" | "devtools" | "data" => {
@@ -183,12 +242,14 @@ export function MCPServerItem({
                       disabled={isLoading}
                       variant="outline"
                       size="sm"
-                      className="h-8 rounded-r-none border-r-0 border-white/20 bg-transparent text-white hover:bg-white/10"
+                      className="h-8 rounded-r-none border-r-0 border-white/20 bg-transparent text-white hover:bg-white/10 flex items-center gap-1.5"
                     >
+                      {getInstallerIcon()}
                       {isLoading ? "Installing..." : "Install"}
                     </Button>
                     <InstallDropdown
                       onInstall={() => onInstall?.(server)}
+                      onInstallWithCursor={handleInstallWithCursor}
                       isLoading={isLoading}
                       triggerClassName="h-8 w-8 p-0 rounded-l-none border-white/20 bg-transparent text-white hover:bg-white/10"
                     />

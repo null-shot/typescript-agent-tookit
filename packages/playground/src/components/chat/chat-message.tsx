@@ -27,7 +27,7 @@ export interface ChatMessageProps {
 
 export function ChatMessage({
   content,
-  timestamp: _timestamp,
+  timestamp,
   variant,
   className,
   isThinking = false,
@@ -37,6 +37,7 @@ export function ChatMessage({
   taskSteps = [],
   error,
 }: ChatMessageProps) {
+  // Timestamp is required by interface but not currently used in rendering
   
   // User message component with dynamic width
   const UserMessage = () => (

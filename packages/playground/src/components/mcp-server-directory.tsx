@@ -9,8 +9,7 @@ import { RegistryLoadingScreen } from "./registry-loading-screen";
 import { 
   updateMCPConfigStatus,
   loadMCPConfig,
-  getMCPServerState,
-  isServerEnabled as getIsServerEnabled
+  getMCPServerState
 } from "@/lib/storage";
 import { 
   initializeSearch, 

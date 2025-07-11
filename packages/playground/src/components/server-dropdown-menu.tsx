@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,10 +14,35 @@ import {
   ExternalLink,
   Trash2,
   ChevronDown,
-  Download,
+  Package,
+  Check,
 } from "lucide-react";
 import { MCPServer } from "@/types/mcp-server";
 import { Button } from "./ui/button";
+import { 
+  InstallerType, 
+  getInstallerPreference, 
+  saveInstallerPreference 
+} from "@/lib/storage";
+
+// Cursor icon component (using SVG since Lucid doesn't have it)
+function CursorIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg 
+      className={className} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2"
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.45 9-10V7l-10-5z"/>
+      <path d="M12 22V12"/>
+      <path d="M17 13L12 8L7 13"/>
+    </svg>
+  );
+}
 
 interface ServerActionsDropdownProps {
   server: MCPServer;
@@ -82,19 +107,58 @@ export function ServerActionsDropdown({
 
 interface InstallDropdownProps {
   onInstall?: () => void;
-  onInstallFromGit?: () => void;
-  onInstallFromNpm?: () => void;
+  onInstallWithCursor?: () => void;
   isLoading?: boolean;
   triggerClassName?: string;
 }
 
 export function InstallDropdown({
   onInstall,
-  onInstallFromGit,
-  onInstallFromNpm,
+  onInstallWithCursor,
   isLoading = false,
   triggerClassName
 }: InstallDropdownProps) {
+  const [currentInstaller, setCurrentInstaller] = useState<InstallerType>('local-toolbox');
+
+  // Load installer preference on component mount
+  useEffect(() => {
+    setCurrentInstaller(getInstallerPreference());
+  }, []);
+
+  const handleInstallerChange = (installerType: InstallerType) => {
+    setCurrentInstaller(installerType);
+    saveInstallerPreference(installerType);
+    
+    // Execute the appropriate install action
+    if (installerType === 'local-toolbox') {
+      onInstall?.();
+    } else if (installerType === 'cursor') {
+      onInstallWithCursor?.();
+    }
+  };
+
+  const getInstallerIcon = (installerType: InstallerType) => {
+    switch (installerType) {
+      case 'local-toolbox':
+        return <Package className="mr-2 h-4 w-4" />;
+      case 'cursor':
+        return <CursorIcon className="mr-2 h-4 w-4" />;
+      default:
+        return <Package className="mr-2 h-4 w-4" />;
+    }
+  };
+
+  const getInstallerLabel = (installerType: InstallerType) => {
+    switch (installerType) {
+      case 'local-toolbox':
+        return 'Local Toolbox';
+      case 'cursor':
+        return 'Cursor';
+      default:
+        return 'Local Toolbox';
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -112,25 +176,24 @@ export function InstallDropdown({
         className="w-56 bg-[#17181A] border-white/20"
       >
         <DropdownMenuItem 
-          onClick={onInstall}
+          onClick={() => handleInstallerChange('local-toolbox')}
           className="text-white hover:bg-white/10 focus:bg-white/10"
         >
-          <Download className="mr-2 h-4 w-4" />
-          Install from Registry
+          <Package className="mr-2 h-4 w-4" />
+          <span className="flex-1">Local Toolbox</span>
+          {currentInstaller === 'local-toolbox' && (
+            <Check className="ml-2 h-4 w-4" />
+          )}
         </DropdownMenuItem>
         <DropdownMenuItem 
-          onClick={onInstallFromGit}
+          onClick={() => handleInstallerChange('cursor')}
           className="text-white hover:bg-white/10 focus:bg-white/10"
         >
-          <ExternalLink className="mr-2 h-4 w-4" />
-          Install from Git
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onInstallFromNpm}
-          className="text-white hover:bg-white/10 focus:bg-white/10"
-        >
-          <Download className="mr-2 h-4 w-4" />
-          Install from NPM
+          <CursorIcon className="mr-2 h-4 w-4" />
+          <span className="flex-1">Cursor</span>
+          {currentInstaller === 'cursor' && (
+            <Check className="ml-2 h-4 w-4" />
+          )}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
