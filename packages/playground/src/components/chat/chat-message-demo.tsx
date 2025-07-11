@@ -75,7 +75,6 @@ export function ChatMessageDemo() {
             variant="agent"
             content="This message is being streamed in real-time..."
             timestamp="2:35 PM"
-            isStreaming={true}
           />
         </div>
       </div>

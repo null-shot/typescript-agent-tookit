@@ -46,7 +46,6 @@ interface Message {
   timestamp: string | Date;
   sender: "user" | "agent" | "error";
   isThinking?: boolean;
-  isStreaming?: boolean;
   showTaskList?: boolean;
   taskSteps?: Array<{
     id: string;
@@ -489,7 +488,6 @@ export function ChatContainer({
         content: msg.content || '',
         timestamp: new Date(msg.createdAt || new Date()),
         sender: msg.role === "user" ? "user" : "agent" as "user" | "agent",
-        isStreaming: isActivelyStreaming,
         isThinking,
         showTaskList: sampleTaskSteps.length > 0,
         taskSteps: sampleTaskSteps
@@ -692,7 +690,6 @@ export function ChatContainer({
                   variant={message.sender}
                   avatar={userAvatar}
                   isThinking={message.isThinking}
-                  isStreaming={message.isStreaming}
                   showTaskList={message.showTaskList}
                   taskSteps={message.taskSteps}
                   error={message.error}
