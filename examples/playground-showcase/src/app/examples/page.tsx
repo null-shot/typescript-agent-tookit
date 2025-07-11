@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExternalLink, Code, Zap, Settings } from 'lucide-react'
+import { ExternalLink, Code, Zap, Settings, Terminal } from 'lucide-react'
 
 const examples = [
   {
@@ -46,6 +46,93 @@ function CustomLayout() {
     <div className="grid grid-cols-2 gap-4">
       <ChatContainer />
       <MCPServerDirectory />
+    </div>
+  )
+}`
+  },
+  {
+    title: 'Full Playground Interface',
+    description: 'Complete playground with header, toolbox management, and modal flows',
+    href: '/examples/full-playground',
+    icon: Terminal,
+    code: `import { 
+  PlaygroundProvider, 
+  PlaygroundHeader,
+  ChatContainer,
+  MCPServerDirectory,
+  DockerInstallModal,
+  useConfigurableMcpServerManager
+} from '@xava-labs/playground'
+
+function FullPlayground() {
+  const [isDockerModalOpen, setIsDockerModalOpen] = useState(false)
+  const [isToolboxInstalled, setIsToolboxInstalled] = useState(false)
+  const [toolboxStatus, setToolboxStatus] = useState('disconnected')
+  
+  const { connected, connect } = useConfigurableMcpServerManager()
+
+  return (
+    <PlaygroundProvider config={{ /* your config */ }}>
+      <main className="flex h-screen">
+        <div className="flex-1 flex flex-col p-6">
+          <PlaygroundHeader 
+            isToolboxInstalled={isToolboxInstalled}
+            toolboxStatus={toolboxStatus}
+            onInstallClick={() => setIsDockerModalOpen(true)}
+          />
+          <MCPServerDirectory />
+        </div>
+        <div className="w-96 border-l">
+          <ChatContainer />
+        </div>
+      </main>
+      
+      <DockerInstallModal
+        isOpen={isDockerModalOpen}
+        onClose={() => setIsDockerModalOpen(false)}
+        onInstallationComplete={() => setIsToolboxInstalled(true)}
+      />
+    </PlaygroundProvider>
+  )
+}`
+  },
+  {
+    title: 'Using MCP Server Manager Hook',
+    description: 'Direct access to MCP server management functionality',
+    href: '/examples/server-manager',
+    icon: Settings,
+    code: `import { 
+  PlaygroundProvider,
+  useConfigurableMcpServerManager 
+} from '@xava-labs/playground'
+
+function ServerManager() {
+  const {
+    servers,
+    connected,
+    loading,
+    addServer,
+    deleteServer,
+    refreshServers
+  } = useConfigurableMcpServerManager()
+
+  const handleAddServer = async () => {
+    await addServer({
+      uniqueName: 'my-server',
+      command: 'npx',
+      args: ['my-mcp-server'],
+      env: { API_KEY: 'your-key' }
+    })
+  }
+
+  return (
+    <div>
+      <button onClick={handleAddServer}>Add Server</button>
+      <ul>
+        {servers.map(server => (
+          <li key={server.uniqueName}>{server.uniqueName}</li>
+        ))}
+      </ul>
     </div>
   )
 }`

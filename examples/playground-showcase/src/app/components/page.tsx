@@ -1,7 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { PlaygroundProvider, ChatContainer, MCPServerDirectory, ModelSelector } from '@xava-labs/playground'
+import { 
+  PlaygroundProvider, 
+  ChatContainer, 
+  MCPServerDirectory, 
+  ModelSelector,
+  PlaygroundHeader,
+  LocalToolboxStatusBadge,
+  LocalToolboxStatus
+} from '@xava-labs/playground'
 import '@xava-labs/playground/styles'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -28,10 +36,11 @@ export default function ComponentsPage() {
             }}
           >
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="chat">Chat Components</TabsTrigger>
                 <TabsTrigger value="mcp">MCP Management</TabsTrigger>
                 <TabsTrigger value="models">Model Selection</TabsTrigger>
+                <TabsTrigger value="playground">Playground UI</TabsTrigger>
               </TabsList>
 
               <TabsContent value="chat" className="space-y-6">
@@ -187,6 +196,103 @@ export default function ComponentsPage() {
                         <li>• Temperature and token controls</li>
                         <li>• Custom model support</li>
                         <li>• Usage tracking</li>
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="playground" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Playground Header</CardTitle>
+                    <CardDescription>
+                      Header component with gears icon, status indicators, and installation functionality
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="border border-border rounded-lg p-4 bg-[#14161D]">
+                      <PlaygroundHeader 
+                        isToolboxInstalled={false}
+                        toolboxStatus="disconnected"
+                        onInstallClick={() => console.log('Install clicked')}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Status Indicators</CardTitle>
+                    <CardDescription>
+                      Status badges for local toolbox connection state
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Online:</span>
+                          <LocalToolboxStatusBadge status="online" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Offline:</span>
+                          <LocalToolboxStatusBadge status="offline" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Cannot Connect:</span>
+                          <LocalToolboxStatusBadge status="cannot_connect" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">Disconnected:</span>
+                          <LocalToolboxStatusBadge status="disconnected" />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Usage Example</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-secondary rounded-md p-4 overflow-x-auto">
+                        <pre className="text-sm">
+                          <code>{`import { 
+  PlaygroundHeader, 
+  LocalToolboxStatusBadge,
+  DockerInstallModal 
+} from '@xava-labs/playground'
+
+<PlaygroundHeader 
+  isToolboxInstalled={isInstalled}
+  toolboxStatus={status}
+  onInstallClick={handleInstall}
+/>
+
+<LocalToolboxStatusBadge 
+  status="online" 
+  showTooltip={true} 
+/>`}</code>
+                        </pre>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Features</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-2 text-sm">
+                        <li>• Local toolbox status monitoring</li>
+                        <li>• Docker installation management</li>
+                        <li>• Visual status indicators</li>
+                        <li>• Interactive installation flow</li>
+                        <li>• Responsive design</li>
+                        <li>• Themed components</li>
                       </ul>
                     </CardContent>
                   </Card>

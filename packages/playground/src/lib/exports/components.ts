@@ -15,8 +15,14 @@ export { McpServerManager } from '../../components/mcp-server-manager';
 export { MCPConfigurationDrawer } from '../../components/mcp-configuration-drawer';
 export { McpWebSocketTest } from '../../components/mcp-websocket-test';
 
+// Playground components
+export { PlaygroundHeader } from '../../components/playground-header';
+export { DockerInstallModal } from '../../components/docker-install-modal';
+
 // UI components
 export { ModelSelector } from '../../components/model-selector';
+export { LocalToolboxStatusBadge } from '../../components/ui/local-toolbox-status';
+export type { LocalToolboxStatus } from '../../components/ui/local-toolbox-status';
 
 // UI primitives
 export { Button } from '../../components/ui/button';
