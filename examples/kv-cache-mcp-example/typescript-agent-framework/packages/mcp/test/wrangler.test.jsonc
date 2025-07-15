@@ -1,0 +1,23 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "mcp-test",
+  "main": "../test/index.ts",
+  "compatibility_date": "2025-03-10",
+  "observability": {
+    "enabled": true
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_DURABLE_OBJECT",
+        "class_name": "TestHonoServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["TestHonoServer"]
+    }
+  ]
+} 

@@ -1,0 +1,133 @@
+name: Pull Request
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - '.github/workflows/**'
+
+jobs:
+  test-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Test
+        run: yarn test
+
+      - name: Find changed packages
+        id: changed_packages
+        run: |
+          # Get changed directories and format as JSON array
+          DIRS_JSON=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | 
+                      grep -o 'packages/[^/]*' | 
+                      sort | 
+                      uniq | 
+                      jq -R -s -c 'split("\n")[:-1]')
+          echo "dirs=$DIRS_JSON" >> $GITHUB_OUTPUT
+          
+          # For logging, get the space-separated list
+          CHANGED_DIRS=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | 
+                        grep -o 'packages/[^/]*' | 
+                        sort | 
+                        uniq)
+          echo "Changed packages: $CHANGED_DIRS"
+
+      - name: Check changesets status
+        run: |
+          # Check if there are any changesets present
+          CHANGESETS_COUNT=$(find .changeset -name "*.md" | grep -v "README" | wc -l)
+          echo "Found $CHANGESETS_COUNT changesets"
+          
+          # Check if any package files changed without a changeset
+          PACKAGES_LIST=$(echo '${{ steps.changed_packages.outputs.dirs }}' | jq -r 'join(" ")')
+          NEEDS_CHANGESET=false
+          
+          for PKG in $PACKAGES_LIST; do
+            # Check if there are source code changes
+            SRC_CHANGES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -q "^$PKG/src" && echo "true" || echo "false")
+            
+            if [ "$SRC_CHANGES" = "true" ] && [ "$CHANGESETS_COUNT" -eq 0 ]; then
+              NEEDS_CHANGESET=true
+              echo "⚠️ $PKG has source changes but no changeset was found"
+            fi
+          done
+          
+          if [ "$NEEDS_CHANGESET" = "true" ]; then
+            echo "::warning::Some packages have source changes but no changesets were found. Consider adding a changeset using 'yarn changeset'."
+          fi
+      
+      - name: Dry run changesets version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Run a dry run of the changeset version command to see what would happen
+          if [ -d .changeset ] && [ "$(find .changeset -name "*.md" | grep -v "README" | wc -l)" -gt 0 ]; then
+            echo "Running changeset version in dry-run mode..."
+            # Using npx to ensure we use the project's version of changeset
+            npx changeset version --snapshot preview
+            
+            # Check which packages would be bumped
+            BUMPED_PACKAGES=$(git diff --name-only | grep "package.json" | sort)
+            
+            if [ -n "$BUMPED_PACKAGES" ]; then
+              echo "The following packages would have version bumps:"
+              for PKG_PATH in $BUMPED_PACKAGES; do
+                PKG_NAME=$(node -p "require('./$PKG_PATH').name")
+                OLD_VERSION=$(git show HEAD:$PKG_PATH 2>/dev/null | jq -r .version || echo "not found")
+                NEW_VERSION=$(node -p "require('./$PKG_PATH').version")
+                echo "- $PKG_NAME: $OLD_VERSION → $NEW_VERSION"
+              done
+            else
+              echo "No packages would be bumped."
+            fi
+            
+            # Reset the changed files
+            git reset --hard HEAD
+          else
+            echo "No changesets found. No version changes would be applied."
+          fi
+          
+      - name: Package information summary
+        run: |
+          # Convert JSON array to space-separated list for shell processing
+          PACKAGES_LIST=$(echo '${{ steps.changed_packages.outputs.dirs }}' | jq -r 'join(" ")')
+          
+          echo "## Package Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          for PKG in $PACKAGES_LIST; do
+            echo "### ${PKG}" >> $GITHUB_STEP_SUMMARY
+            cd $PKG
+            CURRENT_VERSION=$(node -p "require('./package.json').version")
+            echo "- Current version: ${CURRENT_VERSION}" >> $GITHUB_STEP_SUMMARY
+            cd ../../
+          done
+          
+          # Check if there are changesets
+          CHANGESETS_COUNT=$(find .changeset -name "*.md" | grep -v "README" | wc -l)
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "$CHANGESETS_COUNT" -gt 0 ]; then
+            echo "This PR contains $CHANGESETS_COUNT changesets that will trigger a version update when merged." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "This PR doesn't contain any changesets. No version updates will be triggered when merged." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "When merged to main, updated packages will be published automatically according to the changesets." >> $GITHUB_STEP_SUMMARY 

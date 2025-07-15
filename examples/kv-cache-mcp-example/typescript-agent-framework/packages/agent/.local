@@ -1,0 +1,4 @@
+# Anthropic API key
+ANTHROPIC_API_KEY=your_anthropic_api_key_here 
+CLOUDFLARE_ACCOUNT_ID=your_account_id_here
+CLOUDFLARE_AI_GATEWAY_ID=your_gateway_id_here

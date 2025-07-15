@@ -1,0 +1,29 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Project Structure
+
+This project is structured as a monorepo using yarn workspaces. The main structure is as follows:
+
+- `packages/`: Contains all the project packages
+  - `mcp/`: The main MCP (Model Context Protocol) implementation for Cloudflare Workers
+  - `test-utils/`: Utilities for testing
+
+- `examples/`: Contains example implementations
+  - `crud-mcp/`: An example CRUD application using the MCP framework
+  - `simple-prompt-agent/`: An example agent that integrates agent framework with only a prompt for chatting.
+
+## Key Files
+
+- Main package: [packages/mcp/src/index.ts](mdc:packages/mcp/src/index.ts)
+- MCP Server implementation: [packages/mcp/src/mcp/server.ts](mdc:packages/mcp/src/mcp/server.ts)
+- Example application: [examples/crud-mcp/src/index.ts](mdc:examples/crud-mcp/src/index.ts)
+
+## Development Workflow
+
+1. Install dependencies at the root level: `yarn install`
+2. Build all packages: `yarn build`
+3. Run tests: `yarn test`
+4. To develop specific packages, navigate to their directory and use their specific scripts

@@ -1,0 +1,7 @@
+name = "kv-cache-mcp-example"
+main = "src/index.ts"
+compatibility_date = "2024-07-15"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "dummy-id"

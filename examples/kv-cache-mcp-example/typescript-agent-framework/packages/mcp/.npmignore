@@ -1,0 +1,23 @@
+# Source files
+src/
+test/
+
+# Configuration files
+.vscode/
+.editorconfig
+.prettierrc
+tsconfig.json
+vitest.config.mts
+wrangler.jsonc
+worker-configuration.d.ts
+
+# Git files
+.gitignore
+
+# Node.js files
+node_modules/
+
+# Build artifacts
+coverage/
+*.log
+.DS_Store 
