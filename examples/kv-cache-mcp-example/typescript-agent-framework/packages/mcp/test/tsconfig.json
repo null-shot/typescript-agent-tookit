@@ -1,8 +1,0 @@
-{
-	"extends": "../tsconfig.json",
-	"compilerOptions": {
-		"types": ["@cloudflare/workers-types/experimental", "@cloudflare/vitest-pool-workers"]
-	},
-	"include": ["./**/*.ts", "../worker-configuration.d.ts", "../src/mcp/websocket-transport.test.ts", "../../test-utils/src/mcp/WorkerSSEClientTransport.ts", "../../test-utils/src/mcp/WorkerWebSocketClientTransport.ts"],
-	"exclude": []
-}

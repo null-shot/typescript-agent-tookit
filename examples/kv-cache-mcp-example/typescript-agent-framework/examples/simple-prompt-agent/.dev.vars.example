@@ -1,4 +1,0 @@
-AI_PROVIDER=anthropic|openai
-ANTHROPIC_API_KEY=sk-ant-key-here
-OPEN_AI_API_KEY=sk-proj-key-here
-TOOLS_REGISTRY=this-gets
