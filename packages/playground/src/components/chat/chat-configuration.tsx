@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { cn } from "../../lib/exports/utils";
+import { loadAIModelConfig, saveAIModelConfig, AIModelConfig, getModels, type AIModel } from "../../lib/exports/storage";
 import Image from "next/image";
-import { cn } from "@/lib/utils";
-import { loadAIModelConfig } from "@/lib/storage";
-import { getModels, type AIModel } from "@/lib/model-service";
-import { MessageSquare, Settings2, Send, Info, Lock } from "lucide-react";
+import { MessageSquare, Settings2 } from "lucide-react";
 
 interface ChatConfigurationProps {
   onContinue: (config: {
@@ -206,7 +207,11 @@ export function ChatConfiguration({ onContinue, className }: ChatConfigurationPr
                 />
                 {error && (
                   <div className="flex items-center gap-1 text-[#FD5353] text-xs">
-                    <Info className="w-3 h-3" />
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 16V12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 8H12.01" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                     <span>{error}</span>
                   </div>
                 )}
@@ -229,7 +234,11 @@ export function ChatConfiguration({ onContinue, className }: ChatConfigurationPr
           <div className="flex flex-col items-center justify-center gap-2 py-4 px-5">
             {/* Lock icon with gradient colors */}
             <div className="w-6 h-6 flex items-center justify-center">
-              <Lock className="w-5 h-5 text-[#7849EF]" />
+              <svg className="w-5 h-5 text-[#7849EF]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M18 10V6C18 4.89543 17.1046 4 16 4H8C6.89543 4 6 4.89543 6 6V10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10 14H14" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
             
             {/* Text */}

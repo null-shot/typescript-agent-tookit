@@ -6,8 +6,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+} from "./dropdown-menu";
+import { cn } from "../../lib/exports/utils";
 
 export interface MenuOption {
   label: string;

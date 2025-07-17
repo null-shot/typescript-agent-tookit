@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/exports/utils";
 import { 
   loadAIModelConfig, 
   saveAIModelConfig,
@@ -9,7 +9,7 @@ import {
   saveCurrentProvider,
   getCurrentProvider,
   AIModelConfig
-} from "@/lib/storage";
+} from "../lib/exports/storage";
 
 // Simplified types for API-driven approach
 interface APIModel {

@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "./ui/dropdown-menu";
 import { 
   MoreVertical, 
   Settings, 
@@ -16,13 +16,8 @@ import {
   ChevronDown,
   Check,
 } from "lucide-react";
-import { MCPServer } from "@/types/mcp-server";
+import { MCPServer, InstallerType, getInstallerPreference, saveInstallerPreference } from "../lib/exports/storage";
 import { Button } from "./ui/button";
-import { 
-  InstallerType, 
-  getInstallerPreference, 
-  saveInstallerPreference 
-} from "@/lib/storage";
 import Image from "next/image";
 
 // Docker icon component (SVG whale logo)

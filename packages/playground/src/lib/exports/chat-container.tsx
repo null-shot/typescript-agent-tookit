@@ -1,15 +1,18 @@
+"use client";
+
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import Image from "next/image";
-import { cn } from "../../lib/exports/utils";
-import { ChatConfiguration } from "./chat-configuration";
-import { ChatMessage } from "./chat-message";
-import { ChatInput } from "./chat-input";
-import { DateDivider } from "./date-divider";
-import { ChatSettingsModal } from "./chat-settings-modal";
-import { NewChatConfirmationModal } from "./new-chat-confirmation-modal";
-import { ProxyMismatchPopup } from "../ui/proxy-mismatch-popup";
+import { cn } from "./utils";
+import { ChatConfiguration } from "../../components/chat/chat-configuration";
+import { ChatMessage } from "../../components/chat/chat-message";
+import { ChatInput } from "../../components/chat/chat-input";
+import { DateDivider } from "../../components/chat/date-divider";
+import { ChatSettingsModal } from "../../components/chat/chat-settings-modal";
+import { NewChatConfirmationModal } from "../../components/chat/new-chat-confirmation-modal";
+import { ProxyMismatchPopup } from "../../components/ui/proxy-mismatch-popup";
 import { useChat, type Message as UIMessage } from "@ai-sdk/react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePlaygroundRouter, usePlaygroundPathname } from "./router-provider";
+import { PlaygroundImage } from "./image-provider";
+import { usePlaygroundConfig } from "./playground-provider";
 import { 
   saveAIModelConfig, 
   loadAIModelConfig, 
@@ -19,10 +22,10 @@ import {
   getOrCreateProxyId,
   validateProxyId,
   ProxyIdValidationResult
-} from "../../lib/exports/storage";
-import { getAllAvailableModels, type AIModel } from "../../lib/exports/storage";
+} from "../storage";
+import { getAllAvailableModels, type AIModel } from "../model-service";
 import { MessageSquare, Settings2 } from "lucide-react";
-import { DockerInstallModal } from "../docker-install-modal";
+import { DockerInstallModal } from "../../components/docker-install-modal";
 
 interface ModelConfig {
   provider: 'openai' | 'anthropic';
@@ -67,15 +70,15 @@ interface DateDividerItem {
   date: Date;
 }
 
-interface ChatContainerProps {
+export interface ChatContainerProps {
   className?: string;
   title?: string;
   showHeader?: boolean;
   userAvatar?: string;
   onModelConfigChange?: (config: ModelConfig | null) => void;
-  enableSessionManagement?: boolean; // New prop to enable session features
-  sessionId?: string; // For existing sessions
-  enabledMCPServerCount?: number; // Number of enabled MCP servers
+  enableSessionManagement?: boolean;
+  sessionId?: string;
+  enabledMCPServerCount?: number;
 }
 
 // Extract session ID from URL path
@@ -102,14 +105,16 @@ export function ChatContainer({
   className,
   title = "Playground Chat",
   showHeader = true,
-  userAvatar = "/images/default-avatar.png",
+  userAvatar,
   onModelConfigChange,
   enableSessionManagement = false,
   sessionId: propSessionId,
   enabledMCPServerCount = 0
 }: ChatContainerProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname = usePlaygroundPathname();
+  const router = usePlaygroundRouter();
+  const config = usePlaygroundConfig();
+  
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
@@ -150,7 +155,10 @@ export function ChatContainer({
     }
   };
   
-    useEffect(() => {
+  useEffect(() => {
+    // Only run in browser and when localStorage is enabled
+    if (typeof window === 'undefined' || !config.enableLocalStorage) return;
+    
     // Get or create proxyId from localStorage
     const currentProxyId = getOrCreateProxyId();
     setProxyId(currentProxyId);
@@ -161,10 +169,12 @@ export function ChatContainer({
     
     console.log('Using proxyId for MCP connection:', currentProxyId);
     console.log('Generated new chat session ID:', newChatSessionId);
-  }, []);
+  }, [config.enableLocalStorage]);
 
   // Periodic health check and proxyId validation
   useEffect(() => {
+    if (!config.mcpProxyUrl) return;
+    
     const performHealthCheck = async () => {
       try {
         const result = await validateProxyId();
@@ -198,7 +208,7 @@ export function ChatContainer({
     const healthCheckInterval = setInterval(performHealthCheck, 5000);
 
     return () => clearInterval(healthCheckInterval);
-  }, []);
+  }, [config.mcpProxyUrl]);
 
   const handleDockerModalClose = () => {
     setShowDockerModal(false);
@@ -276,10 +286,10 @@ export function ChatContainer({
     setMessages,
     stop,
   } = useChat({
-    api: modelConfig ? '/api/chat' : undefined,
+    api: modelConfig && config.apiBaseUrl ? `${config.apiBaseUrl}/chat` : undefined,
     id: enableSessionManagement ? 'session-chat' : 'chat-session',
     streamProtocol: 'data' as const,
-    initialMessages: (enableSessionManagement && sessionId && !isNewChat(sessionId) ? loadChat(sessionId) : []) as UIMessage[],
+    initialMessages: (enableSessionManagement && sessionId && !isNewChat(sessionId) && config.enableLocalStorage ? loadChat(sessionId) : []) as UIMessage[],
     headers: modelConfig ? {
       'Authorization': `Bearer ${modelConfig.apiKey}`,
     } : {},
@@ -288,9 +298,11 @@ export function ChatContainer({
       model: selectedModel.id,
       temperature: modelConfig.temperature || 0.7,
       maxTokens: modelConfig.maxTokens || 2000,
-      mcpProxyId: proxyId, // Pass proxyId to chat API for Durable Object routing
-      mcpSessionId: chatSessionId, // Pass unique session ID for SSE transport
-      enableMCPTools: enabledMCPServerCount > 0 && validationResult?.isValid && validationResult?.serverConnected, // Only enable tools if servers are active and connection is valid
+      maxSteps: modelConfig.maxSteps,
+      systemPrompt: modelConfig.systemPrompt,
+      mcpProxyId: proxyId,
+      mcpSessionId: chatSessionId,
+      enableMCPTools: enabledMCPServerCount > 0 && validationResult?.isValid && validationResult?.serverConnected,
     } : {} as Record<string, unknown>,
     onError: (error) => {
       console.error('Chat error:', error);
@@ -359,24 +371,26 @@ export function ChatContainer({
   });
 
   // Handle configuration completion
-  const handleConfigurationComplete = (config: { provider: string; version: string; apiKey: string }) => {
+  const handleConfigurationComplete = (configData: { provider: string; version: string; apiKey: string }) => {
     const modelConfig: ModelConfig = {
-      provider: config.provider.toLowerCase() as 'openai' | 'anthropic',
-      apiKey: config.apiKey,
-      model: config.version,
+      provider: configData.provider.toLowerCase() as 'openai' | 'anthropic',
+      apiKey: configData.apiKey,
+      model: configData.version,
       temperature: 0.7,
       maxTokens: 2000,
     };
     
-    // Save to localStorage for persistence
-    const aiModelConfig: AIModelConfig = {
-      provider: modelConfig.provider,
-      apiKey: modelConfig.apiKey,
-      model: modelConfig.model,
-      temperature: modelConfig.temperature,
-      maxTokens: modelConfig.maxTokens,
-    };
-    saveAIModelConfig(aiModelConfig);
+    // Save to localStorage for persistence if enabled
+    if (config.enableLocalStorage) {
+      const aiModelConfig: AIModelConfig = {
+        provider: modelConfig.provider,
+        apiKey: modelConfig.apiKey,
+        model: modelConfig.model,
+        temperature: modelConfig.temperature,
+        maxTokens: modelConfig.maxTokens,
+      };
+      saveAIModelConfig(aiModelConfig);
+    }
     
     setModelConfig(modelConfig);
     setCurrentError(null);
@@ -386,19 +400,21 @@ export function ChatContainer({
 
   // Load existing configuration on mount
   useEffect(() => {
-    const existingConfig = loadAIModelConfig();
-    if (existingConfig && existingConfig.apiKey && existingConfig.model) {
-      const modelConfig: ModelConfig = {
-        provider: existingConfig.provider,
-        apiKey: existingConfig.apiKey,
-        model: existingConfig.model,
-        temperature: existingConfig.temperature || 0.7,
-        maxTokens: existingConfig.maxTokens || 2000,
-      };
-      setModelConfig(modelConfig);
-      onModelConfigChange?.(modelConfig);
+    if (config.enableLocalStorage) {
+      const existingConfig = loadAIModelConfig();
+      if (existingConfig && existingConfig.apiKey && existingConfig.model) {
+        const modelConfig: ModelConfig = {
+          provider: existingConfig.provider,
+          apiKey: existingConfig.apiKey,
+          model: existingConfig.model,
+          temperature: existingConfig.temperature || 0.7,
+          maxTokens: existingConfig.maxTokens || 2000,
+        };
+        setModelConfig(modelConfig);
+        onModelConfigChange?.(modelConfig);
+      }
     }
-  }, [onModelConfigChange]);
+  }, [config.enableLocalStorage, onModelConfigChange]);
 
   // Load available models when app starts
   useEffect(() => {
@@ -445,7 +461,7 @@ export function ChatContainer({
 
   // Save messages effect (only if session management enabled)
   useEffect(() => {
-    if (!enableSessionManagement) return;
+    if (!enableSessionManagement || !config.enableLocalStorage) return;
     
     // Don't save for new chats until they have a proper ID
     if (isNewChat(sessionId) || !sessionId) return;
@@ -460,7 +476,7 @@ export function ChatContainer({
     }, 500); // 500ms debounce
     
     return () => clearTimeout(saveTimeout);
-  }, [enableSessionManagement, sessionId, aiMessages]);
+  }, [enableSessionManagement, sessionId, aiMessages, config.enableLocalStorage]);
 
   // Handle model selection
   const handleModelSelect = (model: ModelOption) => {
@@ -609,8 +625,8 @@ export function ChatContainer({
           >
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden">
-                <Image 
-                  src="/images/badge_light_bg.png" 
+                <PlaygroundImage 
+                  assetKey="badgeLightBg"
                   alt="Playground Chat"
                   width={32}
                   height={32}
@@ -686,7 +702,7 @@ export function ChatContainer({
                   content={message.content}
                   timestamp={message.timestamp}
                   variant={message.sender}
-                  avatar={userAvatar}
+                  avatar={userAvatar || 'defaultAvatar'}
                   isThinking={message.isThinking}
                   showTaskList={message.showTaskList}
                   taskSteps={message.taskSteps}

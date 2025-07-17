@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { ChatContainer } from "../../components/chat";
-import { MCPServerDirectory } from "../../components/mcp-server-directory";
-import { ModelSelector } from "../../components/model-selector";
-import { MCPServer } from "../../types/mcp-server";
-import { getCurrentModelConfig, AIModelConfig } from "../../lib/storage";
+import { ChatContainer } from "./components";
+import { MCPServerDirectory } from "./components";
+import { MCPServer } from "./types";
+import { getCurrentModelConfig, AIModelConfig } from "../storage";
 import { usePlaygroundConfig } from './playground-provider';
 
-// Extended interface for model config with validation status (matching ModelSelector)
+// Extended interface for model config with validation status
 interface AIModelConfigWithValidation extends AIModelConfig {
   isValid?: boolean;
   validationError?: string | null;
@@ -18,7 +17,6 @@ export interface PlaygroundProps {
   className?: string;
   style?: React.CSSProperties;
   layout?: 'horizontal' | 'vertical';
-  showModelSelector?: boolean;
   showMCPDirectory?: boolean;
   showChat?: boolean;
 }
@@ -27,7 +25,6 @@ export function Playground({
   className,
   style,
   layout = 'horizontal',
-  showModelSelector = true,
   showMCPDirectory = true,
   showChat = true,
 }: PlaygroundProps) {
@@ -115,35 +112,22 @@ export function Playground({
           </div>
         )}
 
-        {/* Bottom Section - Chat + Model Selector */}
-        <div className="flex flex-1 min-h-0">
-          {/* Chat Interface */}
-          {showChat && (
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="w-full max-w-4xl h-full">
-                  <ChatContainer 
-                    title={chatTitle}
-                    showHeader={true}
-                    className="h-full"
-                    enabledMCPServerCount={enabledServerCount}
-                    onModelConfigChange={handleModelChange}
-                  />
-                </div>
+        {/* Bottom Section - Chat (Full Width) */}
+        {showChat && (
+          <div className="flex-1 min-h-0">
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div className="w-full max-w-4xl h-full">
+                <ChatContainer 
+                  title={chatTitle}
+                  showHeader={true}
+                  className="h-full"
+                  enabledMCPServerCount={enabledServerCount}
+                  onModelConfigChange={handleModelChange}
+                />
               </div>
             </div>
-          )}
-
-          {/* Model Selector */}
-          {showModelSelector && (
-            <div className="border-l border-[rgba(255,255,255,0.1)] p-4 flex-shrink-0">
-              <ModelSelector 
-                onModelChange={handleModelChange}
-                className="sticky top-4"
-              />
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </main>
     );
   }
@@ -161,37 +145,22 @@ export function Playground({
         </div>
       )}
 
-      {/* Right Half - Chat + Model Selector */}
-      <div className={`${showMCPDirectory ? 'w-1/2' : 'w-full'} flex flex-col min-w-0`}>
-        <div className="flex flex-1 min-h-0">
-          {/* Chat Interface */}
-          {showChat && (
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="flex-1 flex items-center justify-center p-4">
-                <div className="w-full max-w-4xl h-full">
-                  <ChatContainer 
-                    title={chatTitle}
-                    showHeader={true}
-                    className="h-full"
-                    enabledMCPServerCount={enabledServerCount}
-                    onModelConfigChange={handleModelChange}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Model Selector */}
-          {showModelSelector && (
-            <div className="border-l border-[rgba(255,255,255,0.1)] p-4 flex-shrink-0">
-              <ModelSelector 
-                onModelChange={handleModelChange}
-                className="sticky top-4"
+      {/* Right Half - Chat (Full Width, No Model Selector Sidebar) */}
+      {showChat && (
+        <div className={`${showMCPDirectory ? 'w-1/2' : 'w-full'} flex flex-col min-w-0`}>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="w-full max-w-4xl h-full">
+              <ChatContainer 
+                title={chatTitle}
+                showHeader={true}
+                className="h-full"
+                enabledMCPServerCount={enabledServerCount}
+                onModelConfigChange={handleModelChange}
               />
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 } 

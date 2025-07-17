@@ -1,9 +1,11 @@
 import { defineConfig } from 'tsup';
+import { copyFileSync } from 'fs';
+import { join } from 'path';
 
 export default defineConfig({
   entry: ['src/lib/exports/index.ts'],
   format: ['cjs', 'esm'],
-  dts: false, // Skip for now due to tsconfig issues
+  dts: true,
   splitting: false,
   sourcemap: true,
   clean: true,
@@ -36,4 +38,17 @@ export default defineConfig({
       js: '"use client";'
     };
   },
+  onSuccess: async () => {
+    // Copy CSS file to dist after successful build
+    console.log('Copying styles.css to dist...');
+    try {
+      copyFileSync(
+        join(process.cwd(), 'src/lib/exports/styles.css'),
+        join(process.cwd(), 'dist/styles.css')
+      );
+      console.log('Successfully copied styles.css');
+    } catch (error) {
+      console.error('Failed to copy styles.css:', error);
+    }
+  }
 }); 

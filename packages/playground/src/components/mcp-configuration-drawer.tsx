@@ -1,12 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
-import { MCPServer, MCPServerConfigData } from "@/types/mcp-server";
-import { 
-  saveMCPConfig, 
-  loadMCPConfig 
-} from "@/lib/storage";
+import { cn } from "../lib/exports/utils";
+import { MCPServer, MCPServerConfigData, saveMCPConfig, loadMCPConfig } from "../lib/exports/storage";
 import {
   Sheet,
   SheetContent,
@@ -14,10 +10,10 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "./ui/sheet";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 export interface MCPConfigurationDrawerProps {
   server: MCPServer | null;

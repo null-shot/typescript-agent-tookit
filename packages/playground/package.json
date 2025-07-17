@@ -20,9 +20,7 @@
 	"scripts": {
 		"dev": "wrangler dev -c ../mcp-proxy/wrangler.jsonc --port 6050 & next dev",
 		"build": "next build",
-		"build:lib": "npm run build:components && npm run build:styles",
-		"build:components": "tsup src/lib/exports/index.ts --format cjs,esm --dts --clean --tsconfig tsconfig.lib.json",
-		"build:styles": "mkdir -p dist && cp ./src/lib/exports/styles.css ./dist/styles.css",
+		"build:lib": "tsup --config tsup.config.ts --tsconfig tsconfig.lib.json",
 		"start": "next start",
 		"lint": "next lint",
 		"test": "echo No tests",

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
+import { ImageProvider, ImageProviderProps, ImageAssets } from './image-provider';
+import { RouterProvider, RouterContextValue } from './router-provider';
 
 export interface PlaygroundConfig {
   mcpProxyUrl: string;
@@ -10,6 +12,10 @@ export interface PlaygroundConfig {
     provider: 'openai' | 'anthropic';
     apiKey: string;
     model: string;
+    temperature?: number;
+    maxTokens?: number;
+    maxSteps?: number;
+    systemPrompt?: string;
   };
   theme?: 'dark' | 'light';
   enabledFeatures?: {
@@ -17,11 +23,16 @@ export interface PlaygroundConfig {
     mcpServerDirectory?: boolean;
     modelSelector?: boolean;
   };
+  enableLocalStorage?: boolean;
 }
 
 const DEFAULT_CONFIG: PlaygroundConfig = {
-  mcpProxyUrl: process.env.NEXT_PUBLIC_MCP_PROXY_URL || 'http://localhost:6050',
-  mcpProxyWsUrl: process.env.NEXT_PUBLIC_MCP_PROXY_WS_URL || 'ws://localhost:6050/client/ws',
+  mcpProxyUrl: typeof window !== 'undefined' 
+    ? (window as any).NEXT_PUBLIC_MCP_PROXY_URL || 'http://localhost:6050'
+    : 'http://localhost:6050',
+  mcpProxyWsUrl: typeof window !== 'undefined'
+    ? (window as any).NEXT_PUBLIC_MCP_PROXY_WS_URL || 'ws://localhost:6050/client/ws'
+    : 'ws://localhost:6050/client/ws',
   apiBaseUrl: '/api',
   theme: 'dark',
   enabledFeatures: {
@@ -29,6 +40,7 @@ const DEFAULT_CONFIG: PlaygroundConfig = {
     mcpServerDirectory: true,
     modelSelector: true,
   },
+  enableLocalStorage: true,
 };
 
 const PlaygroundContext = createContext<PlaygroundConfig>(DEFAULT_CONFIG);
@@ -36,9 +48,18 @@ const PlaygroundContext = createContext<PlaygroundConfig>(DEFAULT_CONFIG);
 export interface PlaygroundProviderProps {
   children: ReactNode;
   config: Partial<PlaygroundConfig>;
+  imageAssets: ImageAssets;
+  imageComponent?: ImageProviderProps['ImageComponent'];
+  router?: RouterContextValue;
 }
 
-export function PlaygroundProvider({ children, config }: PlaygroundProviderProps) {
+export function PlaygroundProvider({ 
+  children, 
+  config,
+  imageAssets,
+  imageComponent,
+  router
+}: PlaygroundProviderProps) {
   const mergedConfig: PlaygroundConfig = {
     ...DEFAULT_CONFIG,
     ...config,
@@ -48,10 +69,38 @@ export function PlaygroundProvider({ children, config }: PlaygroundProviderProps
     },
   };
 
-  return (
+  let content = (
     <PlaygroundContext.Provider value={mergedConfig}>
-      {children}
+      <ImageProvider assets={imageAssets} ImageComponent={imageComponent}>
+        {children}
+      </ImageProvider>
     </PlaygroundContext.Provider>
+  );
+
+  // Wrap with router provider if router is provided
+  if (router) {
+    content = (
+      <RouterProvider value={router}>
+        {content}
+      </RouterProvider>
+    );
+  }
+
+  // Wrap everything in a scoped container with data-theme attribute
+  return (
+    <div 
+      className="xava-playground-root" 
+      data-theme={mergedConfig.theme || 'dark'}
+      style={{
+        // Ensure isolation from parent styles
+        all: 'initial',
+        display: 'block',
+        minHeight: '100vh',
+        fontFamily: "'Space Grotesk', sans-serif",
+      }}
+    >
+      {content}
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { CheckCircle, AlertCircle, AlertTriangle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/exports/utils";
 
 export type LocalToolboxStatus = "online" | "offline" | "cannot_connect" | "error" | "disconnected";
 

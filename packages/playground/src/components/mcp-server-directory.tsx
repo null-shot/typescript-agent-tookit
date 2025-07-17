@@ -1,22 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { MCPServer, MCPServerConfigData } from "@/types/mcp-server";
+import { cn } from "../lib/exports/utils";
+import { MCPServer, MCPServerConfigData, updateMCPConfigStatus, loadMCPConfig, getMCPServerState, fetchMCPRegistry, isRegistryCached } from "../lib/exports/storage";
 import { MCPServerItem } from "./mcp-server-item";
 import { MCPConfigurationDrawer } from "./mcp-configuration-drawer";
 import { RegistryLoadingScreen } from "./registry-loading-screen";
-import { 
-  updateMCPConfigStatus,
-  loadMCPConfig,
-  getMCPServerState
-} from "@/lib/storage";
-import { 
-  initializeSearch, 
-  MCPServerSearch 
-} from "@/lib/search";
-import { fetchMCPRegistry, isRegistryCached } from "@/lib/mcp-registry";
-import { useMcpServerManager } from "@/hooks/use-mcp-server-manager";
+import { useMcpServerManager } from "../lib/exports/hooks";
 
 export interface MCPServerDirectoryProps {
   className?: string;
@@ -24,16 +14,16 @@ export interface MCPServerDirectoryProps {
   onServerCountChange?: (count: number) => void;
 }
 
-export function MCPServerDirectory({
+export function MCPServerDirectory({ 
   className,
-  onServerToggle,
+  onServerToggle, 
   onServerCountChange
 }: MCPServerDirectoryProps) {
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
-  const [searchInstance, setSearchInstance] = useState<MCPServerSearch | null>(null);
+      const [searchInstance, setSearchInstance] = useState<MCPServer[] | null>(null);
   const [registryError, setRegistryError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState('Initializing...');
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
@@ -86,7 +76,7 @@ export function MCPServerDirectory({
         setServers(directory.servers);
         
         // Initialize search
-        const search = initializeSearch(directory.servers);
+        const search = directory.servers; // Changed from initializeSearch
         setSearchInstance(search);
         
         setLoadingStatus('Complete!');
@@ -124,7 +114,7 @@ export function MCPServerDirectory({
         setLoadingStatus('Initializing search...');
         setServers(directory.servers);
         
-        const search = initializeSearch(directory.servers);
+        const search = directory.servers; // Changed from initializeSearch
         setSearchInstance(search);
         
         setLoadingStatus('Complete!');
@@ -135,13 +125,13 @@ export function MCPServerDirectory({
           setContentReady(true);
         }, 100);
         
-      } catch (error) {
+    } catch (error) {
         console.error('Failed to initialize MCP registry:', error);
         setRegistryError(error instanceof Error ? error.message : 'Unknown error occurred');
         setIsLoading(false);
-      }
-    };
-    
+    }
+  };
+
     initializeData();
   };
 
@@ -153,7 +143,10 @@ export function MCPServerDirectory({
     
     // Apply search if query exists
     if (searchQuery.trim()) {
-      results = searchInstance.search(searchQuery);
+      results = results.filter(server => 
+        server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        server.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
     
     // Apply category filter
@@ -167,7 +160,7 @@ export function MCPServerDirectory({
   // Get unique categories for filtering
   const categories = useMemo(() => {
     if (!searchInstance) return [];
-    return searchInstance.getCategories();
+    return Array.from(new Set(searchInstance.map(server => server.category)));
   }, [searchInstance]);
 
   // Utility function to substitute input values in env vars and args

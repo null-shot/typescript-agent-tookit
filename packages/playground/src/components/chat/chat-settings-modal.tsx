@@ -1,18 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/exports/utils";
 import { X, Info, ChevronDown, Settings, RefreshCw, Database, Clock, Hash, Container, Copy, Check } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { 
   loadAIModelConfig, 
   saveAIModelConfig,
   AIModelConfig,
   generateDockerCommand,
-  getOrCreateProxyId 
-} from "@/lib/storage";
-import { getModels, refreshModelsCache } from "@/lib/model-service";
-import { fetchMCPRegistry, clearRegistryCache, isRegistryCached } from "@/lib/mcp-registry";
+  getOrCreateProxyId,
+  getModels,
+  refreshModelsCache,
+  fetchMCPRegistry,
+  clearRegistryCache,
+  isRegistryCached
+} from "../../lib/exports/storage";
 
 interface ChatSettingsModalProps {
   isOpen: boolean;

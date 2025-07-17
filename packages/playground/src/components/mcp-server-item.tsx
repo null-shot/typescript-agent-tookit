@@ -1,20 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
-import { MCPServer } from "@/types/mcp-server";
+import { cn } from "../lib/exports/utils";
+import { MCPServer, InstallerType, getInstallerPreference, generateCursorDeeplink, loadMCPConfig } from "../lib/exports/storage";
 import { Star } from "lucide-react";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { ServerActionsDropdown, InstallDropdown } from "./server-dropdown-menu";
-import { 
-  InstallerType, 
-  getInstallerPreference, 
-  generateCursorDeeplink,
-  loadMCPConfig 
-} from "@/lib/storage";
 import Image from "next/image";
 
 // Docker icon component (SVG whale logo)

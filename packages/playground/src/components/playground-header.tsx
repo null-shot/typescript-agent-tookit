@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Package } from "lucide-react";
 import { Button } from "./ui/button";
 import { LocalToolboxStatusBadge, LocalToolboxStatus } from "./ui/local-toolbox-status";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/exports/utils";
 
 export interface PlaygroundHeaderProps {
   className?: string;

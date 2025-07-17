@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/exports/utils";
 import { Send, Brain, ChevronDown } from "lucide-react";
-import { getCurrentModelConfig, loadAIModelConfig, saveAIModelConfig } from "@/lib/storage";
-import { getModels, type AIModel } from "@/lib/model-service";
+import { getCurrentModelConfig, loadAIModelConfig, saveAIModelConfig, getModels, type AIModel } from "../../lib/exports/storage";
 
 interface ChatInputProps {
   onSend: (message: string) => void;

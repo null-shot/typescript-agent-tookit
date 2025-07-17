@@ -2,7 +2,7 @@ import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import { CheckCircle, AlertCircle } from "lucide-react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/exports/utils"
 
 const statusBadgeVariants = cva(
   "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-normal",
