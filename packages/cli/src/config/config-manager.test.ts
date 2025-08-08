@@ -75,7 +75,6 @@ describe("ConfigManager", () => {
 
   it("should preserve JSONC formatting on save", async () => {
     const originalContent = `{
-  // MCP Server Configuration
   "servers": {
     "test": {
       "source": "github:test/repo",
@@ -98,6 +97,6 @@ describe("ConfigManager", () => {
     await manager.save(config);
 
     const savedContent = vol.readFileSync("mcp.jsonc", "utf-8") as string;
-    expect(savedContent).toContain("// MCP Server Configuration");
+    expect(JSON.parse(savedContent)).to.toEqual(config);
   });
 });

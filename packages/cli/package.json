@@ -32,7 +32,6 @@
   },
   "scripts": {
     "build": "tsc",
-	// wrangler dev -c wrangler.json -c node_modules/@modelcontextprotocol/servers/wrangler.jsonc
     "dev": "tsx watch src/cli.ts",
     "start": "node dist/cli.js",
     "test": "vitest",

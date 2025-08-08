@@ -132,6 +132,63 @@ program
     }
   });
 
+program
+  .command("run")
+  .description("Run MCP servers with dedicated workers using service discovery")
+  .option("--server <name>", "Run specific server by name")
+  .option("--port <port>", "Port for local development", "8787")
+  .option("--env <environment>", "Environment to run in", "development")
+  .option("--watch", "Enable watch mode for development")
+  .action(
+    async (
+      options: {
+        server: string;
+        port?: string;
+        env?: string;
+        watch?: boolean;
+      } & GlobalOptions,
+    ) => {
+      const spinner = ora("Starting MCP servers...").start();
+
+      try {
+        const {
+          dryRun,
+          verbose,
+          config: configPath,
+        } = program.opts<GlobalOptions>();
+        const dryRunManager = new DryRunManager(dryRun || false);
+
+        if (verbose) logger.setVerbose(true);
+        if (dryRun) logger.info(chalk.yellow("🔍 Running in dry-run mode"));
+
+        const configManager = new ConfigManager(configPath || "mcp.jsonc");
+        const config = await configManager.load();
+
+        const wranglerManager = new WranglerManager();
+
+        await runServers(config, {
+          dryRunManager,
+          wranglerManager,
+          serverName: options.server,
+          port: options.port || "8787",
+          environment: options.env || "development",
+          watch: options.watch || false,
+          spinner,
+        });
+
+        spinner.succeed(chalk.green("✅ MCP servers started successfully"));
+
+        if (dryRun) {
+          logger.info(chalk.yellow("\n📋 Dry run summary:"));
+          dryRunManager.printSummary();
+        }
+      } catch (error) {
+        spinner.fail(chalk.red("❌ Failed to start MCP servers"));
+        handleError(error);
+      }
+    },
+  );
+
 async function installServers(
   config: MCPConfig,
   context: {
@@ -224,6 +281,196 @@ async function listInstalledServers(
     .join("\n");
 
   return `${"Name".padEnd(22)} ${"Source".padEnd(42)} Command\n${"─".repeat(80)}\n${table}`;
+}
+
+async function runServers(
+  config: MCPConfig,
+  context: {
+    dryRunManager: DryRunManager;
+    wranglerManager: WranglerManager;
+    serverName?: string;
+    port: string;
+    environment: string;
+    watch: boolean;
+    spinner: any;
+  },
+) {
+  const {
+    dryRunManager,
+    wranglerManager,
+    serverName,
+    port,
+    environment,
+    watch,
+    spinner,
+  } = context;
+
+  const serversToRun = serverName
+    ? { [serverName]: config.servers[serverName] }
+    : config.servers;
+
+  if (!serversToRun || Object.keys(serversToRun).length === 0) {
+    throw new CLIError(
+      "No MCP servers found to run",
+      serverName
+        ? `Server "${serverName}" not found in configuration`
+        : "Add MCP servers to your mcp.jsonc configuration file",
+      1,
+    );
+  }
+
+  logger.info(`Starting ${Object.keys(serversToRun).length} MCP server(s)...`);
+
+  // If no specific server is provided, run all servers in dedicated subprocesses
+  if (!serverName) {
+    spinner.text = "Starting all MCP servers in dedicated subprocesses...";
+    
+    // Update configuration for all servers
+    await dryRunManager.execute(
+      "Update wrangler.jsonc with configurations for all MCP servers",
+      () => wranglerManager.updateConfigForDedicatedWorkers(config, serversToRun)
+    );
+
+    // Run all servers in parallel subprocesses
+    const { spawn } = await import("node:child_process");
+    const processes = [];
+
+    for (const [serverName, serverConfig] of Object.entries(serversToRun)) {
+      const serverPort = parseInt(port) + Object.keys(serversToRun).indexOf(serverName);
+      const wranglerArgs = [
+        "dev",
+        "--port", serverPort.toString(),
+        "--env", environment,
+        "--name", serverName,
+      ];
+
+      if (watch) {
+        wranglerArgs.push("--watch");
+      }
+
+      logger.info(chalk.blue(`🚀 Starting ${serverName} on port ${serverPort}...`));
+      
+      const process = spawn("wrangler", wranglerArgs, {
+        stdio: "inherit",
+        shell: true,
+        env: {
+          ...process.env,
+          MCP_SERVER_NAME: serverName,
+          MCP_SERVER_PORT: serverPort.toString(),
+        },
+      });
+
+      processes.push(process);
+    }
+
+    // Handle graceful shutdown for all processes
+    process.on("SIGINT", () => {
+      logger.info(chalk.yellow("\n🛑 Shutting down all MCP servers..."));
+      processes.forEach(p => p.kill("SIGINT"));
+    });
+
+    process.on("SIGTERM", () => {
+      logger.info(chalk.yellow("\n🛑 Shutting down all MCP servers..."));
+      processes.forEach(p => p.kill("SIGTERM"));
+    });
+
+    // Wait for all processes to exit
+    await Promise.all(processes.map(p => 
+      new Promise<void>((resolve, reject) => {
+        p.on("close", (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new CLIError(
+              `${serverName} process exited with code ${code}`,
+              "Check the logs above for error details",
+              code || 1
+            ));
+          }
+        });
+
+        p.on("error", (error) => {
+          reject(new CLIError(
+            `Failed to start ${serverName}: ${error.message}`,
+            "Make sure wrangler is installed and accessible in your PATH",
+            1
+          ));
+        });
+      })
+    ));
+
+    spinner.succeed(chalk.green("✅ All MCP servers started successfully"));
+    return;
+  }
+
+  // Handle single server case
+  spinner.text = "Configuring service bindings for dedicated workers...";
+  await dryRunManager.execute(
+    "Update wrangler.jsonc with service bindings for dedicated workers",
+    () => wranglerManager.updateConfigForDedicatedWorkers(config, serversToRun)
+  );
+
+  // Start the single worker
+  spinner.text = "Starting Cloudflare Worker...";
+  
+  const wranglerArgs = [
+    "dev",
+    "--port", port,
+    "--env", environment,
+    "--name", serverName,
+  ];
+
+  if (watch) {
+    wranglerArgs.push("--watch");
+  }
+
+  logger.info(chalk.blue(`🚀 Starting ${serverName} on port ${port}...`));
+  
+  if (!dryRunManager.isEnabled()) {
+    const { spawn } = await import("node:child_process");
+    const wranglerProcess = spawn("wrangler", wranglerArgs, {
+      stdio: "inherit",
+      shell: true,
+      env: {
+        ...process.env,
+        MCP_SERVER_NAME: serverName,
+        MCP_SERVER_PORT: port,
+      },
+    });
+
+    // Handle graceful shutdown
+    process.on("SIGINT", () => {
+      logger.info(chalk.yellow(`\n🛑 Shutting down ${serverName}...`));
+      wranglerProcess.kill("SIGINT");
+    });
+
+    process.on("SIGTERM", () => {
+      logger.info(chalk.yellow(`\n🛑 Shutting down ${serverName}...`));
+      wranglerProcess.kill("SIGTERM");
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      wranglerProcess.on("close", (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new CLIError(
+            `${serverName} process exited with code ${code}`,
+            "Check the logs above for error details",
+            code || 1
+          ));
+        }
+      });
+
+      wranglerProcess.on("error", (error) => {
+        reject(new CLIError(
+          `Failed to start wrangler: ${error.message}`,
+          "Make sure wrangler is installed and accessible in your PATH",
+          1
+        ));
+      });
+    });
+  }
 }
 
 function handleError(error: unknown): void {

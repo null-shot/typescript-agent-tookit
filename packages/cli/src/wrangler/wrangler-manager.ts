@@ -201,7 +201,6 @@ export class WranglerManager {
       config.services = config.services.filter((service) => {
         const serverName = service.service;
         return currentServers.includes(serverName);
-        return true;
       });
 
       if (config.services.length !== originalLength) {
@@ -234,6 +233,106 @@ export class WranglerManager {
         `Cleaned up wrangler.jsonc configuration for removed servers`,
       );
     }
+  }
+
+  async updateConfigForDedicatedWorkers(
+    mcpConfig: MCPConfig,
+    serversToRun: Record<string, MCPServerConfig>
+  ): Promise<void> {
+    const wranglerConfig = await this.readConfig();
+
+    // Ensure required structure exists
+    if (!wranglerConfig.durable_objects) {
+      wranglerConfig.durable_objects = { bindings: [] };
+    }
+    if (!wranglerConfig.durable_objects.bindings) {
+      wranglerConfig.durable_objects.bindings = [];
+    }
+    if (!wranglerConfig.services) {
+      wranglerConfig.services = [];
+    }
+    if (!wranglerConfig.vars) {
+      wranglerConfig.vars = {};
+    }
+
+    // Add nodejs_compat flag if not present
+    if (!wranglerConfig.compatibility_flags) {
+      wranglerConfig.compatibility_flags = [];
+    }
+    if (!wranglerConfig.compatibility_flags.includes("nodejs_compat")) {
+      wranglerConfig.compatibility_flags.push("nodejs_compat");
+    }
+
+    // Configure service bindings for dedicated workers with script_name
+    for (const [serverName, serverConfig] of Object.entries(serversToRun)) {
+      // Create Durable Object binding for each MCP server with script_name
+      const durableObjectName = serverName;
+      const existingDO = wranglerConfig.durable_objects.bindings.find(
+        (binding) => binding.name === durableObjectName,
+      );
+
+      if (!existingDO && serverConfig.type === "do") {
+        wranglerConfig.durable_objects.bindings.push({
+          name: durableObjectName,
+          class_name: durableObjectName,
+          script_name: serverName, // Point to the dedicated worker script
+        });
+      } else if (existingDO && serverConfig.type === "do") {
+        // Update existing binding with script_name
+        existingDO.script_name = serverName;
+      }
+
+      // Create service binding for dedicated workers with proper script_name
+      const serviceBindingName = `MCP_${serverName.toUpperCase()}`;
+      const existingService = wranglerConfig.services.find(
+        (service) => service.name === serviceBindingName,
+      );
+
+      if (!existingService && (serverConfig.type ?? "worker") === "worker") {
+        wranglerConfig.services.push({
+          name: serviceBindingName,
+          service: serverName,
+          // Use script_name to point to the actual worker file in node_modules
+          environment: "production", // Ensure consistent environment
+        });
+      } else if (existingService) {
+        // Update existing service binding
+        existingService.service = serverName;
+      }
+
+      // Add environment variables for service discovery
+      if (serverConfig.env) {
+        for (const envVar of serverConfig.env) {
+          if (envVar.value) {
+            wranglerConfig.vars[envVar.name] = envVar.value;
+          }
+        }
+      }
+
+      // Add auth headers as environment variables
+      if (serverConfig.auth?.headers) {
+        for (const [headerName, headerValue] of Object.entries(
+          serverConfig.auth.headers,
+        )) {
+          const envName = `MCP_${serverName.toUpperCase()}_${headerName.toUpperCase()}`;
+          wranglerConfig.vars[envName] = headerValue;
+        }
+      }
+
+      // Add service discovery variables
+      wranglerConfig.vars[`MCP_${serverName.toUpperCase()}_SERVICE`] = serverName;
+      wranglerConfig.vars[`MCP_${serverName.toUpperCase()}_SCRIPT`] = serverName;
+    }
+
+    // Ensure services can discover each other
+    const serviceNames = Object.keys(serversToRun);
+    wranglerConfig.vars.MCP_SERVICES = JSON.stringify(serviceNames);
+    wranglerConfig.vars.MCP_SERVICE_DISCOVERY = "enabled";
+
+    await this.writeConfig(wranglerConfig);
+    logger.debug(
+      `Updated wrangler.jsonc with dedicated worker configurations for ${Object.keys(serversToRun).length} MCP servers`,
+    );
   }
 
   async generateWorkerCode(mcpConfig: MCPConfig): Promise<string> {
