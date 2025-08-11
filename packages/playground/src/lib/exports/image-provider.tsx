@@ -26,7 +26,7 @@ interface ImageComponentProps {
   height?: number;
   className?: string;
   style?: React.CSSProperties;
-  [key: string]: any; // Allow additional props
+  [key: string]: unknown; // Allow additional props
 }
 
 const ImageContext = createContext<{

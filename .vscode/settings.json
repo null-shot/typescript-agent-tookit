@@ -1,0 +1,69 @@
+{
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.suggest.autoImports": true,
+  "typescript.preferences.completeJSDocFields": true,
+  
+  // ESLint settings to match CI behavior
+  "eslint.enable": true,
+  "eslint.lintTask.enable": true,
+  "eslint.run": "onType",
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact", 
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.workingDirectories": [
+    "packages/playground",
+    "packages/mcp",
+    "packages/agent",
+    "packages/test-utils",
+    "packages/mcp-proxy",
+    "packages/mcp-toolbox"
+  ],
+  
+  // Auto-fix ESLint errors on save
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  
+  // Format on save for consistent styling
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  
+  // Specific settings for TypeScript files
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode", 
+    "editor.formatOnSave": true
+  },
+  
+  // Next.js specific settings
+  "files.associations": {
+    "*.mdx": "markdown"
+  },
+  
+  // Show all TypeScript errors
+  "typescript.preferences.noSemicolons": "off",
+  "typescript.validate.enable": true,
+  "javascript.validate.enable": true,
+  
+  // Workspace specific settings
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.next": true,
+    "**/coverage": true
+  },
+  
+  // File watcher settings for better performance
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.next/**": true,
+    "**/dist/**": true
+  }
+}

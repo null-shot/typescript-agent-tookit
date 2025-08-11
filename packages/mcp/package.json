@@ -20,6 +20,9 @@
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
 		"test": "vitest run",
+		"lint": "echo 'No ESLint configured for this package'",
+		"lint:fix": "echo 'No ESLint configured for this package'",
+		"type-check": "tsc --noEmit",
 		"codegen": "wrangler types -c wrangler.jsonc --env-interface Env env.d.ts"
 	},
 	"keywords": [

@@ -152,26 +152,29 @@ export class MCPServerSearch {
     let results = this.search(query);
 
     if (filters.category) {
+      const categoryFilter = filters.category;
       results = results.filter(server => 
-        server.category?.toLowerCase() === filters.category!.toLowerCase()
+        server.category?.toLowerCase() === categoryFilter.toLowerCase()
       );
     }
 
     if (filters.author) {
+      const authorFilter = filters.author;
       results = results.filter(server => 
-        server.author?.toLowerCase().includes(filters.author!.toLowerCase())
+        server.author?.toLowerCase().includes(authorFilter.toLowerCase())
       );
     }
 
     if (filters.license) {
+      const licenseFilter = filters.license;
       results = results.filter(server => {
         // Support both old format (licenses array) and new format (license string)
         if (server.licenses) {
           return server.licenses.some(license => 
-            license.toLowerCase().includes(filters.license!.toLowerCase())
+            license.toLowerCase().includes(licenseFilter.toLowerCase())
           );
         } else if (server.license) {
-          return server.license.toLowerCase().includes(filters.license!.toLowerCase());
+          return server.license.toLowerCase().includes(licenseFilter.toLowerCase());
         }
         return false;
       });
