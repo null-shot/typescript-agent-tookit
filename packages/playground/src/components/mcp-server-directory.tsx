@@ -144,8 +144,8 @@ export function MCPServerDirectory({
     // Apply search if query exists
     if (searchQuery.trim()) {
       results = results.filter(server => 
-        server.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        server.description.toLowerCase().includes(searchQuery.toLowerCase())
+        server.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        server.short_description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
@@ -160,7 +160,7 @@ export function MCPServerDirectory({
   // Get unique categories for filtering
   const categories = useMemo(() => {
     if (!searchInstance) return [];
-    return Array.from(new Set(searchInstance.map(server => server.category)));
+    return Array.from(new Set(searchInstance.map(server => server.category).filter((category): category is string => Boolean(category))));
   }, [searchInstance]);
 
   // Utility function to substitute input values in env vars and args

@@ -17,6 +17,13 @@ export default function PlaygroundPage() {
             modelSelector: true,
           },
         }}
+        imageAssets={{
+          defaultAvatar: '/images/default-avatar.png',
+          badgeLightBg: '/images/badge_light_bg.png', 
+          gears: '/images/gears.png',
+          cursorLogo: '/images/cursor-logo.svg',
+          ellipse: '/images/ellipse.svg'
+        }}
       >
         <Playground 
           className="h-screen"

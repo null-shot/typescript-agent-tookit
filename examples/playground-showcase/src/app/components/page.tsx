@@ -34,6 +34,13 @@ export default function ComponentsPage() {
               mcpProxyWsUrl: 'ws://localhost:6050/client/ws',
               theme: 'dark',
             }}
+            imageAssets={{
+              defaultAvatar: '/images/default-avatar.png',
+              badgeLightBg: '/images/badge_light_bg.png', 
+              gears: '/images/gears.png',
+              cursorLogo: '/images/cursor-logo.svg',
+              ellipse: '/images/ellipse.svg'
+            }}
           >
             <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
