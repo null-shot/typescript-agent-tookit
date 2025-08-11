@@ -5,7 +5,7 @@ services:
   mcp-toolbox:
     build:
       context: ../../
-      dockerfile: packages/mcp-toolbox/Dockerfile
+      dockerfile: mcp-toolbox.Dockerfile
     ports:
       - "${PORT:-11990}:${PORT:-11990}"
     environment:
