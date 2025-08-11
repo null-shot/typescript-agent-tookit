@@ -8,7 +8,6 @@ import { PlaygroundHeader } from "../../components/playground-header";
 import { MCPServer } from "../../types/mcp-server";
 import { LocalToolboxStatus } from "../../components/ui/local-toolbox-status";
 import { useMcpServerManager } from "../../hooks/use-mcp-server-manager";
-import { usePlaygroundConfig } from './playground-provider';
 
 interface ModelConfig {
   provider: 'openai' | 'anthropic';
@@ -34,7 +33,6 @@ export function PlaygroundExact({
   showInstallModal = true,
   userAvatar = "/images/default-avatar.png",
 }: PlaygroundExactProps) {
-  const config = usePlaygroundConfig();
   const [isToolboxInstalled, setIsToolboxInstalled] = useState(false);
   const [toolboxStatus, setToolboxStatus] = useState<LocalToolboxStatus>('disconnected');
   const [enabledServerCount, setEnabledServerCount] = useState(0);

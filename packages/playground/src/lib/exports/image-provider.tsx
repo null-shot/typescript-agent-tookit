@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, ReactNode } from 'react';
+import Image from 'next/image';
 
 export interface ImageAssets {
   defaultAvatar: string;
@@ -15,29 +16,32 @@ export interface ImageProviderProps {
   children: ReactNode;
   assets: ImageAssets;
   // Optional custom image component for framework-specific optimizations
-  ImageComponent?: React.ComponentType<{
-    src: string;
-    alt: string;
-    width?: number;
-    height?: number;
-    className?: string;
-    style?: React.CSSProperties;
-  }>;
+  ImageComponent?: React.ComponentType<ImageComponentProps>;
+}
+
+interface ImageComponentProps {
+  src: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  [key: string]: any; // Allow additional props
 }
 
 const ImageContext = createContext<{
   assets: ImageAssets;
-  ImageComponent: React.ComponentType<any>;
+  ImageComponent: React.ComponentType<ImageComponentProps>;
 } | null>(null);
 
-// Default image component (simple img tag)
-const DefaultImageComponent: React.FC<any> = ({ src, alt, width, height, className, style, ...props }) => {
+// Default image component using Next.js Image
+const DefaultImageComponent: React.FC<ImageComponentProps> = ({ src, alt, width, height, className, style, ...props }) => {
   return (
-    <img 
+    <Image 
       src={src} 
       alt={alt} 
-      width={width} 
-      height={height} 
+      width={width || 24} 
+      height={height || 24} 
       className={className}
       style={style}
       {...props}

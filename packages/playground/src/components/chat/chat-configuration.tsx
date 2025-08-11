@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { cn } from "../../lib/exports/utils";
-import { loadAIModelConfig, saveAIModelConfig, AIModelConfig, getModels, type AIModel } from "../../lib/exports/storage";
+import { loadAIModelConfig, getModels, type AIModel } from "../../lib/exports/storage";
 import Image from "next/image";
 import { MessageSquare, Settings2 } from "lucide-react";
 

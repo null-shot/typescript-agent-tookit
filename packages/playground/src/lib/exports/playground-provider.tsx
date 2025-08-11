@@ -26,12 +26,18 @@ export interface PlaygroundConfig {
   enableLocalStorage?: boolean;
 }
 
+// Define a type for environment variables on window
+interface WindowWithEnv extends Window {
+  NEXT_PUBLIC_MCP_PROXY_URL?: string;
+  NEXT_PUBLIC_MCP_PROXY_WS_URL?: string;
+}
+
 const DEFAULT_CONFIG: PlaygroundConfig = {
   mcpProxyUrl: typeof window !== 'undefined' 
-    ? (window as any).NEXT_PUBLIC_MCP_PROXY_URL || 'http://localhost:6050'
+    ? (window as WindowWithEnv).NEXT_PUBLIC_MCP_PROXY_URL || 'http://localhost:6050'
     : 'http://localhost:6050',
   mcpProxyWsUrl: typeof window !== 'undefined'
-    ? (window as any).NEXT_PUBLIC_MCP_PROXY_WS_URL || 'ws://localhost:6050/client/ws'
+    ? (window as WindowWithEnv).NEXT_PUBLIC_MCP_PROXY_WS_URL || 'ws://localhost:6050/client/ws'
     : 'ws://localhost:6050/client/ws',
   apiBaseUrl: '/api',
   theme: 'dark',
