@@ -17,6 +17,10 @@ export { McpWebSocketTest } from '../../components/mcp-websocket-test';
 export { PlaygroundHeader } from '../../components/playground-header';
 export { DockerInstallModal } from '../../components/docker-install-modal';
 
+// Model components  
+export { ModelSelector } from '../../components/model-selector';
+export type { ModelSelectorProps } from '../../components/model-selector';
+
 // UI components
 export { LocalToolboxStatusBadge } from '../../components/ui/local-toolbox-status';
 export type { LocalToolboxStatus } from '../../components/ui/local-toolbox-status';

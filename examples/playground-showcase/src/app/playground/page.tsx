@@ -28,7 +28,6 @@ export default function PlaygroundPage() {
         <Playground 
           className="h-screen"
           layout="horizontal"
-          showModelSelector={true}
           showMCPDirectory={true}
         />
       </PlaygroundProvider>

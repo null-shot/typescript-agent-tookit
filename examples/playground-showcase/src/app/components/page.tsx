@@ -7,8 +7,7 @@ import {
   MCPServerDirectory, 
   ModelSelector,
   PlaygroundHeader,
-  LocalToolboxStatusBadge,
-  LocalToolboxStatus
+  LocalToolboxStatusBadge
 } from '@xava-labs/playground'
 import '@xava-labs/playground/styles'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'

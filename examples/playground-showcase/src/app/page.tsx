@@ -1,8 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
-import { PlaygroundProvider } from '@xava-labs/playground'
 import { ExternalLink, Github, Terminal, MessageCircle, Settings, Zap, Package, CheckCircle } from 'lucide-react'
 
 export default function Home() {
