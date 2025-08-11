@@ -37,4 +37,7 @@ yarn-error.log*
 next-env.d.ts
 
 # wrangler
-.wrangler/ 
+.wrangler/
+
+# Allow our src/lib directory (override root gitignore)
+!src/lib/ 
