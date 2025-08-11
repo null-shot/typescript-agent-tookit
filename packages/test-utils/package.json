@@ -28,11 +28,11 @@
     "lint": "echo 'No ESLint configured for this package'",
     "lint:fix": "echo 'No ESLint configured for this package'",
     "type-check": "tsc --noEmit",
-    "prepublishOnly": "yarn build",
+    "prepublishOnly": "pnpm build",
     "postversion": "echo 'Version updated to' $npm_package_version"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.13.0"
+    "@modelcontextprotocol/sdk": "^1.17.2"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.8.43",
