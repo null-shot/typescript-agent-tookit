@@ -21,8 +21,8 @@ importers:
   examples/crud-mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: ^1.13.0
-        version: 1.13.1
+        specifier: ^1.17.2
+        version: 1.17.2
       '@xava-labs/mcp':
         specifier: file:../../packages/mcp
         version: file:packages/mcp
