@@ -9,6 +9,8 @@ import { WranglerManager } from "./wrangler/wrangler-manager.js";
 import { DryRunManager } from "./utils/dry-run.js";
 import { CLIError } from "./utils/errors.js";
 import { Logger } from "./utils/logger.js";
+import { TemplateManager } from "./template/template-manager.js";
+import { InputManager } from "./template/input-manager.js";
 import type { MCPConfig, InstallOptions, ListOptions } from "./types/index.js";
 
 const program = new Command();
@@ -108,6 +110,97 @@ program
       await configManager.validate();
       spinner.succeed(chalk.green("✅ Configuration is valid"));
     } catch (error) {
+      handleError(error);
+    }
+  });
+
+// Create command group
+const createCommand = program
+  .command("create")
+  .description("Create a new project from template");
+
+createCommand
+  .command("mcp")
+  .description("Create a new MCP server project")
+  .action(async () => {
+    const spinner = ora("Setting up MCP project...").start();
+    
+    try {
+      const {
+        dryRun,
+        verbose,
+      } = program.opts<GlobalOptions>();
+      const dryRunManager = new DryRunManager(dryRun || false);
+
+      if (verbose) logger.setVerbose(true);
+      if (dryRun) logger.info(chalk.yellow("🔍 Running in dry-run mode"));
+
+      spinner.stop(); // Stop spinner for user input
+
+      const inputManager = new InputManager();
+      const projectConfig = await inputManager.promptForProjectConfig("mcp");
+      
+      spinner.start("Creating MCP project...");
+
+      const templateManager = new TemplateManager(dryRunManager);
+      await templateManager.createProject("mcp", projectConfig.projectName, projectConfig.targetDirectory);
+
+      spinner.succeed(chalk.green("✅ MCP project created successfully"));
+      
+      logger.info(chalk.blue("\n🚀 Next steps:"));
+      logger.info(`   cd ${projectConfig.targetDirectory}`);
+      logger.info("   npm install");
+      logger.info("   npm run dev");
+
+      if (dryRun) {
+        logger.info(chalk.yellow("\n📋 Dry run summary:"));
+        dryRunManager.printSummary();
+      }
+    } catch (error) {
+      spinner.fail(chalk.red("❌ Failed to create MCP project"));
+      handleError(error);
+    }
+  });
+
+createCommand
+  .command("agent")
+  .description("Create a new Agent project")
+  .action(async () => {
+    const spinner = ora("Setting up Agent project...").start();
+    
+    try {
+      const {
+        dryRun,
+        verbose,
+      } = program.opts<GlobalOptions>();
+      const dryRunManager = new DryRunManager(dryRun || false);
+
+      if (verbose) logger.setVerbose(true);
+      if (dryRun) logger.info(chalk.yellow("🔍 Running in dry-run mode"));
+
+      spinner.stop(); // Stop spinner for user input
+
+      const inputManager = new InputManager();
+      const projectConfig = await inputManager.promptForProjectConfig("agent");
+      
+      spinner.start("Creating Agent project...");
+
+      const templateManager = new TemplateManager(dryRunManager);
+      await templateManager.createProject("agent", projectConfig.projectName, projectConfig.targetDirectory);
+
+      spinner.succeed(chalk.green("✅ Agent project created successfully"));
+      
+      logger.info(chalk.blue("\n🚀 Next steps:"));
+      logger.info(`   cd ${projectConfig.targetDirectory}`);
+      logger.info("   npm install");
+      logger.info("   npm run dev");
+
+      if (dryRun) {
+        logger.info(chalk.yellow("\n📋 Dry run summary:"));
+        dryRunManager.printSummary();
+      }
+    } catch (error) {
+      spinner.fail(chalk.red("❌ Failed to create Agent project"));
       handleError(error);
     }
   });

@@ -5,6 +5,8 @@ export { WranglerManager } from "./wrangler/wrangler-manager.js";
 export { DryRunManager } from "./utils/dry-run.js";
 export { CLIError } from "./utils/errors.js";
 export { Logger } from "./utils/logger.js";
+export { TemplateManager } from "./template/template-manager.js";
+export { InputManager } from "./template/input-manager.js";
 
 // Export types
 export type {
