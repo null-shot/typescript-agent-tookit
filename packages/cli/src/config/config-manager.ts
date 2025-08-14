@@ -1,7 +1,6 @@
 import { readFile, writeFile, access } from "fs/promises";
-import { parse, parseTree, modify, applyEdits } from "jsonc-parser";
-import Ajv from "ajv";
-import type { JSONSchemaType } from "ajv";
+import { parse, modify, applyEdits } from "jsonc-parser";
+import Ajv, { JSONSchemaType } from "ajv";
 import type { MCPConfig, MCPServerConfig } from "../types/index.js";
 import { ConfigError } from "../utils/errors.js";
 import { Logger } from "../utils/logger.js";
@@ -19,6 +18,11 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
           properties: {
             source: { type: "string" },
             command: { type: "string" },
+            type: { 
+              type: "string", 
+              enum: ["worker", "do"], 
+              nullable: true 
+            },
             env: {
               type: "array",
               items: {
@@ -38,26 +42,29 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
                 headers: {
                   type: "object",
                   patternProperties: {
-                    "^[a-zA-Z][a-zA-Z0-9-_]*$": { type: "string" },
+                    "^[a-zA-Z][a-zA-Z0-9-_]*$": { type: "string" }
                   },
+                  required: [],
                   additionalProperties: false,
                   nullable: true,
                 },
               },
+              required: [],
               additionalProperties: false,
               nullable: true,
             },
           },
           required: ["source", "command"],
           additionalProperties: false,
-        },
+        }
       },
+      required: [],
       additionalProperties: false,
     },
   },
   required: ["servers"],
   additionalProperties: false,
-};
+} as const;
 
 export class ConfigManager {
   private ajv = new Ajv();
@@ -71,7 +78,7 @@ export class ConfigManager {
     } catch {
       throw new ConfigError(
         `Configuration file not found: ${this.configPath}`,
-        `Run 'mcp-cli init' to create a new configuration file`,
+        `Run 'nullshot init' to create a new configuration file`,
       );
     }
 
@@ -82,7 +89,7 @@ export class ConfigManager {
       if (!this.#validate(config)) {
         const errors =
           this.#validate.errors
-            ?.map((err) => `${err.instancePath || "root"}: ${err.message}`)
+            ?.map((err) => `${(err as any).instancePath || "root"}: ${err.message}`)
             .join(", ") || "Unknown validation error";
 
         throw new ConfigError(
@@ -106,7 +113,7 @@ export class ConfigManager {
     if (!this.#validate(config)) {
       const errors =
         this.#validate.errors
-          ?.map((err) => `${err.instancePath || "root"}: ${err.message}`)
+          ?.map((err) => `${(err as any).instancePath || "root"}: ${err.message}`)
           .join(", ") || "Unknown validation error";
 
       throw new ConfigError(`Invalid configuration: ${errors}`);

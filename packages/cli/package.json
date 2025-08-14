@@ -1,6 +1,7 @@
 {
-  "name": "nullshot-cli",
+  "name": "@xava-labs/nullshot",
   "version": "1.0.0",
+  "type": "module",
   "author": "Felix Nordén",
   "description": "CLI tool for managing Model Context Protocol (MCP) servers with Cloudflare Workers and Durable Objects",
   "keywords": [
@@ -13,16 +14,23 @@
   ],
   "files": [
     "dist",
-    "schema.json"
+    "schema.json",
+    "README.md",
+    "LICENSE"
   ],
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nullshot/nullshot-cli.git"
+    "url": "https://github.com/null-shot/typescript-agent-framework.git",
+    "directory": "packages/cli"
   },
-  "homepage": "https://github.com/nullshot/nullshot-cli#readme",
+  "homepage": "https://github.com/null-shot/typescript-agent-framework/tree/main/packages/cli#readme",
   "bugs": {
-    "url": "https://github.com/nullshot/nullshot-cli/issues"
+    "url": "https://github.com/null-shot/typescript-agent-framework/issues"
   },
   "engines": {
     "node": ">=22.0.0"
@@ -58,19 +66,11 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@modelcontextprotocol/servers": "github:modelcontextprotocol/servers-archived",
     "ajv": "^8.17.1",
     "chalk": "^5.4.1",
     "commander": "^14.0.0",
     "jsonc-parser": "^3.3.1",
     "ora": "^8.2.0",
     "package-manager-detector": "^1.3.0"
-  },
-  "mcpServers": {
-    "github": {
-      "source": "github:modelcontextprotocol/servers-archived",
-      "installedAt": "2025-07-08T08:59:51.079Z",
-      "packageName": "modelcontextprotocol-servers-archived"
-    }
   }
 }

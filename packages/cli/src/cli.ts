@@ -21,8 +21,8 @@ interface GlobalOptions {
 }
 
 program
-  .name("mcp-cli")
-  .description("CLI tool for managing MCP servers with Cloudflare Workers")
+  .name("nullshot")
+  .description("Nullshot CLI for managing MCP servers with Cloudflare Workers")
   .version("1.0.0")
   .option("--dry-run", "Show what would be done without making changes")
   .option("-v, --verbose", "Enable verbose logging")
@@ -306,7 +306,7 @@ async function runServers(
   } = context;
 
   const serversToRun = serverName
-    ? { [serverName]: config.servers[serverName] }
+    ? (config.servers[serverName] ? { [serverName]: config.servers[serverName] } : {})
     : config.servers;
 
   if (!serversToRun || Object.keys(serversToRun).length === 0) {
@@ -333,9 +333,9 @@ async function runServers(
 
     // Run all servers in parallel subprocesses
     const { spawn } = await import("node:child_process");
-    const processes = [];
+    const processes: any[] = [];
 
-    for (const [serverName, serverConfig] of Object.entries(serversToRun)) {
+    for (const [serverName] of Object.entries(serversToRun)) {
       const serverPort = parseInt(port) + Object.keys(serversToRun).indexOf(serverName);
       const wranglerArgs = [
         "dev",
@@ -350,7 +350,7 @@ async function runServers(
 
       logger.info(chalk.blue(`🚀 Starting ${serverName} on port ${serverPort}...`));
       
-      const process = spawn("wrangler", wranglerArgs, {
+      const childProcess = spawn("wrangler", wranglerArgs, {
         stdio: "inherit",
         shell: true,
         env: {
@@ -360,7 +360,7 @@ async function runServers(
         },
       });
 
-      processes.push(process);
+      processes.push(childProcess);
     }
 
     // Handle graceful shutdown for all processes
@@ -377,7 +377,7 @@ async function runServers(
     // Wait for all processes to exit
     await Promise.all(processes.map(p => 
       new Promise<void>((resolve, reject) => {
-        p.on("close", (code) => {
+        p.on("close", (code: number) => {
           if (code === 0) {
             resolve();
           } else {
@@ -389,7 +389,7 @@ async function runServers(
           }
         });
 
-        p.on("error", (error) => {
+        p.on("error", (error: Error) => {
           reject(new CLIError(
             `Failed to start ${serverName}: ${error.message}`,
             "Make sure wrangler is installed and accessible in your PATH",

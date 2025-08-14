@@ -1,4 +1,4 @@
-# MCP CLI
+# Nullshot CLI
 
 A TypeScript CLI tool for managing Model Context Protocol (MCP) servers with Cloudflare Workers and Durable Objects.
 
@@ -15,18 +15,18 @@ A TypeScript CLI tool for managing Model Context Protocol (MCP) servers with Clo
 ## Installation
 
 ```bash
-npm install -g mcp-cli
+npm install -g @xava-labs/nullshot
 # or
-yarn global add mcp-cli
+yarn global add @xava-labs/nullshot
 # or  
-pnpm add -g mcp-cli
+pnpm add -g @xava-labs/nullshot
 ```
 
 ## Quick Start
 
 1. **Initialize configuration**:
 ```bash
-mcp-cli init
+nullshot init
 ```
 
 2. **Edit `mcp.jsonc`** with your servers:
@@ -53,7 +53,7 @@ mcp-cli init
 
 3. **Install servers**:
 ```bash
-mcp-cli install
+nullshot install
 ```
 
 ## Configuration
@@ -90,12 +90,12 @@ The `mcp.jsonc` file defines your MCP servers:
 - `https://github.com/user/repo.git#tag`
 ## Commands
 
-### `mcp-cli install`
+### `nullshot install`
 
 Install MCP servers from configuration file.
 
 ```bash
-mcp-cli install [options]
+nullshot install [options]
 
 Options:
   --skip-package-update    Skip updating package.json dependencies
@@ -105,31 +105,31 @@ Options:
   -c, --config <path>     Path to config file (default: mcp.jsonc)
 ```
 
-### `mcp-cli list`
+### `nullshot list`
 
 List currently installed MCP servers.
 
 ```bash
-mcp-cli list [options]
+nullshot list [options]
 
 Options:
   --format <type>         Output format: table|json (default: table)
 ```
 
-### `mcp-cli validate`
+### `nullshot validate`
 
 Validate MCP configuration file.
 
 ```bash
-mcp-cli validate
+nullshot validate
 ```
 
-### `mcp-cli init`
+### `nullshot init`
 
 Initialize a new MCP configuration file.
 
 ```bash
-mcp-cli init [options]
+nullshot init [options]
 
 Options:
   --force                 Overwrite existing configuration file
@@ -141,13 +141,13 @@ Options:
 
 ```bash
 # Initialize with default servers
-mcp-cli init
+nullshot init
 
 # Install all configured servers
-mcp-cli install
+nullshot install
 
 # Preview changes without executing
-mcp-cli install --dry-run
+nullshot install --dry-run
 ```
 
 ### Custom Configuration
@@ -185,7 +185,7 @@ mcp-cli install --dry-run
 
 ### Cloudflare Workers Integration
 
-After running `mcp-cli install`, your `wrangler.jsonc` will be updated:
+After running `nullshot install`, your `wrangler.jsonc` will be updated:
 
 ```jsonc
 {
@@ -221,19 +221,19 @@ The CLI automatically detects your package manager:
 
 ```bash
 # Validate configuration
-mcp-cli validate
+nullshot validate
 
 # Preview installation
-mcp-cli install --dry-run
+nullshot install --dry-run
 
 # Install with verbose output
-mcp-cli install --verbose
+nullshot install --verbose
 
 # List installed servers
-mcp-cli list
+nullshot list
 
 # List in JSON format
-mcp-cli list --format json
+nullshot list --format json
 ```
 
 ## Project Structure
@@ -265,7 +265,7 @@ mcp-cli list --format json
 
 ```bash
 git clone <repository>
-cd mcp-cli
+cd nullshot-cli
 npm install
 ```
 
@@ -300,7 +300,7 @@ The CLI provides helpful error messages and suggestions:
 
 ```bash
 ❌ Configuration file not found: mcp.jsonc
-💡 Run 'mcp-cli init' to create a new configuration file
+💡 Run 'nullshot init' to create a new configuration file
 
 ❌ Invalid configuration: servers.test: missing required property 'command'
 💡 Check your configuration file against the schema
@@ -337,7 +337,7 @@ export POSTGRES_CONNECTION_STRING=postgresql://...
 Enable verbose logging to troubleshoot issues:
 
 ```bash
-mcp-cli install --verbose --dry-run
+nullshot install --verbose --dry-run
 ```
 
 ## Contributing

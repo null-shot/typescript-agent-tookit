@@ -67,7 +67,7 @@ export class PackageManager {
       logger.debug(`Installing ${source} using ${manager.name}`);
       const command = `${manager.installCommand} ${source}`;
 
-      const { stdout, stderr } = await execAsync(command);
+      const { stderr } = await execAsync(command);
 
       if (stderr && !stderr.includes("npm WARN")) {
         logger.warn(`Package installation warning: ${stderr}`);

@@ -1,8 +1,8 @@
 import { readFile, writeFile, access } from "node:fs/promises";
 import { parse, modify, applyEdits } from "jsonc-parser";
-import type { WranglerConfig, MCPConfig } from "../types";
-import { CLIError } from "../utils/errors";
-import { Logger } from "../utils/logger";
+import type { WranglerConfig, MCPConfig, MCPServerConfig } from "../types/index.js";
+import { CLIError } from "../utils/errors.js";
+import { Logger } from "../utils/logger.js";
 
 const logger = new Logger();
 
@@ -236,7 +236,7 @@ export class WranglerManager {
   }
 
   async updateConfigForDedicatedWorkers(
-    mcpConfig: MCPConfig,
+    _mcpConfig: MCPConfig,
     serversToRun: Record<string, MCPServerConfig>
   ): Promise<void> {
     const wranglerConfig = await this.readConfig();
