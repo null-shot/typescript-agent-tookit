@@ -39,12 +39,12 @@ yarn docker:dev
 ```
 
 **Command Details:**
+
 - **`docker:build`**: Builds the Docker image from the monorepo root with the correct build context
 - **`docker:run`**: Runs the container with host network access, environment variables, and data volume mounting
 - **`docker:dev`**: Uses docker-compose to build and run the container with all configurations from `docker-compose.yml`
 
 > 📖 **For production deployment and GitHub Container Registry usage, see [DOCKER.md](./DOCKER.md)**
-
 
 ## WebSocket API
 
@@ -60,7 +60,7 @@ All messages must be valid JSON with this structure:
 
 ```json
 {
-  "verb": "add" | "delete" | "list",
+  "verb": "add" | "delete" | "update" | "list",
   "data": { /* verb-specific data */ }
 }
 ```
@@ -72,6 +72,7 @@ All messages must be valid JSON with this structure:
 ### 📦 `add` - Add MCP Package
 
 **Request:**
+
 ```json
 {
   "verb": "add",
@@ -85,6 +86,7 @@ All messages must be valid JSON with this structure:
 ```
 
 **Success Response:**
+
 ```json
 {
   "verb": "add",
@@ -99,7 +101,7 @@ All messages must be valid JSON with this structure:
     "installedAt": "2024-01-01T12:00:00.000Z"
   },
   "capabilities": {
-    "tools": [{"name": "tool1", "description": "..."}],
+    "tools": [{ "name": "tool1", "description": "..." }],
     "resources": [],
     "prompts": []
   },
@@ -109,6 +111,7 @@ All messages must be valid JSON with this structure:
 ```
 
 **Error Response:**
+
 ```json
 {
   "verb": "add",
@@ -122,9 +125,66 @@ All messages must be valid JSON with this structure:
 
 ---
 
+### 🔄 `update` - Update MCP Package Configuration
+
+**Request:**
+
+```json
+{
+  "verb": "update",
+  "data": {
+    "unique-name": "my-mcp-server",
+    "command": "npx",
+    "args": ["-y", "some-mcp-package", "--new-config", "--stdio"],
+    "env": {
+      "NEW_API_KEY": "updated-key-value"
+    }
+  }
+}
+```
+
+**Success Response:**
+
+```json
+{
+  "verb": "update",
+  "success": true,
+  "message": "MCP server 'my-mcp-server' updated successfully",
+  "data": {
+    "id": 1,
+    "name": "my-mcp-server",
+    "command": "npx",
+    "args": ["-y", "some-mcp-package", "--new-config", "--stdio"],
+    "env": ["NEW_API_KEY"],
+    "updatedAt": "2024-01-01T12:00:00.000Z"
+  },
+  "capabilities": {
+    "tools": [{ "name": "tool1", "description": "..." }],
+    "resources": [],
+    "prompts": []
+  },
+  "totalCapabilities": 5,
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+**Error Response:**
+
+```json
+{
+  "verb": "update",
+  "success": false,
+  "error": "Package with unique-name 'my-mcp-server' not found",
+  "timestamp": "2024-01-01T12:00:00.000Z"
+}
+```
+
+---
+
 ### 🗑️ `delete` - Remove MCP Package
 
 **Request:**
+
 ```json
 {
   "verb": "delete",
@@ -135,6 +195,7 @@ All messages must be valid JSON with this structure:
 ```
 
 **Success Response:**
+
 ```json
 {
   "verb": "delete",
@@ -145,6 +206,7 @@ All messages must be valid JSON with this structure:
 ```
 
 **Error Response:**
+
 ```json
 {
   "verb": "delete",
@@ -159,6 +221,7 @@ All messages must be valid JSON with this structure:
 ### 📋 `list` - List All Packages
 
 **Request:**
+
 ```json
 {
   "verb": "list"
@@ -166,6 +229,7 @@ All messages must be valid JSON with this structure:
 ```
 
 **Response:**
+
 ```json
 {
   "verb": "list",
@@ -190,20 +254,25 @@ All messages must be valid JSON with this structure:
 ## Behavior
 
 ### ✅ Success Flow
+
 1. **`add`**: Tests MCP server connection before storing
-2. **`delete`**: Removes from database if exists
-3. **`list`**: Returns all stored packages
+2. **`update`**: Tests new configuration, disconnects old connection, updates database, reconnects with new config
+3. **`delete`**: Removes from database if exists
+4. **`list`**: Returns all stored packages
 
 ### ❌ Error Handling
+
 - **Invalid JSON**: `"Invalid JSON format"`
 - **Missing verb**: `"Invalid message format"`
 - **Invalid verb**: `"Invalid message format"`
 - **Validation errors**: `"Validation failed"` with details
 - **MCP connection fails**: `"Failed to connect to MCP server"`
-- **Duplicate name**: `"Package with unique-name 'X' already exists"`
-- **Not found**: `"Package with unique-name 'X' not found"`
+- **Duplicate name**: `"Package with unique-name 'X' already exists"` (add only)
+- **Not found**: `"Package with unique-name 'X' not found"` (update/delete)
+- **Update connection fails**: `"Failed to connect to MCP server with new configuration"`
 
 ### 🔄 MCP Connection Testing
+
 - Tests actual connection to MCP server before storing
 - Validates server exposes tools, resources, or prompts
 - 10-second timeout for connections
@@ -214,56 +283,81 @@ All messages must be valid JSON with this structure:
 ## Examples
 
 ### JavaScript/Node.js
-```javascript
-const WebSocket = require('ws');
-const ws = new WebSocket('ws://localhost:11990/ws');
 
-ws.on('open', () => {
+```javascript
+const WebSocket = require("ws");
+const ws = new WebSocket("ws://localhost:11990/ws");
+
+ws.on("open", () => {
   // Add Figma MCP
-  ws.send(JSON.stringify({
-    verb: 'add',
-    data: {
-      'unique-name': 'figma-mcp',
-      command: 'npx',
-      args: ['-y', 'figma-developer-mcp', '--figma-api-key=YOUR-KEY', '--stdio'],
-      env: {}
-    }
-  }));
+  ws.send(
+    JSON.stringify({
+      verb: "add",
+      data: {
+        "unique-name": "figma-mcp",
+        command: "npx",
+        args: [
+          "-y",
+          "figma-developer-mcp",
+          "--figma-api-key=YOUR-KEY",
+          "--stdio",
+        ],
+        env: {},
+      },
+    })
+  );
 });
 
-ws.on('message', (data) => {
+ws.on("message", (data) => {
   const response = JSON.parse(data.toString());
-  console.log('Response:', response);
+  console.log("Response:", response);
 });
 
 // List packages
-ws.send(JSON.stringify({ verb: 'list' }));
+ws.send(JSON.stringify({ verb: "list" }));
+
+// Update package configuration
+ws.send(
+  JSON.stringify({
+    verb: "update",
+    data: {
+      "unique-name": "figma-mcp",
+      command: "npx",
+      args: ["-y", "figma-developer-mcp", "--figma-api-key=NEW-KEY", "--stdio"],
+      env: { FIGMA_API_KEY: "NEW-KEY-VALUE" },
+    },
+  })
+);
 
 // Delete package
-ws.send(JSON.stringify({
-  verb: 'delete', 
-  data: { 'unique-name': 'figma-mcp' }
-}));
+ws.send(
+  JSON.stringify({
+    verb: "delete",
+    data: { "unique-name": "figma-mcp" },
+  })
+);
 ```
 
 ### Browser
+
 ```javascript
-const ws = new WebSocket('ws://localhost:11990/ws');
+const ws = new WebSocket("ws://localhost:11990/ws");
 
 ws.onopen = () => {
-  console.log('Connected to MCP server');
-  
+  console.log("Connected to MCP server");
+
   // List existing packages
-  ws.send(JSON.stringify({ verb: 'list' }));
+  ws.send(JSON.stringify({ verb: "list" }));
 };
 
 ws.onmessage = (event) => {
   const response = JSON.parse(event.data);
-  console.log('Server response:', response);
+  console.log("Server response:", response);
 };
 ```
 
 ### curl (via websocat)
+
 ```bash
 # Install websocat
 curl -L https://github.com/vi/websocat/releases/latest/download/websocat.x86_64-unknown-linux-musl > websocat
@@ -272,7 +366,10 @@ chmod +x websocat
 # Add package
 echo '{"verb":"add","data":{"unique-name":"test","command":"echo","args":["hello"],"env":{}}}' | ./websocat ws://localhost:11990/ws
 
-# List packages  
+# Update package
+echo '{"verb":"update","data":{"unique-name":"test","command":"echo","args":["updated-hello"],"env":{"NEW_VAR":"value"}}}' | ./websocat ws://localhost:11990/ws
+
+# List packages
 echo '{"verb":"list"}' | ./websocat ws://localhost:11990/ws
 
 # Delete package
@@ -288,6 +385,7 @@ echo '{"verb":"delete","data":{"unique-name":"test"}}' | ./websocat ws://localho
 The server requires a `proxyId` parameter to connect to the MCP proxy. This can be provided via:
 
 1. **Command line argument** (recommended):
+
    ```bash
    node dist/index.js --proxy-id your-uuid-here
    ```
@@ -303,6 +401,7 @@ The proxyId should be the same UUID used by the playground and must match the pr
 ### Other Configuration
 
 Configure via `.env`:
+
 ```env
 PORT=11990
 DB_PATH=./data/packages.db
