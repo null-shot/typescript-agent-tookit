@@ -37,8 +37,7 @@ FROM node:22-alpine AS production
 # Install Python and pip for uvx support
 RUN apk add --no-cache python3 py3-pip
 
-# Update pip and install uv (which includes uvx)
-RUN pip3 install --upgrade pip
+# Install uv (which includes uvx) - Updated 2025
 RUN pip3 install --break-system-packages uv
 
 # Create non-root user
