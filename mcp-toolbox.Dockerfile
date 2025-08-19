@@ -34,8 +34,8 @@ RUN cd packages/mcp-toolbox && pnpm build && pnpm run build:bundle
 # Production stage
 FROM node:22-alpine AS production
 
-# Install Python and pip for uvx support
-RUN apk add --no-cache python3 py3-pip
+# Install Python, pip, and Git for uvx support
+RUN apk add --no-cache python3 py3-pip git
 
 # Install uv (which includes uvx) - Updated 2025
 RUN pip3 install --break-system-packages uv

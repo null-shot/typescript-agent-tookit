@@ -80,17 +80,13 @@ export class McpServerProxy implements IMcpServer {
     const readyState = this.proxyConnection?.readyState;
     const timeSinceConnection = Date.now() - this.lastConnectionTime;
     
-    console.log('DEBUG - Full connection state:', {
+    console.log('DEBUG - Connection state:', {
       hasConnection,
-      isMarkedConnected,
-      readyState,
-      readyStateText: readyState === 0 ? 'CONNECTING' : 
-                     readyState === 1 ? 'OPEN' : 
-                     readyState === 2 ? 'CLOSING' : 
-                     readyState === 3 ? 'CLOSED' : 'UNKNOWN',
-      lastConnectionTime: new Date(this.lastConnectionTime).toISOString(),
-      timeSinceConnectionMs: timeSinceConnection,
-      isConnectedResult: this.isConnected()
+      readyState: readyState === 0 ? 'CONNECTING' : 
+                  readyState === 1 ? 'OPEN' : 
+                  readyState === 2 ? 'CLOSING' : 
+                  readyState === 3 ? 'CLOSED' : 'UNKNOWN',
+      isConnected: this.isConnected()
     });
   }
 
@@ -101,7 +97,7 @@ export class McpServerProxy implements IMcpServer {
     try {
       // Handle both string and ArrayBuffer data
       const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
-      console.log('McpServerProxy: Received message from remote container:', messageStr.substring(0, 200) + '...');
+      console.log('McpServerProxy: Received message from remote container');
       
       const message = JSON.parse(messageStr) as JSONRPCMessage;
       
@@ -141,7 +137,7 @@ export class McpServerProxy implements IMcpServer {
     console.log('McpServerProxy: Setting up transport handlers');
     
     transport.onmessage = (message: JSONRPCMessage) => {
-      console.log('McpServerProxy: Transport received message:', JSON.stringify(message, null, 2));
+      console.log('McpServerProxy: Transport received message');
       this.forwardToProxy(JSON.stringify(message));
     };
     
@@ -170,7 +166,7 @@ export class McpServerProxy implements IMcpServer {
     if (isConnected && this.proxyConnection) {
       try {
         const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
-        console.log('McpServerProxy: Sending message to remote container:', messageStr.substring(0, 200) + '...');
+        console.log('McpServerProxy: Sending message to remote container');
         this.proxyConnection.send(data);
       } catch (error) {
         console.error('Error sending message to proxy:', error);

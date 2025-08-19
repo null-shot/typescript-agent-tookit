@@ -250,7 +250,7 @@ export class McpServerProxyDO extends McpServerDO {
     // Handle messages from remote container
     if (attachment && 'isRemoteContainer' in attachment && attachment.isRemoteContainer) {
       const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
-      console.log('MCP Proxy: Received message from remote container:', messageStr.substring(0, 200) + '...');
+      console.log('MCP Proxy: Received message from remote container');
       
       // Check if this is a system message (shutdown notification, etc.)
       let isAdminMessage = false;
@@ -287,7 +287,7 @@ export class McpServerProxyDO extends McpServerDO {
         }
       } catch (error) {
         // If we can't parse it, assume it might be an MCP message
-        console.warn('Could not parse message from remote container:', error);
+        console.warn('Could not parse message from remote container');
         isAdminMessage = false;
       }
       
@@ -305,7 +305,7 @@ export class McpServerProxyDO extends McpServerDO {
     // Handle messages from clients
     else if (attachment && 'isClient' in attachment && attachment.isClient) {
       const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
-      console.log('MCP Proxy: Received message from client:', messageStr.substring(0, 200) + '...');
+      console.log('MCP Proxy: Received message from client');
       
       // Check connection state before forwarding
       if (!this.mcpProxy.isConnected()) {

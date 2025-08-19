@@ -85,23 +85,38 @@ class SqlJsPackageRepository implements PackageRepository {
       VALUES (?, ?, ?, ?)
     `);
 
-    stmt.run([
+    const insertData = [
       data.uniqueName,
       data.command,
       JSON.stringify(data.args),
       JSON.stringify(data.env),
-    ]);
+    ];
 
-    const selectStmt = this.db.prepare(
-      "SELECT * FROM packages WHERE id = last_insert_rowid()"
-    );
-    const result = selectStmt.getAsObject();
+    stmt.run(insertData);
 
-    if (!result || result.length === 0) {
-      throw new Error("Failed to create package");
+    // Get the last inserted row ID and immediately query for the full record
+    const lastInsertResults = this.db.exec("SELECT last_insert_rowid() as id");
+    const lastInsertId = lastInsertResults[0]?.values[0]?.[0];
+    
+    if (!lastInsertId) {
+      throw new Error("Failed to get last insert ID");
     }
 
-    const row = result[0] as any;
+    // Use exec for better reliability
+    const selectResults = this.db.exec(`SELECT * FROM packages WHERE id = ${lastInsertId}`);
+    
+    if (!selectResults || selectResults.length === 0 || !selectResults[0].values || selectResults[0].values.length === 0) {
+      throw new Error("Failed to retrieve created package");
+    }
+
+    const result = selectResults[0];
+    const rowData = result.values[0];
+    
+    // Map to object using column names
+    const row: any = {};
+    result.columns.forEach((col: string, index: number) => {
+      row[col] = rowData[index];
+    });
 
     this.saveDatabase();
 
@@ -109,8 +124,8 @@ class SqlJsPackageRepository implements PackageRepository {
       id: row.id as number,
       uniqueName: row.uniqueName as string,
       command: row.command as string,
-      args: JSON.parse(row.args as string),
-      env: JSON.parse(row.env as string),
+      args: row.args ? JSON.parse(row.args as string) : [],
+      env: row.env ? JSON.parse(row.env as string) : {},
       installedAt: row.installedAt as string,
     };
   }
@@ -118,45 +133,88 @@ class SqlJsPackageRepository implements PackageRepository {
   async findByUniqueName(uniqueName: string): Promise<Package | null> {
     await this.ensureInitialized();
 
-    const stmt = this.db.prepare("SELECT * FROM packages WHERE uniqueName = ?");
-    const result = stmt.getAsObject([uniqueName]);
+    try {
+      // Use exec for better reliability with proper SQL escaping
+      const results = this.db.exec("SELECT * FROM packages WHERE uniqueName = ?", [uniqueName]);
+      
+      if (!results || results.length === 0) {
+        return null;
+      }
+      
+      const result = results[0];
+      if (!result.values || result.values.length === 0) {
+        return null;
+      }
+      
+      const rowData = result.values[0];
+      
+      // Map to object using column names
+      const row: any = {};
+      result.columns.forEach((col: string, index: number) => {
+        row[col] = rowData[index];
+      });
+      
+      // Validate that we have required fields
+      if (!row.uniqueName || !row.command) {
+        console.error("❌ Database row missing required fields:", row);
+        return null;
+      }
 
-    if (!result || result.length === 0) {
+      return {
+        id: row.id as number,
+        uniqueName: row.uniqueName as string,
+        command: row.command as string,
+        args: row.args ? JSON.parse(row.args as string) : [],
+        env: row.env ? JSON.parse(row.env as string) : {},
+        installedAt: row.installedAt as string,
+      };
+      
+    } catch (error) {
+      console.error("❌ Error in findByUniqueName:", error);
       return null;
     }
-
-    const row = result[0] as any;
-
-    return {
-      id: row.id as number,
-      uniqueName: row.uniqueName as string,
-      command: row.command as string,
-      args: JSON.parse(row.args as string),
-      env: JSON.parse(row.env as string),
-      installedAt: row.installedAt as string,
-    };
   }
 
   async findAll(): Promise<Package[]> {
     await this.ensureInitialized();
 
-    const stmt = this.db.prepare(
-      "SELECT * FROM packages ORDER BY installedAt DESC"
-    );
-    const result = stmt.getAsObject();
-
-    if (!result || !Array.isArray(result)) {
+    try {
+      // Use db.exec instead of prepare/getAsObject for better reliability with SQL.js
+      const results = this.db.exec("SELECT * FROM packages ORDER BY installedAt DESC");
+      
+      if (!results || results.length === 0) {
+        return [];
+      }
+      
+      const result = results[0]; // First (and should be only) result set
+      
+      if (!result.values || result.values.length === 0) {
+        return [];
+      }
+      
+      // Map the values array to objects using column names
+      const packages = result.values.map((row: any[]) => {
+        const rowObj: any = {};
+        result.columns.forEach((col: string, index: number) => {
+          rowObj[col] = row[index];
+        });
+        
+        return {
+          id: rowObj.id,
+          uniqueName: rowObj.uniqueName,
+          command: rowObj.command,
+          args: rowObj.args ? JSON.parse(rowObj.args) : [],
+          env: rowObj.env ? JSON.parse(rowObj.env) : {},
+          installedAt: rowObj.installedAt,
+        };
+      });
+      
+      return packages;
+      
+    } catch (error) {
+      console.error("❌ Error in findAll using exec:", error);
       return [];
     }
-
-    return result.map((row: any) => ({
-      id: row.id,
-      uniqueName: row.uniqueName,
-      command: row.command,
-      args: JSON.parse(row.args),
-      env: JSON.parse(row.env),
-      installedAt: row.installedAt,
-    }));
   }
 
   async updateByUniqueName(
@@ -209,25 +267,52 @@ class SqlJsPackageRepository implements PackageRepository {
   async deleteByUniqueName(uniqueName: string): Promise<boolean> {
     await this.ensureInitialized();
 
+    console.log("🔍 DELETE DEBUG: Attempting to delete package with uniqueName:", uniqueName);
+    console.log("🔍 DELETE DEBUG: uniqueName type:", typeof uniqueName);
+    
+    // First check if the package exists before attempting to delete
+    const existingPackage = await this.findByUniqueName(uniqueName);
+    console.log("🔍 DELETE DEBUG: Found existing package:", !!existingPackage);
+    if (existingPackage) {
+      console.log("🔍 DELETE DEBUG: Existing package details:", {
+        id: existingPackage.id,
+        uniqueName: existingPackage.uniqueName,
+        command: existingPackage.command,
+      });
+    }
+
     const stmt = this.db.prepare("DELETE FROM packages WHERE uniqueName = ?");
     stmt.run([uniqueName]);
 
+    const rowsModified = this.db.getRowsModified();
+    console.log("🔍 DELETE DEBUG: Rows modified:", rowsModified);
+
     this.saveDatabase();
-    return this.db.getRowsModified() > 0;
+    return rowsModified > 0;
   }
 
   async count(): Promise<number> {
     await this.ensureInitialized();
 
-    const stmt = this.db.prepare("SELECT COUNT(*) as count FROM packages");
-    const result = stmt.getAsObject();
-
-    if (!result || result.length === 0) {
+    try {
+      const results = this.db.exec("SELECT COUNT(*) as count FROM packages");
+      
+      if (!results || results.length === 0) {
+        return 0;
+      }
+      
+      const result = results[0];
+      if (!result.values || result.values.length === 0) {
+        return 0;
+      }
+      
+      const count = result.values[0][0] as number; // First row, first column
+      return count || 0;
+      
+    } catch (error) {
+      console.error("❌ Error in count using exec:", error);
       return 0;
     }
-
-    const row = result[0] as any;
-    return row.count as number;
   }
 }
 
