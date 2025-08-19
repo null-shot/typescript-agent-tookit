@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "prebuild": "cd ../mcp && pnpm run build",
-    "build": "tsc",
+    "build": "pnpm exec tsc",
     "build:bundle": "esbuild dist/index.js --bundle --platform=node --target=node18 --outfile=dist/bundle.js --external:ws",
     "start": "node dist/index.js",
     "start:bundle": "node dist/bundle.js",

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { X, AlertTriangle, Copy, CheckCircle, Loader2 } from "lucide-react";
 
 interface ProxyMismatchPopupProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ export function ProxyMismatchPopup({
   isOpen,
   onClose,
   frontendProxyId,
-  serverProxyId
+  serverProxyId,
 }: ProxyMismatchPopupProps) {
   const [copied, setCopied] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
@@ -25,16 +25,19 @@ export function ProxyMismatchPopup({
     }
   }, [isOpen]);
 
-  const forceRestartCommand = `docker rm -f mcp-toolbox 2>/dev/null || true && docker run -d -p 11990:11990 --name mcp-toolbox -e PROXY_ID=${frontendProxyId} ghcr.io/null-shot/typescript-agent-framework/mcp-toolbox:pr-41`;
+  const forceRestartCommand = `docker rm -f mcp-toolbox 2>/dev/null || true && docker run -d -p 11990:11990 --name mcp-toolbox -e PROXY_ID=${frontendProxyId} ghcr.io/null-shot/typescript-agent-framework/mcp-toolbox:pr-50`;
 
-  const copyToClipboard = async (text: string, setCopyState: (state: boolean) => void) => {
+  const copyToClipboard = async (
+    text: string,
+    setCopyState: (state: boolean) => void
+  ) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopyState(true);
       setIsWaiting(true);
       setTimeout(() => setCopyState(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
+      console.error("Failed to copy text: ", err);
     }
   };
 
@@ -42,11 +45,11 @@ export function ProxyMismatchPopup({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div 
+      <div
         className="bg-[#1a1b23] rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-        style={{ 
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        style={{
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
         }}
       >
         {/* Header */}
@@ -60,7 +63,8 @@ export function ProxyMismatchPopup({
                 MCP Toolbox Mismatch Proxy ID
               </h2>
               <p className="text-sm text-white/60 mt-1">
-                Your local toolbox needs to be restarted with the correct Proxy ID
+                Your local toolbox needs to be restarted with the correct Proxy
+                ID
               </p>
             </div>
           </div>
@@ -100,8 +104,12 @@ export function ProxyMismatchPopup({
                 onClick={() => copyToClipboard(forceRestartCommand, setCopied)}
                 className="flex items-center gap-2 px-3 py-1 bg-[#7849EF]/20 hover:bg-[#7849EF]/30 text-[#7849EF] rounded transition-colors"
               >
-                {copied ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied!' : 'Copy'}
+                {copied ? (
+                  <CheckCircle className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+                {copied ? "Copied!" : "Copy"}
               </button>
             </div>
             <code className="text-white font-mono text-sm break-all">
@@ -114,7 +122,9 @@ export function ProxyMismatchPopup({
             <div className="bg-[#323546] rounded-lg p-4">
               <div className="flex items-center gap-3">
                 <Loader2 className="w-5 h-5 text-[#7849EF] animate-spin" />
-                <span className="text-white font-medium">Waiting for correct MCP toolbox to work...</span>
+                <span className="text-white font-medium">
+                  Waiting for correct MCP toolbox to work...
+                </span>
               </div>
             </div>
           )}
@@ -138,4 +148,4 @@ export function ProxyMismatchPopup({
       </div>
     </div>
   );
-} 
+}
