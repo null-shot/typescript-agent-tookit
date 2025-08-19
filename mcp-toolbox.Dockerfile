@@ -34,6 +34,12 @@ RUN cd packages/mcp-toolbox && pnpm build && pnpm run build:bundle
 # Production stage
 FROM node:22-alpine AS production
 
+# Install Python and pip for uvx support
+RUN apk add --no-cache python3 py3-pip
+
+# Install uvx globally
+RUN pip3 install --break-system-packages uvx
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
