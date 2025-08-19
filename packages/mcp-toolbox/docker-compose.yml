@@ -1,5 +1,5 @@
 # packages/mcp-toolbox/docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   mcp-toolbox:
@@ -9,11 +9,13 @@ services:
     ports:
       - "${PORT:-11990}:${PORT:-11990}"
     environment:
+      - NODE_ENV=production
       - PORT=${PORT:-11990}
       - DB_PATH=/app/data/packages.db
-      - MCP_PROXY_URL=ws://host.docker.internal:6050/api/remote-container/ws
+      - PROXY_ID=${PROXY_ID:-}
+      - MCP_SERVER_HOST=${MCP_SERVER_HOST:-host.docker.internal:6050}
     volumes:
-      - ./data:/workspace/packages/mcp-toolbox/data
+      - ./data:/app/data
     env_file:
       - .env
     extra_hosts:

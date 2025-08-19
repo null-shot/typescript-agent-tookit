@@ -37,7 +37,16 @@ class SqlJsPackageRepository implements PackageRepository {
   private async ensureInitialized() {
     if (this.initialized) return;
 
-    const SQL = await initSqlJs();
+    const SQL = await initSqlJs({
+      locateFile: (file) => {
+        // In bundled/production mode, the WASM file is in the same directory as the bundle
+        // In development, it's in node_modules
+        if (process.env.NODE_ENV === "production") {
+          return `/app/${file}`;
+        }
+        return `node_modules/sql.js/dist/${file}`;
+      },
+    });
 
     // Load existing database or create new one
     if (existsSync(this.dbPath)) {

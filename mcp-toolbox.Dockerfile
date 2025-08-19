@@ -50,6 +50,9 @@ WORKDIR /app
 COPY --from=builder /workspace/packages/mcp-toolbox/dist/bundle.js ./bundle.js
 COPY --from=builder /workspace/packages/mcp-toolbox/package.json ./package.json
 
+# Copy the SQL.js WASM file that was copied during build
+COPY --from=builder /workspace/packages/mcp-toolbox/dist/sql-wasm.wasm ./sql-wasm.wasm
+
 # Create data directory with proper permissions
 RUN mkdir -p /app/data && chown -R nodejs:nodejs /app
 
