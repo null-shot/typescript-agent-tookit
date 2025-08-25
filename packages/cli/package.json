@@ -51,6 +51,7 @@
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
     "prebuild": "pnpm run clean",
+    "prepare": "pnpm run build",
     "prepublishOnly": "pnpm run build && pnpm run test",
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts"
