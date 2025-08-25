@@ -1,5 +1,5 @@
 {
-	"name": "@xava-labs/mcp",
+	"name": "@null-shot/mcp",
 	"version": "0.2.1",
 	"description": "Model Context Protocol (MCP) server implementation for Cloudflare Workers",
 	"type": "module",

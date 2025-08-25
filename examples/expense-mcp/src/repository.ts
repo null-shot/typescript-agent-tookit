@@ -8,10 +8,9 @@ export type Expense = {
 
 export class ExpenseRepository {
   private expenses: Map<string, Expense> = new Map();
-  private ctx: DurableObjectState; // Add this
 
-  constructor(ctx: DurableObjectState) { // Add parameter
-    this.ctx = ctx;
+  constructor() {
+    // Using in-memory storage, no DurableObjectState needed
   }
 
   create(expense: Expense) {

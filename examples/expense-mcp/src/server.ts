@@ -33,8 +33,8 @@ export class ExpenseMcpServer extends McpHonoServerDO {
    * Registers CRUD tools for the MCP server
    */
   configureServer(server: McpServer): void {
-    // Pass DurableObjectState context to repository for proper session isolation
-    const repository = new ExpenseRepository(this.ctx);
+    // Create repository for expense management
+    const repository = new ExpenseRepository();
 
     // Remove the initializeDatabase call since it's not needed for in-memory storage
     // this.ctx.blockConcurrencyWhile(async () => {
