@@ -3,8 +3,9 @@ export interface MCPConfig {
 }
 
 export interface MCPServerConfig {
-  source: string;
-  command: string;
+  source?: string;
+  command?: string;
+  url?: string;
   type?: "worker" | "do";
   env?: EnvironmentVariable[];
   auth?: AuthConfig;

@@ -1,6 +1,6 @@
 # Simple Prompt Agent
 
-A Cloudflare Workers-based AI agent implementation that uses the @xava-labs/agent SDK to create a simple that can manage your tasks through a todo list.
+A Cloudflare Workers-based AI agent implementation that uses the @null-shot/agent SDK to create a simple that can manage your tasks through a todo list.
 
 ## Overview
 
@@ -24,8 +24,8 @@ This project demonstrates:
 
 ### Key Components
 
-- **Router**: Uses Hono framework with the permissionless agent session router from @xava-labs/agent
-- **Agent SDK**: Implements `AiSdkAgent` from @xava-labs/agent/aisdk
+- **Router**: Uses Hono framework with the permissionless agent session router from @null-shot/agent
+- **Agent SDK**: Implements `AiSdkAgent` from @null-shot/agent/aisdk
 - **Tools Service**: Integrates `ToolboxService` for registering mcp.json and managing MCP connections as tools for your agent to use
 
 ## Getting Started
@@ -99,8 +99,8 @@ This configuration is automatically serialized into an environment variable duri
 ### Agent Implementation
 
 The `SimplePromptAgent` class:
-- Extends `AiSdkAgent` from @xava-labs/agent/aisdk
-- Supports Anthropic, OpenAI, and DeepSeek language models
+- Extends `AiSdkAgent` from @null-shot/agent/aisdk
+- Supports both Anthropic and OpenAI language models
 - Integrates with the ToolboxService for todo list management
 - Uses streaming responses for real-time interaction
 
@@ -130,7 +130,7 @@ The `SimplePromptAgent` class:
 
 The project uses:
 - Hono framework for routing
-- Permissionless agent session router from @xava-labs/agent
+- Permissionless agent session router from @null-shot/agent
 - Type-safe environment bindings
 
 ### Available Endpoints
@@ -181,4 +181,4 @@ pnpm deploy
 
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Hono Framework](https://hono.dev/)
-- [@xava-labs/agent Documentation](https://github.com/xava-labs/agent) 
+- [@null-shot/agent Documentation](https://github.com/null-shot/typescript-agent-framework/tree/main/packages/agent) 

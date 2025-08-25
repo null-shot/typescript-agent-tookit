@@ -40,23 +40,23 @@ This package implements a Durable Object-based Agent architecture for building A
 ## Installation
 
 ```bash
-npm install @xava-labs/agent
+npm install @null-shot/agent
 ```
 
 ## Packages
 
 The framework consists of the following packages:
 
-- `@xava-labs/agent` - Core agent framework
-- `@xava-labs/agent/aisdk` - AI SDK integration layer
-- `@xava-labs/agent/services` - Services for extending agent functionality
+- `@null-shot/agent` - Core agent framework
+- `@null-shot/agent/aisdk` - AI SDK integration layer
+- `@null-shot/agent/services` - Services for extending agent functionality
 
 ## Basic Usage
 
 ```typescript
-import { XavaAgent, AgentEnv } from '@xava-labs/agent';
-import { AiSdkAgent } from '@xava-labs/agent/aisdk';
-import { ToolboxService } from '@xava-labs/agent/services';
+import { XavaAgent, AgentEnv } from '@null-shot/agent';
+import { AiSdkAgent } from '@null-shot/agent/aisdk';
+import { ToolboxService } from '@null-shot/agent/services';
 import { createOpenAI } from '@ai-sdk/openai';
 
 // Define your environment type
@@ -116,7 +116,7 @@ Services extend agent capabilities by providing specific functionality. They all
 Services implement the `Service` interface or extend it with additional capabilities:
 
 ```typescript
-import { Service, AgentEnv } from '@xava-labs/agent';
+import { Service, AgentEnv } from '@null-shot/agent';
 import { Hono } from 'hono';
 
 // Basic service
@@ -195,7 +195,7 @@ Routers act as an API gateway for agents, handling CORS, routing logic, and auth
 
 ```typescript
 import { Hono } from 'hono';
-import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@xava-labs/agent';
+import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@null-shot/agent';
 
 // Create Hono app
 const app = new Hono<{ Bindings: MyEnv }>();
@@ -264,7 +264,7 @@ The `tools-registry-cli` processes `mcp.json` files and updates environment vari
 
 ```bash
 # Install globally
-npm install -g @xava-labs/agent
+npm install -g @null-shot/agent
 
 # Process mcp.json in current directory and update .dev.vars
 npx tools-registry-cli

@@ -12,13 +12,14 @@ import { Hono } from 'hono';
 import { 
 	AgentEnv,
 	applyPermissionlessAgentSessionRouter,
-} from '@xava-labs/agent';
+} from '@null-shot/agent';
 // Import the ToolsService directly 
-import { ToolboxService } from '@xava-labs/agent/services';
+import { ToolboxService } from '@null-shot/agent/services';
 import { LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
-import { AiSdkAgent, AIUISDKMessage } from '@xava-labs/agent/aisdk';
+import { AiSdkAgent, AIUISDKMessage } from '@null-shot/agent/aisdk';
+import mcpConfig from '../mcp.json';
 // Define AI provider type
 type AIProvider = 'anthropic' | 'openai' | 'deepseek';
 
@@ -68,7 +69,7 @@ export class SimplePromptAgent extends AiSdkAgent<EnvWithAgent> {
 				throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
 		}
 
-		super(state, env, model, [new ToolboxService(env)]);
+		super(state, env, model, [new ToolboxService(env, mcpConfig)]);
 	}
 
 	async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {

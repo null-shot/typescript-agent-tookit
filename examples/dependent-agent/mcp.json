@@ -1,0 +1,7 @@
+{
+  "servers": {
+    "mcp-template": {
+      "source": "github:null-shot/typescript-mcp-template"
+    }
+  }
+}

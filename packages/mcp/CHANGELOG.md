@@ -1,4 +1,4 @@
-# @xava-labs/mcp
+# @null-shot/mcp
 
 ## 0.2.1
 

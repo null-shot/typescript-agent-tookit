@@ -1,4 +1,4 @@
-# @xava-labs/agent
+# @null-shot/agent
 
 ## 0.2.0
 

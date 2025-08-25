@@ -43,6 +43,12 @@ program
     "Skip updating wrangler.jsonc configuration",
   )
   .action(async (options: InstallOptions & GlobalOptions) => {
+    // Check if we're already installing to prevent infinite loop
+    if (process.env.NULLSHOT_INSTALLING === 'true') {
+      logger.debug("Skipping nullshot install - already installing packages");
+      return;
+    }
+
     const spinner = ora("Installing MCP servers...").start();
     
     const {
@@ -428,10 +434,13 @@ async function installServers(
   if (!skipPackageUpdate) {
     spinner.text = "Installing npm packages...";
     for (const [name, serverConfig] of Object.entries(config.servers)) {
-      await dryRunManager.execute(
-        `Install package ${serverConfig.source}`,
-        () => packageManager.installPackage(serverConfig.source, name),
-      );
+      // Only install packages for servers with a source
+      if (serverConfig.source) {
+        await dryRunManager.execute(
+          `Install package ${serverConfig.source}`,
+          () => packageManager.installPackage(serverConfig.source!, name),
+        );
+      }
     }
   }
 
@@ -447,8 +456,13 @@ async function installServers(
         
         for (const [serverName] of Object.entries(config.servers)) {
           try {
-            // First find the dependency path
-            const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverName);
+            // Get the actual package name from metadata
+            const packageManager = new PackageManager();
+            const metadata = await packageManager.getMCPPackageMetadata(serverName);
+            const packageName = metadata?.packageName || serverName;
+            
+            // First find the dependency path using the actual package name
+            const dependencyPath = await dependencyAnalyzer.findDependencyPath(packageName);
             if (dependencyPath) {
               // Then analyze the dependency to get wrangler config
               const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
@@ -512,6 +526,7 @@ async function listInstalledServers(
       name,
       source: serverConfig.source,
       command: serverConfig.command,
+      url: serverConfig.url,
       packageInstalled: installedPackages.includes(name),
       status: installedPackages.includes(name) ? "installed" : "not_installed",
     }),
@@ -525,7 +540,7 @@ async function listInstalledServers(
   const table = servers
     .map(
       (server) =>
-        `${server.status === "installed" ? "✅" : "! "} ${server.name.padEnd(20)} ${server.source.padEnd(40)} ${server.command}`,
+        `${server.status === "installed" ? "✅" : "! "} ${server.name.padEnd(20)} ${(server.source || server.url || '').padEnd(40)} ${server.command || ''}`,
     )
     .join("\n");
 
@@ -586,7 +601,12 @@ async function runServers(
         
         for (const [serverName] of Object.entries(serversToRun)) {
           try {
-            const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverName);
+            // Get the actual package name from metadata
+            const packageManager = new PackageManager();
+            const metadata = await packageManager.getMCPPackageMetadata(serverName);
+            const packageName = metadata?.packageName || serverName;
+            
+            const dependencyPath = await dependencyAnalyzer.findDependencyPath(packageName);
             if (dependencyPath) {
               const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
               if (analysis.wranglerConfig) {
@@ -685,7 +705,12 @@ async function runServers(
       
       for (const [serverName] of Object.entries(serversToRun)) {
         try {
-          const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverName);
+          // Get the actual package name from metadata
+          const packageManager = new PackageManager();
+          const metadata = await packageManager.getMCPPackageMetadata(serverName);
+          const packageName = metadata?.packageName || serverName;
+          
+          const dependencyPath = await dependencyAnalyzer.findDependencyPath(packageName);
           if (dependencyPath) {
             const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
             if (analysis.wranglerConfig) {

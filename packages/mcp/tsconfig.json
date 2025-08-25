@@ -46,5 +46,5 @@
 		"skipLibCheck": true
 	},
 	"exclude": ["test", "dist"],
-	"include": ["env.d.ts", "src/**/*.ts", "test/index.ts", "../mcp-proxy/src/mcp-server-proxy.ts", "../mcp-proxy/src/server-proxy.ts"]
+	"include": ["worker-configuration.d.ts", "src/**/*.ts", "test/index.ts", "../agent/src/client/mcp-client-manager.ts", "../agent/src/client/service-binding-transport.ts"]
 }

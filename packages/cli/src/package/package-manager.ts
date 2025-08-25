@@ -64,10 +64,40 @@ export class PackageManager {
   }
 
   async installPackage(source: string, serverName: string): Promise<void> {
-    // Check if package is already installed
+    // Check if package is already installed in mcpServers metadata
     const installedServers = await this.getInstalledMCPPackages();
     if (installedServers.includes(serverName)) {
-      logger.debug(`Package ${serverName} is already installed, skipping installation`);
+      logger.debug(`Package ${serverName} is already installed in mcpServers, skipping installation`);
+      return;
+    }
+
+    // Also check if the package is already in dependencies or devDependencies
+    const packageJson = await this.readPackageJson();
+    const extractedName = this.extractPackageName(source);
+    const allDependencies = {
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies
+    };
+    
+    // Check both the extracted name and the source itself
+    // For GitHub sources, also check if any dependency has the same source URL
+    const isAlreadyInstalled = 
+      allDependencies[extractedName] === source || 
+      Object.values(allDependencies).includes(source) ||
+      (source.startsWith("github:") && Object.values(allDependencies).some(depSource => depSource === source));
+    
+    if (isAlreadyInstalled) {
+      logger.debug(`Package ${source} is already in dependencies, skipping installation`);
+      
+      // Even though package is installed, we still need to ensure MCP metadata exists
+      // since the package might have been installed manually
+      try {
+        const analysis = await this.analyzeDependency(source, serverName);
+        await this.addMCPMetadata(serverName, source, analysis);
+        logger.debug(`Added MCP metadata for existing package ${serverName}`);
+      } catch (error) {
+        logger.warn(`Failed to add MCP metadata for existing package: ${error instanceof Error ? error.message : String(error)}`);
+      }
       return;
     }
 
@@ -78,7 +108,13 @@ export class PackageManager {
       
       const command = `${manager.installCommand} ${source}`;
 
-      const { stderr } = await execAsync(command);
+      // Set environment variable to prevent infinite loop with postinstall
+      const env = {
+        ...process.env,
+        NULLSHOT_INSTALLING: 'true'
+      };
+
+      const { stderr } = await execAsync(command, { env });
 
       if (stderr && !stderr.includes("npm WARN")) {
         logger.warn(`Package installation warning: ${stderr}`);
@@ -127,6 +163,15 @@ export class PackageManager {
       return Object.keys(packageJson.mcpServers || {});
     } catch {
       return [];
+    }
+  }
+
+  async getMCPPackageMetadata(serverName: string): Promise<MCPServerMetadata | undefined> {
+    try {
+      const packageJson = await this.readPackageJson();
+      return packageJson.mcpServers?.[serverName];
+    } catch {
+      return undefined;
     }
   }
 

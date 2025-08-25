@@ -10,7 +10,7 @@ export interface Service {
   initialize?(): Promise<void>;
 
   /**
-   * The name of the service should be formated in @[org]/[repo]/[service-name] ie: @xava-labs/agent/service-name
+   * The name of the service should be formated in @[org]/[repo]/[service-name] ie: @null-shot/agent/service-name
    */ 
   name: string;
 }

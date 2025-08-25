@@ -11,12 +11,17 @@
     {
       "tag": "v1",
       "new_sqlite_classes": [
-        "SimplePromptAgent"
+        "DependentAgent"
       ]
     }
   ],
   "durable_objects": {
-    "bindings": []
+    "bindings": [
+      {
+        "name": "AGENT",
+        "class_name": "DependentAgent"
+      }
+    ]
   },
   "observability": {
     "enabled": true

@@ -16,8 +16,9 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
         "^[a-zA-Z][a-zA-Z0-9_-]*$": {
           type: "object",
           properties: {
-            source: { type: "string" },
-            command: { type: "string" },
+            source: { type: "string", nullable: true },
+            command: { type: "string", nullable: true },
+            url: { type: "string", nullable: true },
             type: { 
               type: "string", 
               enum: ["worker", "do"], 
@@ -54,7 +55,7 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
               nullable: true,
             },
           },
-          required: ["source", "command"],
+          required: [],
           additionalProperties: false,
         }
       },
@@ -98,6 +99,16 @@ export class ConfigManager {
         );
       }
 
+      // Custom validation: ensure each server has at least one of source, command, or url
+      for (const [serverName, serverConfig] of Object.entries(config.servers)) {
+        if (!serverConfig.source && !serverConfig.command && !serverConfig.url) {
+          throw new ConfigError(
+            `Invalid configuration: /servers/${serverName}: must have at least one of 'source', 'command', or 'url'`,
+            "Each server must specify either a source (for installation), command (for execution), or url (for connection)",
+          );
+        }
+      }
+
       return config;
     } catch (error) {
       if (error instanceof ConfigError) throw error;
@@ -117,6 +128,15 @@ export class ConfigManager {
           .join(", ") || "Unknown validation error";
 
       throw new ConfigError(`Invalid configuration: ${errors}`);
+    }
+
+    // Custom validation: ensure each server has at least one of source, command, or url
+    for (const [serverName, serverConfig] of Object.entries(config.servers)) {
+      if (!serverConfig.source && !serverConfig.command && !serverConfig.url) {
+        throw new ConfigError(
+          `Invalid configuration: /servers/${serverName}: must have at least one of 'source', 'command', or 'url'`,
+        );
+      }
     }
 
     try {

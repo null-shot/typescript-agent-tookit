@@ -12,19 +12,21 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
-    "@xava-labs/agent": "^0.2.0",
+    "@null-shot/agent": "workspace:*",
     "ai": "^4.3.16",
     "hono": "^4.7.11",
     "solitary-bar-c2b2": "github:null-shot/typescript-mcp-template"
   },
   "devDependencies": {
+    "@null-shot/cli": "workspace:*",
+    "@types/node": "^24.3.0",
     "typescript": "^5.5.2",
     "wrangler": "^4.18.0"
   },
   "mcpServers": {
     "mcp-template": {
       "source": "github:null-shot/typescript-mcp-template",
-      "installedAt": "2025-08-25T07:02:12.193Z",
+      "installedAt": "2025-08-25T12:30:49.108Z",
       "packageName": "solitary-bar-c2b2",
       "hasWranglerConfig": true,
       "serviceName": "mcp"

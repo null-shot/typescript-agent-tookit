@@ -1,11 +1,11 @@
-# @xava-labs/test-utils
+# @null-shot/test-utils
 
-Testing utilities for xava-labs projects.
+Testing utilities for null-shot projects.
 
 ## Installation
 
 ```bash
-yarn add -D @xava-labs/test-utils
+yarn add -D @null-shot/test-utils
 ```
 
 ## Usage
@@ -20,7 +20,7 @@ This package provides utilities for testing MCP applications, particularly in Cl
 ### Example
 
 ```typescript
-import { WorkerSSEClientTransport } from '@xava-labs/test-utils';
+import { WorkerSSEClientTransport } from '@null-shot/test-utils';
 
 // Set up test client
 const transport = new WorkerSSEClientTransport({

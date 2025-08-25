@@ -22,6 +22,11 @@
               "description": "Command to use for startup",
               "minLength": 1
             },
+            "url": {
+              "type": "string",
+              "description": "URL endpoint for the MCP server",
+              "format": "uri"
+            },
             "env": {
               "type": "array",
               "description": "Optional environment variables to provide",
@@ -60,7 +65,11 @@
               "additionalProperties": false
             }
           },
-          "required": ["source", "command"],
+          "anyOf": [
+            { "required": ["source"] },
+            { "required": ["command"] },
+            { "required": ["url"] }
+          ],
           "additionalProperties": false
         }
       },

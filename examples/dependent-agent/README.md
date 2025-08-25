@@ -330,5 +330,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For issues and questions:
 
 - Check the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/)
-- Review the [Xava Labs Agent SDK documentation](https://github.com/xava-labs/typescript-agent-framework)
+- Review the [null-shot Agent SDK documentation](https://github.com/null-shot/typescript-agent-framework)
 - Open an issue in this repository
