@@ -13,6 +13,8 @@ vi.mock("fs/promises", async () => {
 describe("ConfigManager", () => {
   beforeEach(() => {
     vol.reset();
+    // Create the current directory in memfs to allow file writes
+    vol.fromJSON({ ".": null });
   });
 
   afterEach(() => {
@@ -30,17 +32,17 @@ describe("ConfigManager", () => {
     };
 
     vol.fromJSON({
-      "mcp.jsonc": JSON.stringify(config),
+      "mcp.json": JSON.stringify(config),
     });
 
-    const manager = new ConfigManager("mcp.jsonc");
+    const manager = new ConfigManager("mcp.json");
     const result = await manager.load();
 
     expect(result).toEqual(config);
   });
 
   it("should throw ConfigError for missing file", async () => {
-    const manager = new ConfigManager("nonexistent.jsonc");
+    const manager = new ConfigManager("nonexistent.json");
 
     await expect(manager.load()).rejects.toThrow(ConfigError);
   });
@@ -56,16 +58,16 @@ describe("ConfigManager", () => {
     };
 
     vol.fromJSON({
-      "mcp.jsonc": JSON.stringify(invalidConfig),
+      "mcp.json": JSON.stringify(invalidConfig),
     });
 
-    const manager = new ConfigManager("mcp.jsonc");
+    const manager = new ConfigManager("mcp.json");
 
     await expect(manager.load()).rejects.toThrow(ConfigError);
   });
 
   it("should initialize default configuration", async () => {
-    const manager = new ConfigManager("mcp.jsonc");
+    const manager = new ConfigManager("mcp.json");
     await manager.init();
 
     const config = await manager.load();
@@ -73,7 +75,7 @@ describe("ConfigManager", () => {
     expect(Object.keys(config.servers)).toContain("filesystem");
   });
 
-  it("should preserve JSONC formatting on save", async () => {
+  it("should preserve JSON formatting on save", async () => {
     const originalContent = `{
   "servers": {
     "test": {
@@ -84,10 +86,10 @@ describe("ConfigManager", () => {
 }`;
 
     vol.fromJSON({
-      "mcp.jsonc": originalContent,
+      "mcp.json": originalContent,
     });
 
-    const manager = new ConfigManager("mcp.jsonc");
+    const manager = new ConfigManager("mcp.json");
     const config = await manager.load();
     config.servers.newServer = {
       source: "github:new/repo",
@@ -96,7 +98,7 @@ describe("ConfigManager", () => {
 
     await manager.save(config);
 
-    const savedContent = vol.readFileSync("mcp.jsonc", "utf-8") as string;
-    expect(JSON.parse(savedContent)).to.toEqual(config);
+    const savedContent = vol.readFileSync("mcp.json", "utf-8") as string;
+    expect(JSON.parse(savedContent)).toEqual(config);
   });
 });

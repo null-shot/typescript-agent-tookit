@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "mcp-template": {
+      "source": "github:null-shot/typescript-mcp-template",
+      "command": "npx -y @null-shot/typescript-mcp-template"
+    }
+  }
+}

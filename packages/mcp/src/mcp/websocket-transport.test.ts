@@ -133,11 +133,13 @@ describe('WebSocketTransport', () => {
       // Convert string to ArrayBuffer
       const encoder = new TextEncoder();
       const uint8Array = encoder.encode(JSON.stringify(message));
-      const buffer = new ArrayBuffer(uint8Array.length);
-      const view = new Uint8Array(buffer);
-      view.set(uint8Array);
       
-      transport.handleMessage(buffer);
+      // Create a proper ArrayBuffer from the Uint8Array
+      const arrayBuffer = new ArrayBuffer(uint8Array.length);
+      const uint8View = new Uint8Array(arrayBuffer);
+      uint8View.set(uint8Array);
+      
+      transport.handleMessage(arrayBuffer);
       
       expect(messageHandler).toHaveBeenCalledWith(message);
     });

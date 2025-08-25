@@ -1,0 +1,33 @@
+{
+  "name": "agent-dependencies",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types",
+    "dev:nullshot": "nullshot dev",
+    "postinstall": "nullshot install"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^1.2.12",
+    "@xava-labs/agent": "^0.2.0",
+    "ai": "^4.3.16",
+    "hono": "^4.7.11",
+    "solitary-bar-c2b2": "github:null-shot/typescript-mcp-template"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.2",
+    "wrangler": "^4.18.0"
+  },
+  "mcpServers": {
+    "mcp-template": {
+      "source": "github:null-shot/typescript-mcp-template",
+      "installedAt": "2025-08-25T07:02:12.193Z",
+      "packageName": "solitary-bar-c2b2",
+      "hasWranglerConfig": true,
+      "serviceName": "mcp"
+    }
+  }
+}

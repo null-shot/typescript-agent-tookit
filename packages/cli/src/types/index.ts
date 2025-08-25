@@ -37,7 +37,16 @@ export interface WranglerConfig {
   };
   services?: ServiceBinding[];
   vars?: Record<string, string>;
+  migrations?: MigrationConfig[];
   [key: string]: any;
+}
+
+export interface MigrationConfig {
+  tag: string;
+  new_classes?: string[];
+  renamed_classes?: Array<{ from: string; to: string }>;
+  deleted_classes?: string[];
+  new_sqlite_classes?: string[];
 }
 
 export interface DurableObjectBinding {
@@ -47,7 +56,7 @@ export interface DurableObjectBinding {
 }
 
 export interface ServiceBinding {
-  name: string;
+  binding: string;
   service: string;
   environment?: string;
 }
@@ -59,7 +68,20 @@ export interface PackageJson {
   devDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
   packageManager?: string;
+  mcpServers?: Record<string, MCPServerMetadata>;
   [key: string]: any;
+}
+
+export interface MCPServerMetadata {
+  source: string;
+  installedAt: string;
+  packageName: string;
+  wranglerConfig?: WranglerConfig;
+  wranglerConfigPath?: string;
+  hasWranglerConfig?: boolean;
+  serviceName?: string;
+  dependencyPath?: string;
+  d1Databases?: string[];
 }
 
 export interface PackageManagerInfo {
@@ -75,3 +97,11 @@ export interface DryRunOperation {
 }
 
 export type LogLevel = "info" | "warn" | "error" | "debug";
+
+export interface DependencyAnalysisResult {
+  serviceName?: string;
+  wranglerConfigPath?: string;
+  wranglerConfig?: WranglerConfig;
+  hasWranglerConfig: boolean;
+  d1Databases?: string[];
+}

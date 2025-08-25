@@ -7,6 +7,8 @@ export { CLIError } from "./utils/errors.js";
 export { Logger } from "./utils/logger.js";
 export { TemplateManager } from "./template/template-manager.js";
 export { InputManager } from "./template/input-manager.js";
+export { DependencyAnalyzer } from "./dependency/dependency-analyzer.js";
+export { MigrationManager } from "./dependency/migration-manager.js";
 
 // Export types
 export type {
@@ -17,7 +19,10 @@ export type {
   InstallOptions,
   ListOptions,
   PackageManagerInfo,
-  WranglerConfig
+  WranglerConfig,
+  MCPServerMetadata,
+  DependencyAnalysisResult,
+  MigrationConfig
 } from "./types/index.js";
 
 // Note: CLI program is not exported as it's designed for command-line use only

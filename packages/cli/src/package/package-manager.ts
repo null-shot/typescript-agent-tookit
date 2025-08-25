@@ -3,16 +3,19 @@
 import { readFile, writeFile } from "fs/promises";
 import { exec } from "child_process";
 import { promisify } from "util";
+import path from "path";
 import { detect } from "package-manager-detector";
-import type { PackageJson, PackageManagerInfo } from "../types/index.js";
+import type { PackageJson, PackageManagerInfo, MCPServerMetadata, DependencyAnalysisResult } from "../types/index.js";
 import { CLIError } from "../utils/errors.js";
 import { Logger } from "../utils/logger.js";
+import { DependencyAnalyzer } from "../dependency/dependency-analyzer.js";
 
 const execAsync = promisify(exec);
 const logger = new Logger();
 
 export class PackageManager {
   private packageManagerInfo: PackageManagerInfo | null = null;
+  private dependencyAnalyzer = new DependencyAnalyzer();
 
   async detectPackageManager(): Promise<PackageManagerInfo> {
     if (this.packageManagerInfo) return this.packageManagerInfo;
@@ -61,10 +64,18 @@ export class PackageManager {
   }
 
   async installPackage(source: string, serverName: string): Promise<void> {
+    // Check if package is already installed
+    const installedServers = await this.getInstalledMCPPackages();
+    if (installedServers.includes(serverName)) {
+      logger.debug(`Package ${serverName} is already installed, skipping installation`);
+      return;
+    }
+
     const manager = await this.detectPackageManager();
 
     try {
       logger.debug(`Installing ${source} using ${manager.name}`);
+      
       const command = `${manager.installCommand} ${source}`;
 
       const { stderr } = await execAsync(command);
@@ -75,8 +86,11 @@ export class PackageManager {
 
       logger.debug(`Successfully installed ${source}`);
 
+      // Analyze the installed dependency
+      const analysis = await this.analyzeDependency(source, serverName);
+
       // Update package.json with MCP server metadata
-      await this.addMCPMetadata(serverName, source);
+      await this.addMCPMetadata(serverName, source, analysis);
     } catch (error) {
       throw new CLIError(
         `Failed to install package ${source}: ${error instanceof Error ? error.message : String(error)}`,
@@ -171,6 +185,7 @@ export class PackageManager {
   private async addMCPMetadata(
     serverName: string,
     source: string,
+    analysis?: DependencyAnalysisResult,
   ): Promise<void> {
     const packageJson = await this.readPackageJson();
 
@@ -178,11 +193,29 @@ export class PackageManager {
       packageJson.mcpServers = {};
     }
 
-    packageJson.mcpServers[serverName] = {
+    const searchPackageName = this.extractPackageName(source);
+    const dependencyPath = await this.dependencyAnalyzer.findDependencyPath(searchPackageName);
+    
+    // Extract the actual package name from the found dependency path
+    const actualPackageName = dependencyPath ? path.basename(dependencyPath) : searchPackageName;
+
+    const metadata: any = {
       source,
       installedAt: new Date().toISOString(),
-      packageName: this.extractPackageName(source),
+      packageName: actualPackageName, // Store the actual installed package name
+      hasWranglerConfig: analysis?.hasWranglerConfig || false,
     };
+
+    // Only store essential metadata - paths can be generated dynamically
+    if (analysis?.serviceName) {
+      metadata.serviceName = analysis.serviceName;
+    }
+    
+    if (analysis?.d1Databases && analysis.d1Databases.length > 0) {
+      metadata.d1Databases = analysis.d1Databases;
+    }
+
+    packageJson.mcpServers[serverName] = metadata;
 
     await this.writePackageJson(packageJson);
   }
@@ -201,6 +234,94 @@ export class PackageManager {
     await this.writePackageJson(packageJson);
   }
 
+  /**
+   * Analyze a dependency after installation to extract metadata
+   */
+  private async analyzeDependency(source: string, serverName: string): Promise<DependencyAnalysisResult | undefined> {
+    try {
+      const packageName = this.extractPackageName(source);
+      const dependencyPath = await this.dependencyAnalyzer.findDependencyPath(packageName);
+      
+      if (!dependencyPath) {
+        logger.warn(`Could not find installed dependency path for ${serverName} (${packageName})`);
+        return undefined;
+      }
+
+      logger.debug(`Analyzing dependency ${serverName} at ${dependencyPath}`);
+      const analysis = await this.dependencyAnalyzer.analyzeDependency(dependencyPath);
+      
+      if (analysis.serviceName) {
+        logger.debug(`Found service ${analysis.serviceName} in dependency ${serverName}`);
+      }
+      
+      if (analysis.hasWranglerConfig) {
+        logger.debug(`Dependency ${serverName} has wrangler config at: ${analysis.wranglerConfigPath}`);
+      }
+
+      return analysis;
+    } catch (error) {
+      logger.warn(`Failed to analyze dependency ${serverName}: ${error instanceof Error ? error.message : String(error)}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Get detailed metadata for installed MCP servers including dependency analysis
+   */
+  async getInstalledMCPServersWithMetadata(): Promise<Record<string, MCPServerMetadata>> {
+    try {
+      const packageJson = await this.readPackageJson();
+      return packageJson.mcpServers || {};
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Get dependencies with wrangler configs
+   */
+  async getDependenciesWithWranglerConfigs(): Promise<Array<{
+    name: string;
+    dependencyPath: string;
+    wranglerConfigPath?: string;
+    serviceName?: string;
+  }>> {
+    const metadata = await this.getInstalledMCPServersWithMetadata();
+    const dependencies: Array<{
+      name: string;
+      dependencyPath: string;
+      wranglerConfigPath?: string;
+      serviceName?: string;
+    }> = [];
+
+    for (const [name, serverMetadata] of Object.entries(metadata)) {
+      if (serverMetadata.packageName && serverMetadata.hasWranglerConfig) {
+        // Generate paths dynamically from the packageName
+        const dependencyPath = path.join("node_modules", serverMetadata.packageName);
+        const wranglerConfigPath = path.join(dependencyPath, "wrangler.jsonc");
+        
+        const dependency: {
+          name: string;
+          dependencyPath: string;
+          wranglerConfigPath?: string;
+          serviceName?: string;
+        } = {
+          name,
+          dependencyPath,
+          wranglerConfigPath,
+        };
+
+        if (serverMetadata.serviceName) {
+          dependency.serviceName = serverMetadata.serviceName;
+        }
+
+        dependencies.push(dependency);
+      }
+    }
+
+    return dependencies;
+  }
+
   private extractPackageName(source: string): string {
     // Extract package name from various source formats
     if (source.startsWith("github:")) {
@@ -214,5 +335,90 @@ export class PackageManager {
     }
 
     return source.split("@")[0] ?? source;
+  }
+
+  /**
+   * Add or update scripts in package.json
+   */
+  async addScripts(scripts: Record<string, string>): Promise<void> {
+    const packageJson = await this.readPackageJson();
+    
+    if (!packageJson.scripts) {
+      packageJson.scripts = {};
+    }
+
+    Object.assign(packageJson.scripts, scripts);
+    
+    await this.writePackageJson(packageJson);
+  }
+
+  /**
+   * Check if a script exists in package.json
+   */
+  async hasScript(scriptName: string): Promise<boolean> {
+    try {
+      const packageJson = await this.readPackageJson();
+      return !!(packageJson.scripts && packageJson.scripts[scriptName]);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get a script command from package.json
+   */
+  async getScript(scriptName: string): Promise<string | undefined> {
+    try {
+      const packageJson = await this.readPackageJson();
+      return packageJson.scripts?.[scriptName];
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Add to postinstall script (creating or appending)
+   */
+  async addToPostinstall(command: string): Promise<void> {
+    const packageJson = await this.readPackageJson();
+    
+    if (!packageJson.scripts) {
+      packageJson.scripts = {};
+    }
+
+    const existing = packageJson.scripts.postinstall;
+    if (existing) {
+      // Don't add if already exists
+      if (existing.includes(command)) {
+        return;
+      }
+      packageJson.scripts.postinstall = `${existing} && ${command}`;
+    } else {
+      packageJson.scripts.postinstall = command;
+    }
+    
+    await this.writePackageJson(packageJson);
+  }
+
+  /**
+   * Run a script if it exists
+   */
+  async runScript(scriptName: string): Promise<boolean> {
+    const hasScript = await this.hasScript(scriptName);
+    if (!hasScript) {
+      return false;
+    }
+
+    const manager = await this.detectPackageManager();
+    const command = `${manager.name} run ${scriptName}`;
+    
+    try {
+      await execAsync(command);
+      logger.debug(`Successfully ran script: ${scriptName}`);
+      return true;
+    } catch (error) {
+      logger.warn(`Failed to run script ${scriptName}: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
   }
 }

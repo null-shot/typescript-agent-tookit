@@ -6,12 +6,14 @@ import ora from "ora";
 import { ConfigManager } from "./config/config-manager.js";
 import { PackageManager } from "./package/package-manager.js";
 import { WranglerManager } from "./wrangler/wrangler-manager.js";
+import { DependencyAnalyzer } from "./dependency/dependency-analyzer.js";
+import { MigrationManager } from "./dependency/migration-manager.js";
 import { DryRunManager } from "./utils/dry-run.js";
-import { CLIError } from "./utils/errors.js";
+import { CLIError, ConfigError } from "./utils/errors.js";
 import { Logger } from "./utils/logger.js";
 import { TemplateManager } from "./template/template-manager.js";
 import { InputManager } from "./template/input-manager.js";
-import type { MCPConfig, InstallOptions, ListOptions } from "./types/index.js";
+import type { MCPConfig, InstallOptions, ListOptions, WranglerConfig } from "./types/index.js";
 
 const program = new Command();
 const logger = new Logger();
@@ -20,6 +22,7 @@ interface GlobalOptions {
   dryRun?: boolean;
   verbose?: boolean;
   config?: string;
+  cwd?: string;
 }
 
 program
@@ -28,7 +31,8 @@ program
   .version("1.0.0")
   .option("--dry-run", "Show what would be done without making changes")
   .option("-v, --verbose", "Enable verbose logging")
-  .option("-c, --config <path>", "Path to config file", "mcp.jsonc");
+  .option("-c, --config <path>", "Path to config file", "mcp.json")
+  .option("--cwd <path>", "Run as if nullshot was started in the specified directory instead of the current working directory");
 
 program
   .command("install")
@@ -40,19 +44,27 @@ program
   )
   .action(async (options: InstallOptions & GlobalOptions) => {
     const spinner = ora("Installing MCP servers...").start();
+    
+    const {
+      dryRun,
+      verbose,
+      config: configPath,
+      cwd,
+    } = program.opts<GlobalOptions>();
+
+    // Change to the specified working directory
+    const originalCwd = process.cwd();
+    if (cwd && cwd !== originalCwd) {
+      process.chdir(cwd);
+    }
 
     try {
-      const {
-        dryRun,
-        verbose,
-        config: configPath,
-      } = program.opts<GlobalOptions>();
       const dryRunManager = new DryRunManager(dryRun || false);
 
       if (verbose) logger.setVerbose(true);
       if (dryRun) logger.info(chalk.yellow("🔍 Running in dry-run mode"));
 
-      const configManager = new ConfigManager(configPath || "mcp.jsonc");
+      const configManager = new ConfigManager(configPath || "mcp.json");
       const config = await configManager.load();
 
       const packageManager = new PackageManager();
@@ -76,6 +88,11 @@ program
     } catch (error) {
       spinner.fail(chalk.red("❌ Installation failed"));
       handleError(error);
+    } finally {
+      // Restore original working directory
+      if (cwd && cwd !== originalCwd) {
+        process.chdir(originalCwd);
+      }
     }
   });
 
@@ -84,9 +101,16 @@ program
   .description("List currently installed MCP servers")
   .option("--format <type>", "Output format (table|json)", "table")
   .action(async (options: ListOptions & GlobalOptions) => {
+    const { config: configPath, cwd } = program.opts<GlobalOptions>();
+
+    // Change to the specified working directory
+    const originalCwd = process.cwd();
+    if (cwd && cwd !== originalCwd) {
+      process.chdir(cwd);
+    }
+
     try {
-      const { config: configPath } = program.opts<GlobalOptions>();
-      const configManager = new ConfigManager(configPath || "mcp.jsonc");
+      const configManager = new ConfigManager(configPath || "mcp.json");
 
       const servers = await listInstalledServers(
         configManager,
@@ -95,6 +119,11 @@ program
       console.log(servers);
     } catch (error) {
       handleError(error);
+    } finally {
+      // Restore original working directory
+      if (cwd && cwd !== originalCwd) {
+        process.chdir(originalCwd);
+      }
     }
   });
 
@@ -102,15 +131,27 @@ program
   .command("validate")
   .description("Validate MCP configuration file")
   .action(async () => {
+    const { config: configPath, cwd } = program.opts<GlobalOptions>();
+
+    // Change to the specified working directory
+    const originalCwd = process.cwd();
+    if (cwd && cwd !== originalCwd) {
+      process.chdir(cwd);
+    }
+
     try {
-      const { config: configPath } = program.opts<GlobalOptions>();
-      const configManager = new ConfigManager(configPath || "mcp.jsonc");
+      const configManager = new ConfigManager(configPath || "mcp.json");
 
       const spinner = ora("Validating configuration...").start();
       await configManager.validate();
       spinner.succeed(chalk.green("✅ Configuration is valid"));
     } catch (error) {
       handleError(error);
+    } finally {
+      // Restore original working directory
+      if (cwd && cwd !== originalCwd) {
+        process.chdir(originalCwd);
+      }
     }
   });
 
@@ -210,18 +251,83 @@ program
   .description("Initialize a new MCP configuration file")
   .option("--force", "Overwrite existing configuration file")
   .action(async (options: { force?: boolean } & GlobalOptions) => {
-    try {
-      const { config: configPath } = program.opts<GlobalOptions>();
-      const configManager = new ConfigManager(configPath || "mcp.jsonc");
+    const { config: configPath, cwd } = program.opts<GlobalOptions>();
 
-      await configManager.init(options.force);
-      logger.info(
-        chalk.green(
-          `✅ Initialized MCP configuration at ${configPath || "mcp.jsonc"}`,
-        ),
-      );
+    // Change to the specified working directory
+    const originalCwd = process.cwd();
+    if (cwd && cwd !== originalCwd) {
+      process.chdir(cwd);
+    }
+
+    try {
+      const configManager = new ConfigManager(configPath || "mcp.json");
+      const packageManager = new PackageManager();
+
+      // Try to initialize MCP configuration, but continue if it already exists
+      try {
+        await configManager.init(options.force);
+        logger.info(
+          chalk.green(
+            `✅ Initialized MCP configuration at ${configPath || "mcp.json"}`,
+          ),
+        );
+      } catch (error) {
+        if (error instanceof ConfigError && error.message.includes("already exists")) {
+          logger.info(chalk.yellow(`⚠️  MCP configuration already exists at ${configPath || "mcp.json"} - skipping creation`));
+        } else {
+          throw error; // Re-throw if it's a different error
+        }
+      }
+
+      // Add nullshot scripts to package.json
+      const spinner = ora("Adding nullshot scripts to package.json...").start();
+      try {
+        const scripts = {
+          "dev:nullshot": "nullshot dev",
+        };
+        
+        await packageManager.addScripts(scripts);
+        
+        // Add postinstall hook
+        await packageManager.addToPostinstall("nullshot install");
+        
+        spinner.succeed("✅ Added nullshot scripts to package.json");
+        
+        // Check and ask about cf-typegen
+        const hasCfTypegen = await packageManager.hasScript("cf-typegen");
+        if (!hasCfTypegen) {
+          logger.info(chalk.yellow("\n⚠️  No 'cf-typegen' script found in package.json"));
+          
+          const prompts = await import("prompts");
+          const response = await prompts.default({
+            type: "confirm",
+            name: "addCfTypegen",
+            message: "Would you like to add the 'cf-typegen' script for generating Wrangler types?",
+            initial: true,
+          });
+          
+          if (response.addCfTypegen) {
+            await packageManager.addScripts({
+              "cf-typegen": "wrangler types"
+            });
+            logger.info(chalk.green("✅ Added 'cf-typegen' script to package.json"));
+          }
+        } else {
+          logger.info(chalk.green("✅ Found existing 'cf-typegen' script - skipping to preserve custom configuration"));
+        }
+        
+      } catch (error) {
+        spinner.fail("❌ Failed to update package.json scripts");
+        logger.warn(`Script update error: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
     } catch (error) {
       handleError(error);
+    } finally {
+      // Restore original working directory
+      if (cwd && cwd !== originalCwd) {
+        process.chdir(originalCwd);
+      }
     }
   });
 
@@ -243,18 +349,26 @@ program
     ) => {
       const spinner = ora("Starting MCP servers...").start();
 
+      const {
+        dryRun,
+        verbose,
+        config: configPath,
+        cwd,
+      } = program.opts<GlobalOptions>();
+
+          // Change to the specified working directory
+    const originalCwd = process.cwd();
+    if (cwd && cwd !== originalCwd) {
+      process.chdir(cwd);
+    }
+
       try {
-        const {
-          dryRun,
-          verbose,
-          config: configPath,
-        } = program.opts<GlobalOptions>();
         const dryRunManager = new DryRunManager(dryRun || false);
 
         if (verbose) logger.setVerbose(true);
         if (dryRun) logger.info(chalk.yellow("🔍 Running in dry-run mode"));
 
-        const configManager = new ConfigManager(configPath || "mcp.jsonc");
+        const configManager = new ConfigManager(configPath || "mcp.json");
         const config = await configManager.load();
 
         const wranglerManager = new WranglerManager();
@@ -278,6 +392,11 @@ program
       } catch (error) {
         spinner.fail(chalk.red("❌ Failed to start MCP servers"));
         handleError(error);
+      } finally {
+        // Restore original working directory
+        if (cwd && cwd !== originalCwd) {
+          process.chdir(originalCwd);
+        }
       }
     },
   );
@@ -321,19 +440,62 @@ async function installServers(
     spinner.text = "Updating Cloudflare Workers configuration...";
     await dryRunManager.execute(
       "Update wrangler.jsonc with MCP server bindings",
-      () => wranglerManager.updateConfig(config),
+      async () => {
+        // Get dependency wrangler configs
+        const dependencyAnalyzer = new DependencyAnalyzer();
+        const dependencyConfigs: WranglerConfig[] = [];
+        
+        for (const [serverName] of Object.entries(config.servers)) {
+          try {
+            // First find the dependency path
+            const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverName);
+            if (dependencyPath) {
+              // Then analyze the dependency to get wrangler config
+              const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
+              if (analysis.wranglerConfig) {
+                dependencyConfigs.push(analysis.wranglerConfig);
+              }
+            }
+          } catch (error) {
+            logger.warn(`Failed to analyze dependency ${serverName}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        
+        return wranglerManager.updateConfigWithDependencies(dependencyConfigs);
+      },
     );
   }
 
-  // Clean up servers not in config (PUT semantics)
-  spinner.text = "Cleaning up removed servers...";
+  // Clean up removed packages (only npm packages, service cleanup handled in wrangler update)
+  spinner.text = "Cleaning up removed packages...";
   await dryRunManager.execute(
-    "Remove servers not in configuration",
+    "Remove packages not in configuration",
     async () => {
       await packageManager.cleanupRemovedServers(serverNames);
-      await wranglerManager.cleanupRemovedServers(serverNames);
     },
   );
+
+  // Run cf-typegen if available
+  spinner.text = "Generating Wrangler types...";
+  const hasCfTypegen = await packageManager.hasScript("cf-typegen");
+  if (hasCfTypegen) {
+    await dryRunManager.execute(
+      "Generate Wrangler types using cf-typegen",
+      async () => {
+        const success = await packageManager.runScript("cf-typegen");
+        if (success) {
+          logger.debug("Successfully generated Wrangler types");
+        }
+      },
+    );
+  } else {
+    logger.warn(
+      chalk.yellow(
+        "⚠️  Skipping generating wrangler types since cf-typegen does not exist. " +
+        "You must generate manually or add \"cf-typegen\": \"wrangler types\" to your package.json"
+      )
+    );
+  }
 }
 
 async function listInstalledServers(
@@ -342,10 +504,8 @@ async function listInstalledServers(
 ): Promise<string> {
   const config = await configManager.load();
   const packageManager = new PackageManager();
-  const wranglerManager = new WranglerManager();
 
   const installedPackages = await packageManager.getInstalledMCPPackages();
-  const wranglerBindings = await wranglerManager.getMCPBindings();
 
   const servers = Object.entries(config.servers).map(
     ([name, serverConfig]) => ({
@@ -353,11 +513,7 @@ async function listInstalledServers(
       source: serverConfig.source,
       command: serverConfig.command,
       packageInstalled: installedPackages.includes(name),
-      wranglerConfigured: wranglerBindings.includes(name),
-      status:
-        installedPackages.includes(name) && wranglerBindings.includes(name)
-          ? "installed"
-          : "partial",
+      status: installedPackages.includes(name) ? "installed" : "not_installed",
     }),
   );
 
@@ -398,6 +554,8 @@ async function runServers(
     spinner,
   } = context;
 
+
+
   const serversToRun = serverName
     ? (config.servers[serverName] ? { [serverName]: config.servers[serverName] } : {})
     : config.servers;
@@ -407,7 +565,7 @@ async function runServers(
       "No MCP servers found to run",
       serverName
         ? `Server "${serverName}" not found in configuration`
-        : "Add MCP servers to your mcp.jsonc configuration file",
+        : "Add MCP servers to your mcp.json configuration file",
       1,
     );
   }
@@ -421,7 +579,27 @@ async function runServers(
     // Update configuration for all servers
     await dryRunManager.execute(
       "Update wrangler.jsonc with configurations for all MCP servers",
-      () => wranglerManager.updateConfigForDedicatedWorkers(config, serversToRun)
+      async () => {
+        // Get dependency wrangler configs for dedicated workers
+        const dependencyAnalyzer = new DependencyAnalyzer();
+        const dependencyConfigs: WranglerConfig[] = [];
+        
+        for (const [serverName] of Object.entries(serversToRun)) {
+          try {
+            const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverName);
+            if (dependencyPath) {
+              const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
+              if (analysis.wranglerConfig) {
+                dependencyConfigs.push(analysis.wranglerConfig);
+              }
+            }
+          } catch (error) {
+            logger.warn(`Failed to analyze dependency ${serverName}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+        
+        return wranglerManager.updateConfigWithDependencies(dependencyConfigs);
+      }
     );
 
     // Run all servers in parallel subprocesses
@@ -500,7 +678,27 @@ async function runServers(
   spinner.text = "Configuring service bindings for dedicated workers...";
   await dryRunManager.execute(
     "Update wrangler.jsonc with service bindings for dedicated workers",
-    () => wranglerManager.updateConfigForDedicatedWorkers(config, serversToRun)
+    async () => {
+      // Get dependency wrangler configs for dedicated workers
+      const dependencyAnalyzer = new DependencyAnalyzer();
+      const dependencyConfigs: WranglerConfig[] = [];
+      
+      for (const [serverName] of Object.entries(serversToRun)) {
+        try {
+          const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverName);
+          if (dependencyPath) {
+            const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
+            if (analysis.wranglerConfig) {
+              dependencyConfigs.push(analysis.wranglerConfig);
+            }
+          }
+        } catch (error) {
+          logger.warn(`Failed to analyze dependency ${serverName}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      
+      return wranglerManager.updateConfigWithDependencies(dependencyConfigs);
+    }
   );
 
   // Start the single worker
@@ -566,6 +764,153 @@ async function runServers(
   }
 }
 
+async function runDev(
+  config: MCPConfig,
+  options: {
+    dryRunManager: DryRunManager;
+    local?: boolean;
+    spinner: any;
+  }
+): Promise<void> {
+  const { dryRunManager, spinner } = options;
+
+  if (!config.servers || Object.keys(config.servers).length === 0) {
+    throw new CLIError(
+      "No MCP servers found in configuration",
+      "Run 'nullshot install' to add some MCP servers or check your mcp.json file",
+      1,
+    );
+  }
+
+  // Get dependency information
+  const packageManager = new PackageManager();
+  const metadata = await packageManager.getInstalledMCPServersWithMetadata();
+  
+  const dependencyAnalyzer = new DependencyAnalyzer();
+  const migrationManager = new MigrationManager(dryRunManager);
+
+  spinner.text = "Analyzing dependencies...";
+
+  // Collect dependency configs and their information
+  const dependencyConfigs: Array<{
+    name: string;
+    serviceName: string;
+    wranglerConfigPath: string;
+    d1Databases?: string[];
+  }> = [];
+
+  // Get the main project's wrangler config path
+  const mainWranglerConfigPath = "wrangler.jsonc";
+
+  // Analyze each dependency
+  for (const [serverName, serverMeta] of Object.entries(metadata)) {
+    try {
+      const dependencyPath = await dependencyAnalyzer.findDependencyPath(serverMeta.packageName);
+      if (dependencyPath) {
+        const analysis = await dependencyAnalyzer.analyzeDependency(dependencyPath);
+        if (analysis.wranglerConfigPath && analysis.serviceName) {
+          const config: any = {
+            name: serverName,
+            serviceName: analysis.serviceName,
+            wranglerConfigPath: analysis.wranglerConfigPath,
+          };
+          if (analysis.d1Databases) {
+            config.d1Databases = analysis.d1Databases;
+          }
+          dependencyConfigs.push(config);
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to analyze dependency ${serverName}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  if (dependencyConfigs.length === 0) {
+    logger.warn(chalk.yellow("No dependencies with wrangler configs found"));
+  }
+
+  // List the services we're going to start
+  const serviceList = dependencyConfigs.map(dep => dep.serviceName).join(", ");
+  logger.info(chalk.blue(`Running dev for services: ${serviceList || "none"}`));
+
+  // Run D1 migrations
+  spinner.text = "Running D1 migrations...";
+  
+  // Run D1 migrations
+  const d1MigrationResults = await migrationManager.executeD1MigrationsForDependencies(dependencyConfigs);
+  const failedD1Migrations = d1MigrationResults.filter((result: any) => !result.success);
+  if (failedD1Migrations.length > 0) {
+    logger.warn(`${failedD1Migrations.length} D1 migration(s) failed, but continuing...`);
+  }
+
+  // Build the wrangler command
+  spinner.text = "Starting wrangler dev...";
+  
+  const configPaths = [
+    mainWranglerConfigPath, // Main project config always first
+    ...dependencyConfigs.map(dep => dep.wranglerConfigPath),
+  ];
+  
+  // Build args array with separate -c flags for each config
+  const args = [
+    "dev",
+    ...configPaths.flatMap(path => ["-c", path]),
+  ];
+  
+  const fullCommand = `wrangler dev ${configPaths.map(path => `-c ${path}`).join(" ")}`;
+  
+  logger.info(chalk.green(`\n🚀 Executing: ${fullCommand}\n`));
+
+  spinner.stop();
+
+  if (dryRunManager.isEnabled()) {
+    await dryRunManager.execute(`[DRY RUN] Would execute: ${fullCommand}`, async () => {});
+    return;
+  }
+
+  // Execute the command
+  const { spawn } = await import("node:child_process");
+
+  const childProcess = spawn("wrangler", args, {
+    stdio: "inherit",
+    shell: false,
+    env: process.env,
+  });
+
+  return new Promise<void>((resolve, reject) => {
+    childProcess.on("close", (code) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new CLIError(
+          `Wrangler dev exited with code ${code}`,
+          "Check the logs above for error details",
+          code || 1
+        ));
+      }
+    });
+
+    childProcess.on("error", (error) => {
+      reject(new CLIError(
+        `Failed to start wrangler dev: ${error.message}`,
+        "Make sure wrangler is installed and accessible in your PATH",
+        1
+      ));
+    });
+
+    // Handle graceful shutdown
+    process.on("SIGINT", () => {
+      logger.info(chalk.yellow(`\n🛑 Shutting down wrangler dev...`));
+      childProcess.kill("SIGINT");
+    });
+
+    process.on("SIGTERM", () => {
+      logger.info(chalk.yellow(`\n🛑 Shutting down wrangler dev...`));
+      childProcess.kill("SIGTERM");
+    });
+  });
+}
+
 function handleError(error: unknown): void {
   if (error instanceof CLIError) {
     logger.error(chalk.red(`❌ ${error.message}`));
@@ -582,12 +927,65 @@ function handleError(error: unknown): void {
     process.exit(1);
   }
 }
-
 // Error handling for unhandled rejections
 process.on("unhandledRejection", (reason) => {
   logger.error(`${chalk.red("Unhandled rejection:")}, ${reason}`);
   process.exit(1);
 });
+
+// Dev command - run services in development mode
+program
+  .command("dev")
+  .description("Run MCP servers in development mode using multi-config approach")
+  .option("--local", "Use --local flag for D1 migrations", true)
+  .action(
+    async (options: { local?: boolean } & GlobalOptions) => {
+      const spinner = ora("Starting development servers...").start();
+
+      const {
+        dryRun,
+        verbose,
+        config: configPath,
+        cwd,
+      } = program.opts<GlobalOptions>();
+
+      // Change to the specified working directory
+      const originalCwd = process.cwd();
+      if (cwd && cwd !== originalCwd) {
+        process.chdir(cwd);
+      }
+
+      try {
+        const dryRunManager = new DryRunManager(dryRun || false);
+
+        if (verbose) logger.setVerbose(true);
+        if (dryRun) logger.info(chalk.yellow("🔍 Running in dry-run mode"));
+
+        const configManager = new ConfigManager(configPath || "mcp.json");
+        const config = await configManager.load();
+
+        await runDev(config, {
+          dryRunManager,
+          local: options.local ?? true,
+          spinner,
+        });
+
+        if (dryRun) {
+          logger.info(chalk.yellow("🔍 Dry-run completed"));
+        }
+      } catch (error) {
+        spinner.fail(chalk.red("❌ Failed to start development servers"));
+        handleError(error);
+      } finally {
+        // Restore original working directory
+        if (cwd && cwd !== originalCwd) {
+          process.chdir(originalCwd);
+        }
+      }
+    }
+  );
+
+
 
 process.on("uncaughtException", (error) => {
   logger.error(`${chalk.red("Uncaught exception:")}, ${error}`);
@@ -595,3 +993,4 @@ process.on("uncaughtException", (error) => {
 });
 
 program.parse();
+

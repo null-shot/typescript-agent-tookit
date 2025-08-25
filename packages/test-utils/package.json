@@ -1,7 +1,7 @@
 {
-  "name": "@xava-labs/test-utils",
+  "name": "@null-shot/test-utils",
   "version": "0.2.0",
-  "description": "Testing utilities for xava-labs projects",
+  "description": "Testing utilities for null-shot projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",

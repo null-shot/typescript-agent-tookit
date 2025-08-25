@@ -1,0 +1,36 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agent-dependencies",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "SimplePromptAgent"
+      ]
+    }
+  ],
+  "durable_objects": {
+    "bindings": []
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "AI_PROVIDER": "anthropic"
+  },
+  "services": [
+    {
+      "binding": "MCP_SERVICE",
+      "service": "mcp"
+    }
+  ],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}

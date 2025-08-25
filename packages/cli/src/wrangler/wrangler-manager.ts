@@ -1,6 +1,6 @@
 import { readFile, writeFile, access } from "node:fs/promises";
 import { parse, modify, applyEdits } from "jsonc-parser";
-import type { WranglerConfig, MCPConfig, MCPServerConfig } from "../types/index.js";
+import type { WranglerConfig } from "../types/index.js";
 import { CLIError } from "../utils/errors.js";
 import { Logger } from "../utils/logger.js";
 
@@ -24,10 +24,8 @@ export class WranglerManager {
         compatibility_date:
           new Date().toISOString().split("T")[0] ?? "2025-05-15",
         compatibility_flags: ["nodejs_compat"],
-        durable_objects: {
-          bindings: [],
-        },
         services: [],
+        vars: {},
       };
 
       await this.writeConfig(defaultConfig);
@@ -79,89 +77,143 @@ export class WranglerManager {
     }
   }
 
-  async updateConfig(mcpConfig: MCPConfig): Promise<void> {
+    /**
+   * Update configuration by merging dependency wrangler configs and handling cleanup
+   */
+  async updateConfigWithDependencies(
+    dependencyConfigs: WranglerConfig[]
+  ): Promise<void> {
     const wranglerConfig = await this.readConfig();
-
-    // Ensure required structure exists
-    if (!wranglerConfig.durable_objects) {
-      wranglerConfig.durable_objects = { bindings: [] };
+    
+    // Ensure basic structure
+    this.ensureWranglerStructure(wranglerConfig);
+    
+    // Get metadata from package manager to detect service name changes
+    let packageManager;
+    let existingMetadata: Record<string, any> = {};
+    try {
+      packageManager = new (await import("../package/package-manager.js")).PackageManager();
+      existingMetadata = await packageManager.getInstalledMCPServersWithMetadata();
+    } catch (error) {
+      logger.warn(`Failed to load package metadata: ${error instanceof Error ? error.message : String(error)}`);
     }
-    if (!wranglerConfig.durable_objects.bindings) {
-      wranglerConfig.durable_objects.bindings = [];
-    }
-    if (!wranglerConfig.services) {
-      wranglerConfig.services = [];
-    }
-    if (!wranglerConfig.vars) {
-      wranglerConfig.vars = {};
-    }
-
-    // Add nodejs_compat flag if not present
-    if (!wranglerConfig.compatibility_flags) {
-      wranglerConfig.compatibility_flags = [];
-    }
-    if (!wranglerConfig.compatibility_flags.includes("nodejs_compat")) {
-      wranglerConfig.compatibility_flags.push("nodejs_compat");
-    }
-
-    // Generate MCP server bindings
-    const mcpServers = Object.entries(mcpConfig.servers);
-
-    for (const [serverName, serverConfig] of mcpServers) {
-      // Create Durable Object binding for each MCP server
-      const durableObjectName = serverName;
-      const existingDO = wranglerConfig.durable_objects.bindings.find(
-        (binding) => binding.name === durableObjectName,
-      );
-
-      if (!existingDO && serverConfig.type === "do") {
-        wranglerConfig.durable_objects.bindings.push({
-          name: durableObjectName,
-          class_name: durableObjectName,
-        });
-      }
-
-      // Create service binding if needed
-      const serviceBindingName = `MCP_${serverName.toUpperCase()}`;
-      const existingService = wranglerConfig.services.find(
-        (service) => service.name === serviceBindingName,
-      );
-
-      if (!existingService && (serverConfig.type ?? "worker") === "worker") {
-        wranglerConfig.services.push({
-          name: serviceBindingName,
-          service: serverName,
-          // environment: "production",
-        });
-      }
-
-      // Add environment variables
-      if (serverConfig.env) {
-        for (const envVar of serverConfig.env) {
-          if (envVar.value) {
-            wranglerConfig.vars[envVar.name] = envVar.value;
+    
+    // Track current service names from dependencies
+    const currentServiceNames = new Set<string>();
+    const serviceNameToServerName = new Map<string, string>();
+    
+    // For each dependency config, add service bindings and merge vars
+    for (const depConfig of dependencyConfigs) {
+      if (depConfig.name) {
+        currentServiceNames.add(depConfig.name);
+        
+        // Find the corresponding server name from serverNames array
+        // For now, we'll map by index or try to find by matching service name in metadata
+        let serverName = depConfig.name; // fallback
+        for (const [metaServerName, metaData] of Object.entries(existingMetadata)) {
+          if (metaData.serviceName === depConfig.name || metaServerName === depConfig.name) {
+            serverName = metaServerName;
+            break;
           }
-          // If no value provided, assume it will be read from process.env
+        }
+        serviceNameToServerName.set(depConfig.name, serverName);
+        
+        // Check if service name has changed
+        const oldMetadata = existingMetadata[serverName];
+        if (oldMetadata && oldMetadata.serviceName && oldMetadata.serviceName !== depConfig.name) {
+          // Service name has changed, remove old binding
+          const oldServiceBindingName = `${oldMetadata.serviceName.toUpperCase().replace(/-/g, '_')}_SERVICE`;
+          const oldServiceIndex = wranglerConfig.services!.findIndex(
+            service => service.binding === oldServiceBindingName
+          );
+          if (oldServiceIndex !== -1) {
+            wranglerConfig.services!.splice(oldServiceIndex, 1);
+            logger.debug(`Removed old service binding ${oldServiceBindingName} -> ${oldMetadata.serviceName}`);
+          }
+        }
+        
+        // Add or update service binding using dependency's service name
+        const serviceBindingName = `${depConfig.name.toUpperCase().replace(/-/g, '_')}_SERVICE`;
+        const existingService = wranglerConfig.services!.find(
+          service => service.binding === serviceBindingName
+        );
+        
+        if (!existingService) {
+          wranglerConfig.services!.push({
+            binding: serviceBindingName,
+            service: depConfig.name
+          });
+          logger.debug(`Added service binding ${serviceBindingName} -> ${depConfig.name}`);
+        } else {
+          existingService.service = depConfig.name;
+          logger.debug(`Updated service binding ${serviceBindingName} -> ${depConfig.name}`);
         }
       }
-
-      // Add auth headers as environment rariables
-      if (serverConfig.auth?.headers) {
-        for (const [headerName, headerValue] of Object.entries(
-          serverConfig.auth.headers,
-        )) {
-          const envName = `MCP_${serverName.toUpperCase()}_${headerName.toUpperCase()}`;
-          wranglerConfig.vars[envName] = headerValue;
+      
+      // Merge environment variables
+      if (depConfig.vars && wranglerConfig.vars) {
+        Object.entries(depConfig.vars).forEach(([key, value]) => {
+          if (value && !wranglerConfig.vars![key]) {
+            wranglerConfig.vars![key] = value;
+          }
+        });
+      }
+      
+      // Merge compatibility requirements
+      if (depConfig.compatibility_date) {
+        const currentDate = wranglerConfig.compatibility_date;
+        if (!currentDate || new Date(depConfig.compatibility_date) > new Date(currentDate)) {
+          wranglerConfig.compatibility_date = depConfig.compatibility_date;
+        }
+      }
+      
+      if (depConfig.compatibility_flags && wranglerConfig.compatibility_flags) {
+        const currentFlags = wranglerConfig.compatibility_flags;
+        const newFlags = depConfig.compatibility_flags.filter(
+          flag => !currentFlags.includes(flag)
+        );
+        if (newFlags.length > 0) {
+          wranglerConfig.compatibility_flags = [...currentFlags, ...newFlags];
         }
       }
     }
+    
+    // Clean up removed services (only MCP-managed services)
+    if (wranglerConfig.services) {
+      const originalLength = wranglerConfig.services.length;
+      
+      // Generate expected service binding names for current dependencies
+      const expectedBindingNames = new Set<string>();
+      for (const serviceName of currentServiceNames) {
+        expectedBindingNames.add(`${serviceName.toUpperCase().replace(/-/g, '_')}_SERVICE`);
+      }
+      
+      wranglerConfig.services = wranglerConfig.services.filter((service) => {
+        // Only filter out services that follow MCP naming convention
+        const isMCPService = service.binding && service.binding.endsWith('_SERVICE');
+        
+        if (isMCPService) {
+          // Keep services that match the current expected binding names
+          return expectedBindingNames.has(service.binding);
+        } else {
+          // Keep all non-MCP services (custom user services)
+          return true;
+        }
+      });
 
+      if (wranglerConfig.services.length !== originalLength) {
+        const removedCount = originalLength - wranglerConfig.services.length;
+        logger.debug(`Cleaned up ${removedCount} removed service bindings`);
+      }
+    }
+    
     await this.writeConfig(wranglerConfig);
-    logger.debug(
-      `Updated wrangler.jsonc with ${mcpServers.length} MCP server configurations`,
-    );
+    logger.debug(`Updated wrangler.jsonc with ${dependencyConfigs.length} dependency configurations`);
   }
 
+  /**
+   * Legacy method for getting MCP bindings from Durable Objects
+   */
   async getMCPBindings(): Promise<string[]> {
     try {
       const config = await this.readConfig();
@@ -176,78 +228,10 @@ export class WranglerManager {
     }
   }
 
-  async cleanupRemovedServers(currentServers: string[]): Promise<void> {
-    const config = await this.readConfig();
-    let hasChanges = false;
-
-    // Remove Durable Object bindings for removed servers
-    if (config.durable_objects?.bindings) {
-      const originalLength = config.durable_objects.bindings.length;
-      config.durable_objects.bindings = config.durable_objects.bindings.filter(
-        (binding) => {
-          const serverName = binding.name;
-          return currentServers.includes(serverName);
-        },
-      );
-
-      if (config.durable_objects.bindings.length !== originalLength) {
-        hasChanges = true;
-      }
-    }
-
-    // Remove service bindings for removed servers
-    if (config.services) {
-      const originalLength = config.services.length;
-      config.services = config.services.filter((service) => {
-        const serverName = service.service;
-        return currentServers.includes(serverName);
-      });
-
-      if (config.services.length !== originalLength) {
-        hasChanges = true;
-      }
-    }
-
-    // Clean up environment variables for removed servers
-    if (config.vars) {
-      const removedServers = (await this.getMCPBindings()).filter(
-        (server) => !currentServers.includes(server),
-      );
-
-      for (const serverName of removedServers) {
-        const prefix = `MCP_${serverName.toUpperCase()}_`;
-        const keysToRemove = Object.keys(config.vars).filter((key) =>
-          key.startsWith(prefix),
-        );
-
-        for (const key of keysToRemove) {
-          delete config.vars[key];
-          hasChanges = true;
-        }
-      }
-    }
-
-    if (hasChanges) {
-      await this.writeConfig(config);
-      logger.debug(
-        `Cleaned up wrangler.jsonc configuration for removed servers`,
-      );
-    }
-  }
-
-  async updateConfigForDedicatedWorkers(
-    _mcpConfig: MCPConfig,
-    serversToRun: Record<string, MCPServerConfig>
-  ): Promise<void> {
-    const wranglerConfig = await this.readConfig();
-
-    // Ensure required structure exists
-    if (!wranglerConfig.durable_objects) {
-      wranglerConfig.durable_objects = { bindings: [] };
-    }
-    if (!wranglerConfig.durable_objects.bindings) {
-      wranglerConfig.durable_objects.bindings = [];
-    }
+  /**
+   * Ensure wrangler config has required structure
+   */
+  private ensureWranglerStructure(wranglerConfig: WranglerConfig): void {
     if (!wranglerConfig.services) {
       wranglerConfig.services = [];
     }
@@ -262,173 +246,6 @@ export class WranglerManager {
     if (!wranglerConfig.compatibility_flags.includes("nodejs_compat")) {
       wranglerConfig.compatibility_flags.push("nodejs_compat");
     }
-
-    // Configure service bindings for dedicated workers with script_name
-    for (const [serverName, serverConfig] of Object.entries(serversToRun)) {
-      // Create Durable Object binding for each MCP server with script_name
-      const durableObjectName = serverName;
-      const existingDO = wranglerConfig.durable_objects.bindings.find(
-        (binding) => binding.name === durableObjectName,
-      );
-
-      if (!existingDO && serverConfig.type === "do") {
-        wranglerConfig.durable_objects.bindings.push({
-          name: durableObjectName,
-          class_name: durableObjectName,
-          script_name: serverName, // Point to the dedicated worker script
-        });
-      } else if (existingDO && serverConfig.type === "do") {
-        // Update existing binding with script_name
-        existingDO.script_name = serverName;
-      }
-
-      // Create service binding for dedicated workers with proper script_name
-      const serviceBindingName = `MCP_${serverName.toUpperCase()}`;
-      const existingService = wranglerConfig.services.find(
-        (service) => service.name === serviceBindingName,
-      );
-
-      if (!existingService && (serverConfig.type ?? "worker") === "worker") {
-        wranglerConfig.services.push({
-          name: serviceBindingName,
-          service: serverName,
-          // Use script_name to point to the actual worker file in node_modules
-          environment: "production", // Ensure consistent environment
-        });
-      } else if (existingService) {
-        // Update existing service binding
-        existingService.service = serverName;
-      }
-
-      // Add environment variables for service discovery
-      if (serverConfig.env) {
-        for (const envVar of serverConfig.env) {
-          if (envVar.value) {
-            wranglerConfig.vars[envVar.name] = envVar.value;
-          }
-        }
-      }
-
-      // Add auth headers as environment variables
-      if (serverConfig.auth?.headers) {
-        for (const [headerName, headerValue] of Object.entries(
-          serverConfig.auth.headers,
-        )) {
-          const envName = `MCP_${serverName.toUpperCase()}_${headerName.toUpperCase()}`;
-          wranglerConfig.vars[envName] = headerValue;
-        }
-      }
-
-      // Add service discovery variables
-      wranglerConfig.vars[`MCP_${serverName.toUpperCase()}_SERVICE`] = serverName;
-      wranglerConfig.vars[`MCP_${serverName.toUpperCase()}_SCRIPT`] = serverName;
-    }
-
-    // Ensure services can discover each other
-    const serviceNames = Object.keys(serversToRun);
-    wranglerConfig.vars.MCP_SERVICES = JSON.stringify(serviceNames);
-    wranglerConfig.vars.MCP_SERVICE_DISCOVERY = "enabled";
-
-    await this.writeConfig(wranglerConfig);
-    logger.debug(
-      `Updated wrangler.jsonc with dedicated worker configurations for ${Object.keys(serversToRun).length} MCP servers`,
-    );
   }
 
-  async generateWorkerCode(mcpConfig: MCPConfig): Promise<string> {
-    const serverEntries = Object.entries(mcpConfig.servers);
-
-    return `// Auto-generated MCP Worker
-import { DurableObject } from 'cloudflare:workers';
-
-export interface Env {
-${serverEntries.map(([name]) => `  McpAgent_${name}: DurableObjectNamespace;`).join("\n")}
-${serverEntries.map(([name]) => `  MCP_${name.toUpperCase()}: Fetcher;`).join("\n")}
-}
-
-export class McpAgent extends DurableObject {
-  private sessions = new Map<string, WebSocket>();
-  
-  async fetch(request: Request): Promise<Response> {
-    const upgradeHeader = request.headers.get('Upgrade');
-    if (upgradeHeader !== 'websocket') {
-      return new Response('Expected websocket', { status: 426 });
-    }
-
-    const webSocketPair = new WebSocketPair();
-    const [client, server] = Object.values(webSocketPair);
-
-    this.ctx.acceptWebSocket(server);
-    const sessionId = crypto.randomUUID();
-    this.sessions.set(sessionId, server);
-
-    return new Response(null, {
-      status: 101,
-      webSocket: client,
-    });
-  }
-
-  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
-    // Handle MCP protocol messages
-    try {
-      const data = typeof message === 'string' ? JSON.parse(message) : message;
-      
-      // Process MCP JSON-RPC 2.0 messages
-      const response = await this.handleMCPMessage(data);
-      
-      if (response) {
-        ws.send(JSON.stringify(response));
-      }
-    } catch (error) {
-      ws.send(JSON.stringify({
-        jsonrpc: '2.0',
-        error: {
-          code: -32700,
-          message: 'Parse error'
-        }
-      }));
-    }
-  }
-
-  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
-    // Clean up session
-    for (const [sessionId, socket] of this.sessions.entries()) {
-      if (socket === ws) {
-        this.sessions.delete(sessionId);
-        break;
-      }
-    }
-  }
-
-  private async handleMCPMessage(message: any): Promise<any> {
-    // Implement MCP protocol handling
-    // This would include capabilities negotiation, resource/tool/prompt handling
-    return {
-      jsonrpc: '2.0',
-      id: message.id,
-      result: { message: 'MCP message received' }
-    };
-  }
-}
-
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-    const serverName = url.pathname.split('/')[1];
-    
-${serverEntries
-  .map(
-    ([name]) => `
-    if (serverName === '${name}') {
-      const durableObjectId = env.McpAgent_${name}.idFromName('${name}');
-      const durableObject = env.McpAgent_${name}.get(durableObjectId);
-      return durableObject.fetch(request);
-    }`,
-  )
-  .join("")}
-    
-    return new Response('Not found', { status: 404 });
-  },
-};`;
-  }
 }
