@@ -5,6 +5,7 @@ A Cloudflare Workers-based AI agent implementation that uses the @null-shot/agen
 ## Overview
 
 This project demonstrates:
+
 - Integration with AI providers (OpenAI, Anthropic, or DeepSeek)
 - Tool-based interactions using the Model Context Protocol (MCP)
 - Durable Object-based state management
@@ -39,16 +40,19 @@ This project demonstrates:
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 2. Set up your environment variables by copying the example file:
+
 ```bash
 cp .dev.vars.example .dev.vars
 ```
 
 3. Configure your `.dev.vars` with the following variables:
+
 ```
 AI_PROVIDER=[anthropic || openai || deepseek]
 ANTHROPIC_API_KEY=[your_anthropic_key]
@@ -84,11 +88,11 @@ The `mcp.json` file configures the Model Context Protocol servers that the agent
 
 ```json
 {
-  "mcpServers": {
-    "todo-list": {
-      "url": "http://localhost:8788/sse"
-    }
-  }
+	"mcpServers": {
+		"todo-list": {
+			"url": "http://localhost:8788/sse"
+		}
+	}
 }
 ```
 
@@ -99,6 +103,7 @@ This configuration is automatically serialized into an environment variable duri
 ### Agent Implementation
 
 The `SimplePromptAgent` class:
+
 - Extends `AiSdkAgent` from @null-shot/agent/aisdk
 - Supports both Anthropic and OpenAI language models
 - Integrates with the ToolboxService for todo list management
@@ -129,6 +134,7 @@ The `SimplePromptAgent` class:
 ### Router Setup
 
 The project uses:
+
 - Hono framework for routing
 - Permissionless agent session router from @null-shot/agent
 - Type-safe environment bindings
@@ -140,11 +146,13 @@ The project uses:
 ## Development Workflow
 
 1. Start the development servers:
+
 ```bash
 pnpm dev
 ```
 
 2. Access the services:
+
 - Agent API: http://localhost:8787
 - CRUD MCP: http://localhost:8788
 - Playground UI: http://localhost:3000
@@ -181,4 +189,4 @@ pnpm deploy
 
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Hono Framework](https://hono.dev/)
-- [@null-shot/agent Documentation](https://github.com/null-shot/typescript-agent-framework/tree/main/packages/agent) 
+- [@null-shot/agent Documentation](https://github.com/null-shot/typescript-agent-framework/tree/main/packages/agent)

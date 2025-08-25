@@ -1,10 +1,10 @@
-import { Implementation } from '@modelcontextprotocol/sdk/types.js';
-import { McpHonoServerDO } from '@null-shot/mcp';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { TodoRepository } from './repository';
-import { setupServerTools } from './tools';
-import { setupServerResources } from './resources';
-import { setupServerPrompts } from './prompts';
+import { Implementation } from "@modelcontextprotocol/sdk/types.js";
+import { McpHonoServerDO } from "@null-shot/mcp";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { TodoRepository } from "./repository";
+import { setupServerTools } from "./tools";
+import { setupServerResources } from "./resources";
+import { setupServerPrompts } from "./prompts";
 
 /**
  * TodoMcpServer extends McpHonoServerDO for CRUD operations on todo items
@@ -19,8 +19,8 @@ export class TodoMcpServer extends McpHonoServerDO {
    */
   getImplementation(): Implementation {
     return {
-      name: 'TodoMcpServer',
-      version: '1.0.0',
+      name: "TodoMcpServer",
+      version: "1.0.0",
     };
   }
 
@@ -40,4 +40,4 @@ export class TodoMcpServer extends McpHonoServerDO {
     setupServerResources(server, repository);
     setupServerPrompts(server);
   }
-} 
+}
