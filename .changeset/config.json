@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@xava-labs/mcp-toolbox"]
+  "ignore": ["@null-shot/mcp-toolbox"]
 }
