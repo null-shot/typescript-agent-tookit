@@ -7,7 +7,7 @@ import { dirname } from "path";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { WebSocketTransport } from "../../mcp/dist/mcp/src/mcp/websocket-transport.js";
+import { WebSocketTransport } from "@null-shot/mcp/dist/mcp/src/mcp/websocket-transport.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   CallToolRequestSchema,
@@ -916,8 +916,8 @@ async function connectToMcpProxy() {
           messageType: isRequest
             ? "request"
             : isResponse
-            ? "response"
-            : "unknown",
+              ? "response"
+              : "unknown",
           method: "method" in message ? message.method : undefined,
           id: "id" in message ? message.id : undefined,
           hasResult: "result" in message && !!message.result,
@@ -982,8 +982,8 @@ async function connectToMcpProxy() {
         messageType: messageData.jsonrpc
           ? "MCP"
           : messageData.verb
-          ? "ADMIN"
-          : "UNKNOWN",
+            ? "ADMIN"
+            : "UNKNOWN",
         keys: Object.keys(messageData),
       });
 
