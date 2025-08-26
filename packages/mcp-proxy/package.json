@@ -1,5 +1,5 @@
 {
-  "name": "mcp-proxy-example",
+  "name": "mcp-proxy",
   "version": "1.0.1",
   "private": true,
   "description": "MCP Server Proxy Example",
@@ -11,7 +11,7 @@
     "codegen": "wrangler types"
   },
   "dependencies": {
-    "@xava-labs/mcp": "workspace:*"
+    "@null-shot/mcp": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.6.3",

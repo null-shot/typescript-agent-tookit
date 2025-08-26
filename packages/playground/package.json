@@ -1,5 +1,5 @@
 {
-  "name": "@xava-labs/playground",
+  "name": "@null-shot/playground",
   "version": "0.2.2",
   "private": false,
   "main": "./dist/index.js",
@@ -43,7 +43,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.2.0",
-    "@xava-labs/mcp": "workspace:*",
+    "@null-shot/mcp": "workspace:*",
     "agents": "^0.0.75",
     "ai": "^4.3.16",
     "class-variance-authority": "^0.7.1",

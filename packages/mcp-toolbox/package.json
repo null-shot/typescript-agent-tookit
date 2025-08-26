@@ -1,5 +1,5 @@
 {
-  "name": "@xava-labs/mcp-toolbox",
+  "name": "@null-shot/mcp-toolbox",
   "version": "1.0.0",
   "private": true,
   "description": "Hono websocket server with SQLite integration",
@@ -25,7 +25,7 @@
     "ws": "^8.18.0",
     "zod": "^3.22.4",
     "@modelcontextprotocol/sdk": "^1.13.0",
-    "@xava-labs/mcp": "workspace:*"
+    "@null-shot/mcp": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.5.4",
