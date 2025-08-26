@@ -1,25 +1,24 @@
-import { Hono } from "hono";
-import { McpServerDO, SSE_MESSAGE_ENDPOINT, WEBSOCKET_ENDPOINT, MCP_SUBPROTOCOL } from "./server";
+import { Hono } from 'hono';
+import { McpServerDO, SSE_MESSAGE_ENDPOINT, WEBSOCKET_ENDPOINT, MCP_SUBPROTOCOL } from './server';
 
+// Support both Cloudflare and Hono environments
+export abstract class McpHonoServerDO<Env = unknown> extends McpServerDO<Env> {
+	private app: Hono;
 
+	public constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		this.app = new Hono();
+		this.setupRoutes(this.app);
+	}
 
-export abstract class McpHonoServerDO extends McpServerDO {
-    private app: Hono<{ Bindings: Env }>;
+	async fetch(request: Request): Promise<Response> {
+		return await this.app.fetch(request);
+	}
 
-    public constructor(ctx: DurableObjectState, env: Env) {
-        super(ctx, env);
-        this.app = new Hono<{ Bindings: Env }>();
-        this.setupRoutes(this.app);
-    }
-
-    async fetch(request: Request): Promise<Response> {
-        return await this.app.fetch(request);
-    }
-    
-    /**
+	/**
 	 * Set up routes for the MCP server
 	 */
-	protected setupRoutes(app: Hono<{ Bindings: Env }>) {
+	protected setupRoutes(app: Hono) {
 		// WebSocket endpoint for direct connections
 		app.get('/ws', async (c) => {
 			// All WebSocket validation will be done in processWebSocketConnection
@@ -29,7 +28,7 @@ export abstract class McpHonoServerDO extends McpServerDO {
 		// SSE endpoint for event streaming
 		app.get(`/sse`, async (c) => {
 			return this.processSSEConnection(c.req.raw);
-        });
+		});
 
 		// Message handling endpoint for SSE clients
 		app.post(SSE_MESSAGE_ENDPOINT, async (c) => {
@@ -45,5 +44,4 @@ export abstract class McpHonoServerDO extends McpServerDO {
 			}
 		});
 	}
-    
 }

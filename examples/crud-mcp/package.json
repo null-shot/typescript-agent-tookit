@@ -4,25 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "echo 'Build temporarily excluded due to memory issues'",
+    "build": "wrangler build",
     "deploy": "wrangler deploy",
     "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
     "dev:vite": "vite dev",
     "start": "wrangler dev",
-    "test": "echo 'Tests temporarily excluded'",
-    "codegen": "wrangler types"
+    "test": "vitest run",
+    "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.8.43",
-    "@xava-labs/test-utils": "file:../../packages/test-utils",
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@types/node": "catalog:",
+    "@null-shot/test-utils": "workspace:*",
+    "@types/chai": "^5.2.2",
+    "chai": "^6.0.1",
     "concurrently": "^9.1.2",
-    "typescript": "^5.8.3",
-    "vitest": "3.0.x",
-    "wrangler": "^4.9.1"
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
-    "@xava-labs/mcp": "file:../../packages/mcp",
+    "@null-shot/mcp": "workspace:*",
     "zod": "^3.23.8"
   }
 }

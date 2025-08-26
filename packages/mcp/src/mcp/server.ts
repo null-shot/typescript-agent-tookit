@@ -1,262 +1,263 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject } from 'cloudflare:workers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSETransport } from "./sse-transport";
-import { WebSocketTransport } from "./websocket-transport";
-import { Implementation } from "@modelcontextprotocol/sdk/types.js";
-import { IMcpServer } from "./mcp-server-interface";
+import { SSETransport } from './sse-transport';
+import { WebSocketTransport } from './websocket-transport';
+import { Implementation } from '@modelcontextprotocol/sdk/types.js';
+import { IMcpServer } from './mcp-server-interface';
 // Transport factory removed - using direct imports
 const MAXIMUM_MESSAGE_SIZE = 4 * 1024 * 1024; // 4MB
-export const SSE_MESSAGE_ENDPOINT = "/sse/message";
-export const WEBSOCKET_ENDPOINT = "/ws";
-export const MCP_SUBPROTOCOL = "mcp";
+export const SSE_MESSAGE_ENDPOINT = '/sse/message';
+export const WEBSOCKET_ENDPOINT = '/ws';
+export const MCP_SUBPROTOCOL = 'mcp';
 
 /**
  * Interface for the WebSocket attachment data
  */
 interface WebSocketAttachment {
-  sessionId: string;
+	sessionId: string;
 }
 
 /**
  * McpDurableServer is a Durable Object implementation of an MCP server.
  * It supports SSE connections for event streaming and WebSocket connections with hibernation.
  */
-export abstract class McpServerDO extends DurableObject {
-  private server: IMcpServer;
-  private sessions: Map<string, SSETransport | WebSocketTransport> = new Map();
-    
-  constructor(ctx: DurableObjectState, env: any, server?: IMcpServer) {
-    super(ctx, env);
+export abstract class McpServerDO<Env = unknown> extends DurableObject<Env> {
+	private server: IMcpServer;
+	private sessions: Map<string, SSETransport | WebSocketTransport> = new Map();
+	protected ctx: DurableObjectState; // Make ctx accessible to subclasses
 
-    if (!server) {
-      // Only call configureServer if we have a real McpServer instance (not a proxy)
-      this.configureServer(this.server = new McpServer(this.getImplementation()));
-    } else {
-      this.server = server;
-    }
-  }
+	constructor(ctx: DurableObjectState, env: any, server?: IMcpServer) {
+		super(ctx, env);
+		this.ctx = ctx; // Store ctx for subclass access
 
-  /**
-   * Returns the implementation information for the MCP server.
-   * Must be implemented by subclasses.
-   */
-  abstract getImplementation(): Implementation;
+		if (!server) {
+			// Only call configureServer if we have a real McpServer instance (not a proxy)
+			this.configureServer((this.server = new McpServer(this.getImplementation())));
+		} else {
+			this.server = server;
+		}
+	}
 
-  /**  
-   * Abstract method that must be implemented by subclasses to configure the server instance.
-   * Called after server initialization to set up any additional server configuration, e.g., handlers of incoming RPC calls.
-   * Note: This is only called when using a real McpServer, not when using a proxy
-   */
-  abstract configureServer(server: McpServer): void;
+	/**
+	 * Returns the implementation information for the MCP server.
+	 * Must be implemented by subclasses.
+	 */
+	abstract getImplementation(): Implementation;
 
+	/**
+	 * Abstract method that must be implemented by subclasses to configure the server instance.
+	 * Called after server initialization to set up any additional server configuration, e.g., handlers of incoming RPC calls.
+	 * Note: This is only called when using a real McpServer, not when using a proxy
+	 */
+	abstract configureServer(server: McpServer): void;
 
-  protected processSSEConnection(request: Request) : Response {
-    // Session ID must exist as it will be created at the worker level prior to forwarding to DO.
-    const url = new URL(request.url);
-    const sessionId = url.searchParams.get("sessionId");
-    if (!sessionId) {
-      return new Response(`Missing sessionId parameter`, {
-        status: 400,
-      });
-    }
+	protected processSSEConnection(request: Request): Response {
+		// Session ID must exist as it will be created at the worker level prior to forwarding to DO.
+		const url = new URL(request.url);
+		const sessionId = url.searchParams.get('sessionId');
+		if (!sessionId) {
+			return new Response(`Missing sessionId parameter`, {
+				status: 400,
+			});
+		}
 
-    const { readable, writable } = new TransformStream();
-    
-    // Create message endpoint URL that preserves both proxyId and sessionId
-    const messageEndpointUrl = new URL(SSE_MESSAGE_ENDPOINT, request.url);
-    // Copy all search parameters from the original request to preserve proxyId
-    url.searchParams.forEach((value, key) => {
-      messageEndpointUrl.searchParams.set(key, value);
-    });
-    
-    const transport = new SSETransport(writable.getWriter(), sessionId, messageEndpointUrl.toString());
-    this.sessions.set(sessionId, transport);
-    this.server.connect(transport);
+		const { readable, writable } = new TransformStream();
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        'Connection': 'keep-alive'
-      }
-    });
-  }
+		// Create message endpoint URL that preserves both proxyId and sessionId
+		const messageEndpointUrl = new URL(SSE_MESSAGE_ENDPOINT, request.url);
+		// Copy all search parameters from the original request to preserve proxyId
+		url.searchParams.forEach((value, key) => {
+			messageEndpointUrl.searchParams.set(key, value);
+		});
 
-  /**
-   * Process a WebSocket connection request
-   */
-  protected processWebSocketConnection(request: Request): Response {
-    // Verify the Upgrade header is present and is WebSocket
-    const upgradeHeader = request.headers.get('Upgrade');
-    if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
-      return new Response('Expected Upgrade: websocket', {
-        status: 426,
-      });
-    }
+		const transport = new SSETransport(writable.getWriter(), sessionId, messageEndpointUrl.toString());
+		this.sessions.set(sessionId, transport);
+		this.server.connect(transport);
 
-    // Check for 'mcp' subprotocol
-    const protocols = request.headers.get('Sec-WebSocket-Protocol');
-    const acceptProtocol = protocols?.split(',').map(p => p.trim()).includes(MCP_SUBPROTOCOL);
-    if (!acceptProtocol) {
-      return new Response('Expected Sec-WebSocket-Protocol: mcp', {
-        status: 426,
-      });
-    }
+		return new Response(readable, {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache, no-transform',
+				Connection: 'keep-alive',
+			},
+		});
+	}
 
-    // If no session was set, it will be automatically generated by the worker.
-    const url = new URL(request.url);
-    const sessionId = url.searchParams.get("sessionId");
-    if (!sessionId) {
-      return new Response(`Missing sessionId parameter`, {
-        status: 400,
-      });
-    }
+	/**
+	 * Process a WebSocket connection request
+	 */
+	protected processWebSocketConnection(request: Request): Response {
+		// Verify the Upgrade header is present and is WebSocket
+		const upgradeHeader = request.headers.get('Upgrade');
+		if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
+			return new Response('Expected Upgrade: websocket', {
+				status: 426,
+			});
+		}
 
-    // Create WebSocket pair
-    const webSocketPair = new WebSocketPair();
-    const [client, server] = Object.values(webSocketPair);
+		// Check for 'mcp' subprotocol
+		const protocols = request.headers.get('Sec-WebSocket-Protocol');
+		const acceptProtocol = protocols
+			?.split(',')
+			.map((p) => p.trim())
+			.includes(MCP_SUBPROTOCOL);
+		if (!acceptProtocol) {
+			return new Response('Expected Sec-WebSocket-Protocol: mcp', {
+				status: 426,
+			});
+		}
 
-    // Store the sessionId as an attachment that will survive hibernation
-    server.serializeAttachment({ sessionId });
+		// If no session was set, it will be automatically generated by the worker.
+		const url = new URL(request.url);
+		const sessionId = url.searchParams.get('sessionId');
+		if (!sessionId) {
+			return new Response(`Missing sessionId parameter`, {
+				status: 400,
+			});
+		}
 
-    // Accept WebSocket with hibernation support
-    this.ctx.acceptWebSocket(server);
+		// Create WebSocket pair
+		const webSocketPair = new WebSocketPair();
+		const [client, server] = Object.values(webSocketPair);
 
-    // Create transport and register handlers
-    const transport = new WebSocketTransport(server, sessionId);
-    this.sessions.set(sessionId, transport);
-    this.server.connect(transport);
+		// Store the sessionId as an attachment that will survive hibernation
+		server.serializeAttachment({ sessionId });
 
-    // Return the client end of the WebSocket with the MCP subprotocol
-    const headers = new Headers();
-    headers.set('Sec-WebSocket-Protocol', MCP_SUBPROTOCOL);
+		// Accept WebSocket with hibernation support
+		this.ctx.acceptWebSocket(server);
 
-    return new Response(null, {
-      status: 101,
-      webSocket: client,
-      headers,
-    });
-  }
+		// Create transport and register handlers
+		const transport = new WebSocketTransport(server, sessionId);
+		this.sessions.set(sessionId, transport);
+		this.server.connect(transport);
 
-  /**
-   * Handle WebSocket messages
-   * This is called by the Durable Object runtime when a message is received
-   */
-  async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
-    // Find the transport associated with this WebSocket
-    const transport = this.findWebSocketTransport(ws);
-    if (transport) {
-      transport.handleMessage(data);
-    } else {
-      console.error("[MCP] websocketSendMessage:No transport found for WebSocket");
-    }
-  }
+		// Return the client end of the WebSocket with the MCP subprotocol
+		const headers = new Headers();
+		headers.set('Sec-WebSocket-Protocol', MCP_SUBPROTOCOL);
 
-  /**
-   * Handle WebSocket close events
-   */
-  async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
-    const transport = this.findWebSocketTransport(ws);
-    if (transport) {
-      this.sessions.delete(transport.sessionId);
-      await transport.close(code, reason);
-    }
-  }
+		return new Response(null, {
+			status: 101,
+			webSocket: client,
+			headers,
+		});
+	}
 
-  /**
-   * Handle WebSocket errors
-   */
-  async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
-    const transport = this.findWebSocketTransport(ws);
-    if (transport) {
-      transport.onerror?.(error instanceof Error ? error : new Error(String(error)));
-    }
-  }
+	/**
+	 * Handle WebSocket messages
+	 * This is called by the Durable Object runtime when a message is received
+	 */
+	async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
+		// Find the transport associated with this WebSocket
+		const transport = this.findWebSocketTransport(ws);
+		if (transport) {
+			transport.handleMessage(data);
+		} else {
+			console.error('[MCP] websocketSendMessage:No transport found for WebSocket');
+		}
+	}
 
-  /**
-   * Find the WebSocketTransport associated with a specific WebSocket instance
-   */
-  private findWebSocketTransport(ws: WebSocket): WebSocketTransport | null {
-    // First try to get the sessionId from the attachment
-    const attachment = ws.deserializeAttachment() as WebSocketAttachment | null;
-    if (attachment?.sessionId) {
-      const transport = this.sessions.get(attachment.sessionId);
-      if (transport instanceof WebSocketTransport) {
-        return transport;
-      }
-    }
+	/**
+	 * Handle WebSocket close events
+	 */
+	async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
+		const transport = this.findWebSocketTransport(ws);
+		if (transport) {
+			this.sessions.delete(transport.sessionId);
+			await transport.close(code, reason);
+		}
+	}
 
-    return null;
-  }
+	/**
+	 * Handle WebSocket errors
+	 */
+	async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
+		const transport = this.findWebSocketTransport(ws);
+		if (transport) {
+			transport.onerror?.(error instanceof Error ? error : new Error(String(error)));
+		}
+	}
 
-  protected processMcpRequest(request: Request) {
-    const contentType = request.headers.get("content-type") || "";
-    if (!contentType.includes("application/json")) {
-      return new Response(`Unsupported content-type: ${contentType}`, {
-        status: 400,
-      });
-    }
+	/**
+	 * Find the WebSocketTransport associated with a specific WebSocket instance
+	 */
+	private findWebSocketTransport(ws: WebSocket): WebSocketTransport | null {
+		// First try to get the sessionId from the attachment
+		const attachment = ws.deserializeAttachment() as WebSocketAttachment | null;
+		if (attachment?.sessionId) {
+			const transport = this.sessions.get(attachment.sessionId);
+			if (transport instanceof WebSocketTransport) {
+				return transport;
+			}
+		}
 
-    // Check if the request body is too large
-    const contentLength = Number.parseInt(
-      request.headers.get("content-length") || "0",
-      10
-    );
+		return null;
+	}
 
-    if (contentLength > MAXIMUM_MESSAGE_SIZE) {
-      return new Response(`Request body too large: ${contentLength} bytes`, {
-        status: 400,
-      });
-    }
+	protected processMcpRequest(request: Request) {
+		const contentType = request.headers.get('content-type') || '';
+		if (!contentType.includes('application/json')) {
+			return new Response(`Unsupported content-type: ${contentType}`, {
+				status: 400,
+			});
+		}
 
-    const url = new URL(request.url);
-    const sessionId = url.searchParams.get("sessionId");
-    if (!sessionId) {
-      return new Response(`Missing sessionId parameter`, {
-        status: 400,
-      });
-    }
+		// Check if the request body is too large
+		const contentLength = Number.parseInt(request.headers.get('content-length') || '0', 10);
 
-    const transport = this.sessions.get(sessionId);
-    if (!transport) {
-      return new Response(`Session not found`, {
-        status: 404,
-      });
-    }
+		if (contentLength > MAXIMUM_MESSAGE_SIZE) {
+			return new Response(`Request body too large: ${contentLength} bytes`, {
+				status: 400,
+			});
+		}
 
-    // Only SSE transports handle POST messages since WebSocket messages are handled by the webSocketMessage method
-    if (transport instanceof SSETransport) {
-      return transport.handlePostMessage(request);
-    } else {
-      return new Response(`Cannot send message to non-SSE transport`, {
-        status: 400,
-      });
-    }
-  }
+		const url = new URL(request.url);
+		const sessionId = url.searchParams.get('sessionId');
+		if (!sessionId) {
+			return new Response(`Missing sessionId parameter`, {
+				status: 400,
+			});
+		}
 
-  /**
-   * Main fetch handler
-   */
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const path = url.pathname;
+		const transport = this.sessions.get(sessionId);
+		if (!transport) {
+			return new Response(`Session not found`, {
+				status: 404,
+			});
+		}
 
-    // Process WebSocket upgrade requests
-    if (path.endsWith(WEBSOCKET_ENDPOINT)) {
-      return this.processWebSocketConnection(request);
-    }
+		// Only SSE transports handle POST messages since WebSocket messages are handled by the webSocketMessage method
+		if (transport instanceof SSETransport) {
+			return transport.handlePostMessage(request);
+		} else {
+			return new Response(`Cannot send message to non-SSE transport`, {
+				status: 400,
+			});
+		}
+	}
 
-    // Process SSE connection requests
-    if (path.endsWith("/sse")) {
-      return this.processSSEConnection(request);
-    }
+	/**
+	 * Main fetch handler
+	 */
+	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		const path = url.pathname;
 
-    // Process SSE message requests
-    if (path.endsWith(SSE_MESSAGE_ENDPOINT)) {
-      return this.processMcpRequest(request);
-    }
+		// Process WebSocket upgrade requests
+		if (path.endsWith(WEBSOCKET_ENDPOINT)) {
+			return this.processWebSocketConnection(request);
+		}
 
-    // Default response for unhandled paths
-    return new Response("Not found", { status: 404 });
-  }
-} 
+		// Process SSE connection requests
+		if (path.endsWith('/sse')) {
+			return this.processSSEConnection(request);
+		}
+
+		// Process SSE message requests
+		if (path.endsWith(SSE_MESSAGE_ENDPOINT)) {
+			return this.processMcpRequest(request);
+		}
+
+		// Default response for unhandled paths
+		return new Response('Not found', { status: 404 });
+	}
+}

@@ -1,23 +1,24 @@
 {
   "name": "crud-mcp",
   "main": "src/index.ts",
-  "compatibility_date": "2025-03-10",
+  "compatibility_date": "2025-02-11",
+  "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [
       {
         "name": "TODO_MCP_SERVER",
-        "class_name": "TodoMcpServer"
-      }
-    ]
+        "class_name": "TodoMcpServer",
+      },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["TodoMcpServer"]
-    }
+      "new_sqlite_classes": ["TodoMcpServer"],
+    },
   ],
   "observability": {
     "enabled": true,
-    "head_sampling_rate": 1
-  }
-} 
+    "head_sampling_rate": 1,
+  },
+}

@@ -9,22 +9,25 @@
 	"compatibility_date": "2025-03-10",
 	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "MCP_SERVER",
-				"class_name": "ExampleMcpServer"
-			}
-		]
+				"class_name": "ExampleMcpServer",
+			},
+		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["ExampleMcpServer"]
-		}
-	]
+			"new_classes": ["ExampleMcpServer"],
+		},
+	],
+	"vars": {
+		"EXPENSE_APPROVAL_WORKFLOW": "ExpenseApprovalWorkflow",
+	},
 
 	/**
 	 * Smart Placement
