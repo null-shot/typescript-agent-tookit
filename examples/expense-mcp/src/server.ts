@@ -6,7 +6,7 @@ import { Hono } from 'hono';
 */
 
 import { Implementation } from '@modelcontextprotocol/sdk/types.js';
-import { McpHonoServerDO } from '@xava-labs/mcp/src/index';
+import { McpHonoServerDO } from '@xava-labs/mcp/dist/mcp/src/mcp/hono-server.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ExpenseRepository } from './repository';
 import { setupServerTools } from './tools';
@@ -48,7 +48,8 @@ export class ExpenseMcpServer extends McpHonoServerDO {
     // });
 
     // Create and set up tools and resources with our repository
-    setupServerTools(server, repository);
+    // Pass the environment to enable workflow access
+    setupServerTools(server, repository, this.env);
     setupServerResources(server, repository);
   }
 

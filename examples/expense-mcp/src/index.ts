@@ -1,7 +1,8 @@
 import { ExpenseMcpServer } from './server';
+import { ExpenseApprovalWorkflow } from './workflow';
 
-// Export the ExpenseMcpServer class for Durable Object binding
-export { ExpenseMcpServer };
+// Export classes for Durable Object and Workflow bindings
+export { ExpenseMcpServer, ExpenseApprovalWorkflow };
 
 // Worker entrypoint for handling incoming requests
 export default {

@@ -17,15 +17,25 @@ export class ExpenseApprovalWorkflow extends WorkflowEntrypoint<Env, ExpensePara
       console.log(`Expense ${event.payload.expenseId} submitted by ${event.payload.user}`);
     });
 
-    // Wait for approval/rejection event
-    const action = await step.waitForEvent('approval_action');
-    if (action.payload === 'approve') {
-      await step.do('Mark as approved', async () => {
-        console.log(`Expense ${event.payload.expenseId} approved`);
+    // Wait for approval/rejection event with timeout
+    try {
+      const action = await step.waitForEvent('approval_action', {
+        timeout: '24 hours'
       });
-    } else {
-      await step.do('Mark as rejected', async () => {
-        console.log(`Expense ${event.payload.expenseId} rejected`);
+      
+      if (action.payload === 'approve') {
+        await step.do('Mark as approved', async () => {
+          console.log(`Expense ${event.payload.expenseId} approved`);
+        });
+      } else {
+        await step.do('Mark as rejected', async () => {
+          console.log(`Expense ${event.payload.expenseId} rejected`);
+        });
+      }
+    } catch (error) {
+      // Handle timeout or other errors gracefully
+      await step.do('Mark as pending approval', async () => {
+        console.log(`Expense ${event.payload.expenseId} is pending approval (workflow active)`);
       });
     }
   }

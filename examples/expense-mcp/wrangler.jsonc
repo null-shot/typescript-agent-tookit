@@ -11,6 +11,13 @@
       }
     ]
   },
+  "workflows": [
+    {
+      "name": "expense-approval-workflow",
+      "binding": "EXPENSE_APPROVAL_WORKFLOW",
+      "class_name": "ExpenseApprovalWorkflow"
+    }
+  ],
   "migrations": [
     {
       "tag": "v1",
