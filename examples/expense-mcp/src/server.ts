@@ -5,6 +5,11 @@ import { ExpenseRepository } from "./repository";
 import { setupServerTools } from "./tools";
 import { setupServerResources } from "./resources";
 
+// Define the environment interface for workflow access
+interface WorkflowEnv {
+  EXPENSE_APPROVAL_WORKFLOW?: any;
+}
+
 /**
  * ExpenseMcpServer extends McpHonoServerDO for CRUD operations on expenses
  */
@@ -38,7 +43,7 @@ export class ExpenseMcpServer extends McpHonoServerDO {
 
     // Create and set up tools and resources with our repository
     // Pass the environment to enable workflow access
-    setupServerTools(server, repository, this.env);
+    setupServerTools(server, repository, this.env as WorkflowEnv);
     setupServerResources(server, repository);
   }
 

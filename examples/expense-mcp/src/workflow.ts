@@ -29,6 +29,7 @@ export class ExpenseApprovalWorkflow extends WorkflowEntrypoint<
     // Wait for approval/rejection event with timeout
     try {
       const action = await step.waitForEvent('approval_action', {
+        type: 'string',
         timeout: '24 hours'
       });
       
