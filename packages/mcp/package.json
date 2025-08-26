@@ -54,7 +54,7 @@
 		"wrangler": "^4.9.1"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.17.2",
+		"@modelcontextprotocol/sdk": "catalog:",
 		"hono": "^4.7.6"
 	}
 }

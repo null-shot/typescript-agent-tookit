@@ -19,9 +19,9 @@
   },
   "devDependencies": {
     "@null-shot/cli": "workspace:*",
-    "@types/node": "^24.3.0",
-    "typescript": "^5.5.2",
-    "wrangler": "^4.18.0"
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
   },
   "mcpServers": {
     "mcp-template": {

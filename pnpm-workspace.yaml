@@ -25,3 +25,4 @@ catalog:
   "@cloudflare/vitest-pool-workers": "0.8.66"
   wrangler: "^4.32.0"
   workerd: "1.20250823.0"
+  "@modelcontextprotocol/sdk": "^1.17.4"

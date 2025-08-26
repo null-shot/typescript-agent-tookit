@@ -11,11 +11,12 @@
     "codegen": "wrangler types"
   },
   "dependencies": {
-    "@null-shot/mcp": "workspace:*"
+    "@null-shot/mcp": "workspace:*",
+    "@modelcontextprotocol/sdk": "catalog:"
   },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "wrangler": "^4.20.3"
+    "typescript": "catalog:",
+    "wrangler": "catalog:"
   },
   "type": "module"
 }

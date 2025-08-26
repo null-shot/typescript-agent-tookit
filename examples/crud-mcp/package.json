@@ -24,7 +24,7 @@
     "wrangler": "catalog:"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.2",
+    "@modelcontextprotocol/sdk": "catalog:",
     "@null-shot/mcp": "workspace:*",
     "zod": "^3.23.8"
   }
