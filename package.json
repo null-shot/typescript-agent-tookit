@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm --filter './packages/*' run build && pnpm --filter './examples/*' run build",
+    "build": "pnpm -r run build",
     "build:packages": "pnpm --filter './packages/*' run build",
     "build:examples": "pnpm --filter './examples/*' run build",
     "test": "pnpm -r run test",
