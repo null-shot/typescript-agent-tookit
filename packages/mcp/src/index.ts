@@ -5,9 +5,6 @@ export * from './mcp/hono-server.js';
 export * from './mcp/sse-transport.js';
 // export * from './mcp/interfaces.js'  // This file doesn't exist
 export * from './mcp/websocket-transport.js';
-export * from '../../agent/src/client/service-binding-transport.js';
-
 // Export the McpHonoServerDO class
 export { McpHonoServerDO } from './mcp/hono-server';
 export { McpServerDO } from './mcp/server';
-export { ServiceBindingSSEClientTransport } from '../../agent/src/client/service-binding-transport.js';
