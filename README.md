@@ -35,7 +35,9 @@ This project is in pre-alpha and actively evolving. Current focus areas:
 - ✅ Official MCP WebSocket Support and HTTP Streaming Support
 - ✅ Agent Framework (AI SDK)
 - ✅ Seamless MCP Plugins (mcp.json) for Agents
-= ✅ Playground UI for LLMs + MCPs
+- ✅ Agent MCP Dependency Management
+- ✅ MCP Webhook / External Service Support
+- ✅ Playground UI for LLMs + MCPs
 
 ### In Development
 
@@ -46,11 +48,54 @@ This project is in pre-alpha and actively evolving. Current focus areas:
 
 ## Quick Start
 
-🚧 Coming Soon! We're working hard to provide a seamless getting started experience.
+Get started with the Null Shot CLI to create MCP servers and AI agents:
+
+### Install the CLI
+
+```bash
+npm install -g @null-shot/cli
+```
+
+### Create a new MCP server
+
+```bash
+nullshot create mcp
+```
+
+### Create a new Agent
+
+```bash
+nullshot create agent
+```
+
+### Initialize MCP configuration in existing project
+
+```bash
+nullshot init
+```
+
+### Install MCP dependencies
+
+```bash
+nullshot install
+```
+
+### Run in development mode
+
+```bash
+nullshot dev
+```
 
 ## Documentation
 
-📚 Coming Soon! Comprehensive documentation and guides are under development.
+Comprehensive documentation is available at [Null Shot Docs](https://nullshot.ai/docs):
+
+- **[Project Overview](https://nullshot.ai/docs)** - Get started with Null Shot
+- **[Agent Framework - Getting Started](https://nullshot.ai/en/docs/developers/agents-framework/overview)** - Build AI agents with Cloudflare Workers
+- **[MCP Framework Overview](https://nullshot.ai/en/docs/developers/mcp-framework/overview)** - Model Context Protocol implementation
+- **[Platform Overview](https://nullshot.ai/en/docs/developers/platform/overview)** - Understanding the platform architecture
+- **[Common Services](https://nullshot.ai/en/docs/developers/services/overview)** - Cloudflare services integration
+- **[Playground](https://nullshot.ai/en/docs/developers/playground)** - Interactive development environment
 
 ## Release Process
 
