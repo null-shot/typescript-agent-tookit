@@ -144,7 +144,7 @@ export default function Home() {
           <div className="bg-card border border-border rounded-lg p-6">
             <h3 className="text-lg font-semibold mb-4">Installation</h3>
             <div className="bg-secondary rounded-md p-4 mb-6">
-              <code className="text-sm">npm install @xava-labs/playground</code>
+              <code className="text-sm">npm install @null-shot/playground</code>
             </div>
             
             <h3 className="text-lg font-semibold mb-4">Complete Playground Setup</h3>
@@ -158,8 +158,8 @@ import {
   MCPServerDirectory,
   DockerInstallModal,
   useConfigurableMcpServerManager
-} from '@xava-labs/playground'
-import '@xava-labs/playground/styles'
+} from '@null-shot/playground'
+import '@null-shot/playground/styles'
 
 function App() {
   const [isDockerModalOpen, setIsDockerModalOpen] = useState(false)

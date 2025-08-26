@@ -1,7 +1,7 @@
 'use client'
 
-import { PlaygroundProvider, Playground } from '@xava-labs/playground'
-import '@xava-labs/playground/styles'
+import { PlaygroundProvider, Playground } from '@null-shot/playground'
+import '@null-shot/playground/styles'
 
 export default function PlaygroundPage() {
   return (

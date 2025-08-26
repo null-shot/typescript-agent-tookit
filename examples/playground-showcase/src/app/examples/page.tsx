@@ -10,7 +10,7 @@ const examples = [
     description: 'Simple setup with default configuration',
     href: '/examples/basic',
     icon: Code,
-    code: `import { PlaygroundProvider, Playground } from '@xava-labs/playground'
+    code: `import { PlaygroundProvider, Playground } from '@null-shot/playground'
 
 function App() {
   return (
@@ -39,7 +39,7 @@ function App() {
     description: 'Using individual components to build custom layouts',
     href: '/examples/composition',
     icon: Zap,
-    code: `import { ChatContainer, MCPServerDirectory } from '@xava-labs/playground'
+    code: `import { ChatContainer, MCPServerDirectory } from '@null-shot/playground'
 
 function CustomLayout() {
   return (
@@ -62,7 +62,7 @@ function CustomLayout() {
   MCPServerDirectory,
   DockerInstallModal,
   useConfigurableMcpServerManager
-} from '@xava-labs/playground'
+} from '@null-shot/playground'
 
 function FullPlayground() {
   const [isDockerModalOpen, setIsDockerModalOpen] = useState(false)
@@ -104,7 +104,7 @@ function FullPlayground() {
     code: `import { 
   PlaygroundProvider,
   useConfigurableMcpServerManager 
-} from '@xava-labs/playground'
+} from '@null-shot/playground'
 
 function ServerManager() {
   const {

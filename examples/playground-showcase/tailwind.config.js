@@ -5,7 +5,7 @@ module.exports = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './node_modules/@xava-labs/playground/dist/**/*.{js,mjs}', // Include playground components
+    './node_modules/@null-shot/playground/dist/**/*.{js,mjs}', // Include playground components
   ],
   theme: {
     container: {

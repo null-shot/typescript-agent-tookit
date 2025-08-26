@@ -1,6 +1,6 @@
 # MCP Playground Showcase
 
-A Next.js application showcasing the `@xava-labs/playground` React component library for building MCP (Model Context Protocol) server management interfaces.
+A Next.js application showcasing the `@null-shot/playground` React component library for building MCP (Model Context Protocol) server management interfaces.
 
 ## 🚀 Features
 
@@ -135,8 +135,8 @@ Add new examples by:
 
 ## 🔗 Related Projects
 
-- [`@xava-labs/playground`](../../packages/playground) - The component library being showcased
-- [`@xava-labs/mcp`](../../packages/mcp) - MCP server implementation for Cloudflare Workers
+- [`@null-shot/playground`](../../packages/playground) - The component library being showcased
+- [`@null-shot/mcp`](../../packages/mcp) - MCP server implementation for Cloudflare Workers
 - [MCP Proxy](../../packages/mcp-proxy) - Proxy server for MCP connections
 
 ## 📖 Documentation

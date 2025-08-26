@@ -1,20 +1,26 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { 
-  PlaygroundProvider, 
-  ChatContainer, 
-  MCPServerDirectory, 
+import { useState } from "react";
+import {
+  PlaygroundProvider,
+  ChatContainer,
+  MCPServerDirectory,
   ModelSelector,
   PlaygroundHeader,
-  LocalToolboxStatusBadge
-} from '@xava-labs/playground'
-import '@xava-labs/playground/styles'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+  LocalToolboxStatusBadge,
+} from "@null-shot/playground";
+import "@null-shot/playground/styles";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ComponentsPage() {
-  const [selectedTab, setSelectedTab] = useState('chat')
+  const [selectedTab, setSelectedTab] = useState("chat");
 
   return (
     <div className="min-h-screen bg-background">
@@ -27,21 +33,25 @@ export default function ComponentsPage() {
             </p>
           </div>
 
-          <PlaygroundProvider 
+          <PlaygroundProvider
             config={{
-              mcpProxyUrl: 'http://localhost:6050',
-              mcpProxyWsUrl: 'ws://localhost:6050/client/ws',
-              theme: 'dark',
+              mcpProxyUrl: "http://localhost:6050",
+              mcpProxyWsUrl: "ws://localhost:6050/client/ws",
+              theme: "dark",
             }}
             imageAssets={{
-              defaultAvatar: '/images/default-avatar.png',
-              badgeLightBg: '/images/badge_light_bg.png', 
-              gears: '/images/gears.png',
-              cursorLogo: '/images/cursor-logo.svg',
-              ellipse: '/images/ellipse.svg'
+              defaultAvatar: "/images/default-avatar.png",
+              badgeLightBg: "/images/badge_light_bg.png",
+              gears: "/images/gears.png",
+              cursorLogo: "/images/cursor-logo.svg",
+              ellipse: "/images/ellipse.svg",
             }}
           >
-            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+            <Tabs
+              value={selectedTab}
+              onValueChange={setSelectedTab}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="chat">Chat Components</TabsTrigger>
                 <TabsTrigger value="mcp">MCP Management</TabsTrigger>
@@ -54,7 +64,8 @@ export default function ComponentsPage() {
                   <CardHeader>
                     <CardTitle>Chat Container</CardTitle>
                     <CardDescription>
-                      Full-featured chat interface with message history and streaming support
+                      Full-featured chat interface with message history and
+                      streaming support
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -72,7 +83,7 @@ export default function ComponentsPage() {
                     <CardContent>
                       <div className="bg-secondary rounded-md p-4 overflow-x-auto">
                         <pre className="text-sm">
-                          <code>{`import { ChatContainer } from '@xava-labs/playground'
+                          <code>{`import { ChatContainer } from '@null-shot/playground'
 
 <ChatContainer 
   className="h-96"
@@ -107,7 +118,8 @@ export default function ComponentsPage() {
                   <CardHeader>
                     <CardTitle>MCP Server Directory</CardTitle>
                     <CardDescription>
-                      Manage and configure your MCP servers with real-time status updates
+                      Manage and configure your MCP servers with real-time
+                      status updates
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -125,7 +137,7 @@ export default function ComponentsPage() {
                     <CardContent>
                       <div className="bg-secondary rounded-md p-4 overflow-x-auto">
                         <pre className="text-sm">
-                          <code>{`import { MCPServerDirectory } from '@xava-labs/playground'
+                          <code>{`import { MCPServerDirectory } from '@null-shot/playground'
 
 <MCPServerDirectory 
   enableSearch={true}
@@ -178,7 +190,7 @@ export default function ComponentsPage() {
                     <CardContent>
                       <div className="bg-secondary rounded-md p-4 overflow-x-auto">
                         <pre className="text-sm">
-                          <code>{`import { ModelSelector } from '@xava-labs/playground'
+                          <code>{`import { ModelSelector } from '@null-shot/playground'
 
 <ModelSelector 
   providers={['openai', 'anthropic']}
@@ -213,15 +225,16 @@ export default function ComponentsPage() {
                   <CardHeader>
                     <CardTitle>Playground Header</CardTitle>
                     <CardDescription>
-                      Header component with gears icon, status indicators, and installation functionality
+                      Header component with gears icon, status indicators, and
+                      installation functionality
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="border border-border rounded-lg p-4 bg-[#14161D]">
-                      <PlaygroundHeader 
+                      <PlaygroundHeader
                         isToolboxInstalled={false}
                         toolboxStatus="disconnected"
-                        onInstallClick={() => console.log('Install clicked')}
+                        onInstallClick={() => console.log("Install clicked")}
                       />
                     </div>
                   </CardContent>
@@ -270,7 +283,7 @@ export default function ComponentsPage() {
   PlaygroundHeader, 
   LocalToolboxStatusBadge,
   DockerInstallModal 
-} from '@xava-labs/playground'
+} from '@null-shot/playground'
 
 <PlaygroundHeader 
   isToolboxInstalled={isInstalled}
@@ -309,5 +322,5 @@ export default function ComponentsPage() {
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}

@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MCP Playground Showcase',
-  description: 'Showcase of @xava-labs/playground components for building MCP server management interfaces',
+  description: 'Showcase of @null-shot/playground components for building MCP server management interfaces',
   keywords: ['MCP', 'Model Context Protocol', 'Playground', 'AI', 'Cloudflare'],
 }
 
