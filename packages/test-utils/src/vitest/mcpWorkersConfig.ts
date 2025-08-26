@@ -13,8 +13,10 @@ export interface McpWorkersConfigOptions {
   additionalAliases?: Record<string, string>;
   /** Whether to include ajv mocking */
   includeAjvMock?: boolean;
-  /** Custom path to ajv mock file */
+  /** Custom ajv mock package path */
   ajvMockPath?: string;
+  /** Additional SSR external packages */
+  additionalSsrExternals?: string[];
   /** Additional options to pass to defineWorkersConfig */
   [key: string]: any;
 }
@@ -29,13 +31,10 @@ export function createMcpWorkersConfig(options: McpWorkersConfigOptions = {}) {
     wranglerConfigPath = "./wrangler.jsonc",
     additionalAliases = {},
     includeAjvMock = true,
-    ajvMockPath,
+    ajvMockPath = "@null-shot/test-utils/vitest/ajv-mock",
+    additionalSsrExternals = [],
     ...otherOptions
   } = options;
-
-  // Use a path relative to the built file location
-  const ajvMockFile =
-    ajvMockPath || new URL("./ajv-mock.js", import.meta.url).pathname;
 
   const config = {
     test: {
@@ -46,20 +45,16 @@ export function createMcpWorkersConfig(options: McpWorkersConfigOptions = {}) {
           wrangler: { configPath: wranglerConfigPath },
         },
       },
-      exclude: ["**/node_modules/**"],
       ...test,
     },
     resolve: {
       alias: {
         ...(includeAjvMock && {
-          ajv: ajvMockFile,
-          "ajv/dist/ajv": ajvMockFile,
+          ajv: ajvMockPath,
+          "ajv/dist/ajv": ajvMockPath,
         }),
         ...additionalAliases,
       },
-    },
-    define: {
-      global: "globalThis",
     },
     ...otherOptions,
   };
