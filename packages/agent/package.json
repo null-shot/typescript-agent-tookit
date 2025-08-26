@@ -32,7 +32,7 @@
 		"prepare": "npm run build",
 		"test": "echo No Tests",
 		"lint": "echo 'No ESLint configured for this package'",
-		"lint:fix": "echo 'No ESLint configured for this package'", 
+		"lint:fix": "echo 'No ESLint configured for this package'",
 		"type-check": "tsc --noEmit",
 		"codegen": "wrangler types"
 	},
