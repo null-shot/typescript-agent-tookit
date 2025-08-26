@@ -56,11 +56,11 @@ jobs:
           MCP_VERSION=$(node -p "require('./packages/mcp/package.json').version")
           TEST_UTILS_VERSION=$(node -p "require('./packages/test-utils/package.json').version")
           AGENT_VERSION=$(node -p "require('./packages/agent/package.json').version")
-          PLAYGROUND_VERSION=$(node -p "require('./packages/playground/package.json').version")
+          CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
           echo "MCP_VERSION=${MCP_VERSION}" >> $GITHUB_OUTPUT
           echo "TEST_UTILS_VERSION=${TEST_UTILS_VERSION}" >> $GITHUB_OUTPUT
           echo "AGENT_VERSION=${AGENT_VERSION}" >> $GITHUB_OUTPUT
-          echo "PLAYGROUND_VERSION=${PLAYGROUND_VERSION}" >> $GITHUB_OUTPUT
+          echo "CLI_VERSION=${CLI_VERSION}" >> $GITHUB_OUTPUT
           echo "RELEASE_TAG=v${MCP_VERSION}" >> $GITHUB_OUTPUT
 
           # Commit the version updates
@@ -88,9 +88,9 @@ jobs:
           cd ../agent
           npm publish --access public || echo "Failed to publish agent, may already exist"
 
-          # Publish playground (may be first time)
-          cd ../playground
-          npm publish --access public || echo "Failed to publish playground, may already exist"
+          # Publish CLI
+          cd ../cli
+          npm publish --access public || echo "Failed to publish cli, may already exist"
 
           cd ../..
 
@@ -109,7 +109,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { RELEASE_TAG, MCP_VERSION, TEST_UTILS_VERSION, AGENT_VERSION, PLAYGROUND_VERSION } = process.env;
+            const { RELEASE_TAG, MCP_VERSION, TEST_UTILS_VERSION, AGENT_VERSION, CLI_VERSION } = process.env;
 
             // Get the commits since the last tag
             const { data: commits } = await github.rest.repos.listCommits({
@@ -122,10 +122,10 @@ jobs:
             const body = `
             ## Packages
 
-            - @xava-labs/mcp: ${MCP_VERSION}
-            - @xava-labs/test-utils: ${TEST_UTILS_VERSION}
-            - @xava-labs/agent: ${AGENT_VERSION}
-            - @xava-labs/playground: ${PLAYGROUND_VERSION}
+            - @null-shot/mcp: ${MCP_VERSION}
+            - @null-shot/test-utils: ${TEST_UTILS_VERSION}
+            - @null-shot/agent: ${AGENT_VERSION}
+            - @null-shot/cli: ${CLI_VERSION}
 
             ## Recent Changes
 
@@ -149,4 +149,4 @@ jobs:
           MCP_VERSION: ${{ steps.publish.outputs.MCP_VERSION }}
           TEST_UTILS_VERSION: ${{ steps.publish.outputs.TEST_UTILS_VERSION }}
           AGENT_VERSION: ${{ steps.publish.outputs.AGENT_VERSION }}
-          PLAYGROUND_VERSION: ${{ steps.publish.outputs.PLAYGROUND_VERSION }}
+          CLI_VERSION: ${{ steps.publish.outputs.CLI_VERSION }}

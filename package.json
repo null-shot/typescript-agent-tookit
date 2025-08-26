@@ -16,7 +16,8 @@
     "type-check": "pnpm -r run type-check",
     "changeset": "changeset",
     "version": "changeset version",
-    "publish": "changeset publish"
+    "publish": "changeset publish",
+    "release": "changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",

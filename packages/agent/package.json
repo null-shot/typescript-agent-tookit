@@ -1,53 +1,58 @@
 {
-	"name": "@null-shot/agent",
-	"version": "0.3.0",
-	"private": false,
-	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		},
-		"./services": {
-			"types": "./dist/services/index.d.ts",
-			"import": "./dist/services/index.js"
-		},
-		"./aisdk": {
-			"types": "./dist/aisdk/index.d.ts",
-			"import": "./dist/aisdk/index.js"
-		}
-	},
-	"bin": {
-		"tools-registry-cli": "./bin/tools-registry-cli.js"
-	},
-	"license": "MIT",
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "tsc",
-		"preinstall": "mkdir -p dist",
-		"prepare": "npm run build",
-		"test": "echo No Tests",
-		"lint": "echo 'No ESLint configured for this package'",
-		"lint:fix": "echo 'No ESLint configured for this package'",
-		"type-check": "tsc --noEmit",
-		"codegen": "wrangler types"
-	},
-	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:",
-		"@cloudflare/workers-types": "catalog:",
-		"@types/node": "catalog:",
-		"typescript": "catalog:",
-		"vitest": "catalog:",
-		"wrangler": "catalog:"
-	},
-	"dependencies": {
-		"agents": "^0.0.97",
-		"ai": "^4.3.9",
-		"hono": "^4.7.7",
-		"zod": "^3.24.3"
-	}
+  "name": "@null-shot/agent",
+  "version": "0.3.0",
+  "private": false,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "import": "./dist/services/index.js"
+    },
+    "./aisdk": {
+      "types": "./dist/aisdk/index.d.ts",
+      "import": "./dist/aisdk/index.js"
+    }
+  },
+  "bin": {
+    "tools-registry-cli": "./bin/tools-registry-cli.js"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "preinstall": "mkdir -p dist",
+    "prepare": "npm run build",
+    "test": "echo No Tests",
+    "lint": "echo 'No ESLint configured for this package'",
+    "lint:fix": "echo 'No ESLint configured for this package'",
+    "type-check": "tsc --noEmit",
+    "codegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@cloudflare/workers-types": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "dependencies": {
+    "agents": "^0.0.97",
+    "ai": "^4.3.9",
+    "hono": "^4.7.7",
+    "zod": "^3.24.3"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ]
 }
