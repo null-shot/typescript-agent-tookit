@@ -97,21 +97,28 @@ class SqlJsPackageRepository implements PackageRepository {
     // Get the last inserted row ID and immediately query for the full record
     const lastInsertResults = this.db.exec("SELECT last_insert_rowid() as id");
     const lastInsertId = lastInsertResults[0]?.values[0]?.[0];
-    
+
     if (!lastInsertId) {
       throw new Error("Failed to get last insert ID");
     }
 
     // Use exec for better reliability
-    const selectResults = this.db.exec(`SELECT * FROM packages WHERE id = ${lastInsertId}`);
-    
-    if (!selectResults || selectResults.length === 0 || !selectResults[0].values || selectResults[0].values.length === 0) {
+    const selectResults = this.db.exec(
+      `SELECT * FROM packages WHERE id = ${lastInsertId}`
+    );
+
+    if (
+      !selectResults ||
+      selectResults.length === 0 ||
+      !selectResults[0].values ||
+      selectResults[0].values.length === 0
+    ) {
       throw new Error("Failed to retrieve created package");
     }
 
     const result = selectResults[0];
     const rowData = result.values[0];
-    
+
     // Map to object using column names
     const row: any = {};
     result.columns.forEach((col: string, index: number) => {
@@ -135,25 +142,28 @@ class SqlJsPackageRepository implements PackageRepository {
 
     try {
       // Use exec for better reliability with proper SQL escaping
-      const results = this.db.exec("SELECT * FROM packages WHERE uniqueName = ?", [uniqueName]);
-      
+      const results = this.db.exec(
+        "SELECT * FROM packages WHERE uniqueName = ?",
+        [uniqueName]
+      );
+
       if (!results || results.length === 0) {
         return null;
       }
-      
+
       const result = results[0];
       if (!result.values || result.values.length === 0) {
         return null;
       }
-      
+
       const rowData = result.values[0];
-      
+
       // Map to object using column names
       const row: any = {};
       result.columns.forEach((col: string, index: number) => {
         row[col] = rowData[index];
       });
-      
+
       // Validate that we have required fields
       if (!row.uniqueName || !row.command) {
         console.error("❌ Database row missing required fields:", row);
@@ -168,7 +178,6 @@ class SqlJsPackageRepository implements PackageRepository {
         env: row.env ? JSON.parse(row.env as string) : {},
         installedAt: row.installedAt as string,
       };
-      
     } catch (error) {
       console.error("❌ Error in findByUniqueName:", error);
       return null;
@@ -180,25 +189,27 @@ class SqlJsPackageRepository implements PackageRepository {
 
     try {
       // Use db.exec instead of prepare/getAsObject for better reliability with SQL.js
-      const results = this.db.exec("SELECT * FROM packages ORDER BY installedAt DESC");
-      
+      const results = this.db.exec(
+        "SELECT * FROM packages ORDER BY installedAt DESC"
+      );
+
       if (!results || results.length === 0) {
         return [];
       }
-      
+
       const result = results[0]; // First (and should be only) result set
-      
+
       if (!result.values || result.values.length === 0) {
         return [];
       }
-      
+
       // Map the values array to objects using column names
       const packages = result.values.map((row: any[]) => {
         const rowObj: any = {};
         result.columns.forEach((col: string, index: number) => {
           rowObj[col] = row[index];
         });
-        
+
         return {
           id: rowObj.id,
           uniqueName: rowObj.uniqueName,
@@ -208,9 +219,8 @@ class SqlJsPackageRepository implements PackageRepository {
           installedAt: rowObj.installedAt,
         };
       });
-      
+
       return packages;
-      
     } catch (error) {
       console.error("❌ Error in findAll using exec:", error);
       return [];
@@ -267,9 +277,12 @@ class SqlJsPackageRepository implements PackageRepository {
   async deleteByUniqueName(uniqueName: string): Promise<boolean> {
     await this.ensureInitialized();
 
-    console.log("🔍 DELETE DEBUG: Attempting to delete package with uniqueName:", uniqueName);
+    console.log(
+      "🔍 DELETE DEBUG: Attempting to delete package with uniqueName:",
+      uniqueName
+    );
     console.log("🔍 DELETE DEBUG: uniqueName type:", typeof uniqueName);
-    
+
     // First check if the package exists before attempting to delete
     const existingPackage = await this.findByUniqueName(uniqueName);
     console.log("🔍 DELETE DEBUG: Found existing package:", !!existingPackage);
@@ -296,19 +309,18 @@ class SqlJsPackageRepository implements PackageRepository {
 
     try {
       const results = this.db.exec("SELECT COUNT(*) as count FROM packages");
-      
+
       if (!results || results.length === 0) {
         return 0;
       }
-      
+
       const result = results[0];
       if (!result.values || result.values.length === 0) {
         return 0;
       }
-      
+
       const count = result.values[0][0] as number; // First row, first column
       return count || 0;
-      
     } catch (error) {
       console.error("❌ Error in count using exec:", error);
       return 0;

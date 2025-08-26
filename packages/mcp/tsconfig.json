@@ -46,11 +46,5 @@
 		"skipLibCheck": true
 	},
 	"exclude": ["test", "dist"],
-	"include": [
-		"env.d.ts",
-		"src/**/*.ts",
-		"test/index.ts",
-		"../agent/src/client/mcp-client-manager.ts",
-		"../agent/src/client/service-binding-transport.ts"
-	]
+	"include": ["env.d.ts", "src/**/*.ts", "test/index.ts"]
 }

@@ -3,8 +3,8 @@
 	"version": "0.2.1",
 	"description": "Model Context Protocol (MCP) server implementation for Cloudflare Workers",
 	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "dist/mcp/src/index.js",
+	"types": "dist/mcp/src/index.d.ts",
 	"files": [
 		"dist",
 		"README.md",
@@ -15,6 +15,7 @@
 	},
 	"scripts": {
 		"build": "tsc",
+		"preinstall": "mkdir -p dist",
 		"prepare": "npm run build",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
