@@ -8,11 +8,7 @@
 		"start": "wrangler dev",
 		"test": "echo 'Tests temporarily excluded'",
 		"cf-typegen": "wrangler types",
-		"build": "wrangler build",
-		"prebuild": "tools-registry-cli ./mcp.json",
-		"predev": "npm run prebuild",
-		"prestart": "npm run prebuild",
-		"print-tools-registry": "tools-registry-cli --stdout"
+		"build": "wrangler build"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.43",
