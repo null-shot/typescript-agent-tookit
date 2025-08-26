@@ -15,7 +15,7 @@
     "@types/node": "^24.3.0",
     "typescript": "^5.8.3",
     "@cloudflare/vitest-pool-workers": "^0.8.15",
-    "@xava-labs/test-utils": "file:../../packages/test-utils",
+    "@null-shot/test-utils": "file:../../packages/test-utils",
     "vitest": "3.0.x",
     "concurrently": "^9.1.2",
     "wrangler": "^4.9.1"

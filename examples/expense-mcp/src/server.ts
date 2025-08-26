@@ -1,20 +1,15 @@
 import { Implementation } from "@modelcontextprotocol/sdk/types.js";
-import { McpHonoServerDO } from "@xava-labs/mcp";
+import { McpHonoServerDO } from "@null-shot/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ExpenseRepository } from "./repository";
 import { setupServerTools } from "./tools";
 import { setupServerResources } from "./resources";
-import { Hono } from "hono";
 
-/**
- * @typedef {import('@cloudflare/workers-types').DurableObjectState} DurableObjectState
- * @typedef {import('@cloudflare/workers-types').Env} Env
- */
 /**
  * ExpenseMcpServer extends McpHonoServerDO for CRUD operations on expenses
  */
 export class ExpenseMcpServer extends McpHonoServerDO {
-  constructor(ctx: DurableObjectState, env: Env) {
+  constructor(ctx: DurableObjectState, env: any) {
     super(ctx, env);
   }
 
@@ -92,30 +87,5 @@ export class ExpenseMcpServer extends McpHonoServerDO {
     }
 
     return super.processMcpRequest(request);
-  }
-
-  protected setupRoutes(app: Hono<{ Bindings: any }>): void {
-    // Call the parent implementation to setup SSE and other MCP routes
-    super.setupRoutes(app);
-
-    // Handle root path - process SSE requests directly
-    app.get("/", (c) => {
-      const acceptHeader = c.req.header("Accept");
-      if (acceptHeader && acceptHeader.includes("text/event-stream")) {
-        // This is an SSE request from the MCP Inspector
-        const sessionId = crypto.randomUUID();
-        const url = new URL(c.req.url);
-        url.searchParams.set("sessionId", sessionId);
-
-        // Create a new request with the sessionId and process it
-        const newRequest = new Request(url.toString(), {
-          method: "GET",
-          headers: c.req.raw.headers,
-        });
-
-        return this.processSSEConnection(newRequest);
-      }
-      return c.text("Expense MCP Server - Connected via SSE at /sse");
-    });
   }
 }

@@ -1,6 +1,6 @@
 import { Implementation } from "@modelcontextprotocol/sdk/types.js";
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { McpServerDO, MCP_SUBPROTOCOL } from "@xava-labs/mcp/src/mcp/server";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServerDO, MCP_SUBPROTOCOL } from "@null-shot/mcp/src/mcp/server";
 import { McpServerProxy } from "./mcp-server-proxy";
 
 const REMOTE_CONTAINER_WS_ENDPOINT = "/remote-container/ws";
@@ -26,15 +26,14 @@ interface ClientAttachment {
  * facilitating bidirectional communication between them.
  */
 export class McpServerProxyDO extends McpServerDO {
- 
   private mcpProxy: McpServerProxy;
   private clientConnections: Set<WebSocket> = new Set();
-  
+
   constructor(ctx: DurableObjectState, env: any) {
     const proxy = new McpServerProxy();
     super(ctx, env, proxy);
     this.mcpProxy = proxy;
-    
+
     // Restore proxy connection state if Durable Object was hibernated and woke up
     this.restoreProxyConnectionFromHibernation();
   }
@@ -60,9 +59,9 @@ export class McpServerProxyDO extends McpServerDO {
    */
   protected processClientConnection(request: Request): Response {
     // Verify the Upgrade header is present and is WebSocket
-    const upgradeHeader = request.headers.get('Upgrade');
-    if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
-      return new Response('Expected Upgrade: websocket', {
+    const upgradeHeader = request.headers.get("Upgrade");
+    if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
+      return new Response("Expected Upgrade: websocket", {
         status: 426,
       });
     }
@@ -95,44 +94,46 @@ export class McpServerProxyDO extends McpServerDO {
   private initializeNewClient(clientWs: WebSocket): void {
     // Send immediate status to the client
     const statusMessage = {
-      verb: 'status',
+      verb: "status",
       success: true,
       connected: this.mcpProxy.isConnected(),
-      message: this.mcpProxy.isConnected() ? 'Connected to remote container' : 'Remote container not connected',
-      timestamp: new Date().toISOString()
+      message: this.mcpProxy.isConnected()
+        ? "Connected to remote container"
+        : "Remote container not connected",
+      timestamp: new Date().toISOString(),
     };
-    
+
     try {
       clientWs.send(JSON.stringify(statusMessage));
     } catch (error) {
-      console.error('Failed to send status message to client:', error);
+      console.error("Failed to send status message to client:", error);
     }
 
     // If remote container is connected, automatically request server list
     if (this.mcpProxy.isConnected()) {
       const listRequest = {
-        verb: 'list'
+        verb: "list",
       };
-      
+
       try {
         this.mcpProxy.forwardToProxy(JSON.stringify(listRequest));
       } catch (error) {
-        console.error('Failed to request server list for client:', error);
+        console.error("Failed to request server list for client:", error);
       }
     } else {
       // Send empty server list if remote container not connected
       const emptyListResponse = {
-        verb: 'list',
+        verb: "list",
         success: true,
         data: [],
         count: 0,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
+
       try {
         clientWs.send(JSON.stringify(emptyListResponse));
       } catch (error) {
-        console.error('Failed to send empty server list to client:', error);
+        console.error("Failed to send empty server list to client:", error);
       }
     }
   }
@@ -144,28 +145,43 @@ export class McpServerProxyDO extends McpServerDO {
   private restoreProxyConnectionFromHibernation(): void {
     // Get all existing WebSocket connections
     const allWebSockets = this.ctx.getWebSockets();
-    
+
     for (const ws of allWebSockets) {
       try {
-        const attachment = ws.deserializeAttachment() as RemoteContainerAttachment | ClientAttachment | { sessionId: string } | null;
-        
+        const attachment = ws.deserializeAttachment() as
+          | RemoteContainerAttachment
+          | ClientAttachment
+          | { sessionId: string }
+          | null;
+
         // Look for remote container connection
-        if (attachment && 'isRemoteContainer' in attachment && attachment.isRemoteContainer) {
+        if (
+          attachment &&
+          "isRemoteContainer" in attachment &&
+          attachment.isRemoteContainer
+        ) {
           this.mcpProxy.setProxyConnection(ws);
           break; // Only need one remote container connection
         }
         // Track client connections
-        else if (attachment && 'isClient' in attachment && attachment.isClient) {
+        else if (
+          attachment &&
+          "isClient" in attachment &&
+          attachment.isClient
+        ) {
           this.clientConnections.add(ws);
         }
       } catch (error) {
-        console.error('Error restoring WebSocket connection:', error);
+        console.error("Error restoring WebSocket connection:", error);
       }
     }
-    
+
     // If we restored a proxy connection, broadcast the connected status to any existing clients
     if (this.mcpProxy.isConnected() && this.clientConnections.size > 0) {
-      this.broadcastConnectionStatus(true, 'Remote container connection restored from hibernation');
+      this.broadcastConnectionStatus(
+        true,
+        "Remote container connection restored from hibernation"
+      );
     }
   }
 
@@ -182,9 +198,9 @@ export class McpServerProxyDO extends McpServerDO {
    */
   protected processRemoteContainerConnection(request: Request): Response {
     // Verify the Upgrade header is present and is WebSocket
-    const upgradeHeader = request.headers.get('Upgrade');
-    if (!upgradeHeader || upgradeHeader.toLowerCase() !== 'websocket') {
-      return new Response('Expected Upgrade: websocket', {
+    const upgradeHeader = request.headers.get("Upgrade");
+    if (!upgradeHeader || upgradeHeader.toLowerCase() !== "websocket") {
+      return new Response("Expected Upgrade: websocket", {
         status: 426,
       });
     }
@@ -194,16 +210,18 @@ export class McpServerProxyDO extends McpServerDO {
     const [client, server] = Object.values(webSocketPair);
 
     // Store marker that this is a remote container connection
-    server.serializeAttachment({ isRemoteContainer: true } as RemoteContainerAttachment);
+    server.serializeAttachment({
+      isRemoteContainer: true,
+    } as RemoteContainerAttachment);
 
     // Accept WebSocket with hibernation support
     this.ctx.acceptWebSocket(server);
 
     // Set this as the proxy connection
     this.mcpProxy.setProxyConnection(server);
-    
+
     // Broadcast connection status to all clients
-    this.broadcastConnectionStatus(true, 'Remote container connected');
+    this.broadcastConnectionStatus(true, "Remote container connected");
 
     return new Response(null, {
       status: 101,
@@ -219,7 +237,7 @@ export class McpServerProxyDO extends McpServerDO {
       try {
         client.send(message);
       } catch (error) {
-        console.error('Error sending message to client:', error);
+        console.error("Error sending message to client:", error);
         // Remove failed client connection
         this.clientConnections.delete(client);
       }
@@ -231,49 +249,64 @@ export class McpServerProxyDO extends McpServerDO {
    */
   private broadcastConnectionStatus(connected: boolean, message: string): void {
     const statusMessage = {
-      verb: 'status',
+      verb: "status",
       success: true,
       connected: connected,
       message: message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
+
     this.broadcastToClients(JSON.stringify(statusMessage));
   }
 
   /**
    * Override webSocketMessage to handle message routing between clients and remote container
    */
-  override async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer): Promise<void> {
-    const attachment = ws.deserializeAttachment() as RemoteContainerAttachment | ClientAttachment | { sessionId: string } | null;
-    
+  override async webSocketMessage(
+    ws: WebSocket,
+    data: string | ArrayBuffer
+  ): Promise<void> {
+    const attachment = ws.deserializeAttachment() as
+      | RemoteContainerAttachment
+      | ClientAttachment
+      | { sessionId: string }
+      | null;
+
     // Handle messages from remote container
-    if (attachment && 'isRemoteContainer' in attachment && attachment.isRemoteContainer) {
-      const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
-      console.log('MCP Proxy: Received message from remote container');
-      
+    if (
+      attachment &&
+      "isRemoteContainer" in attachment &&
+      attachment.isRemoteContainer
+    ) {
+      const messageStr =
+        typeof data === "string" ? data : new TextDecoder().decode(data);
+      console.log("MCP Proxy: Received message from remote container");
+
       // Check if this is a system message (shutdown notification, etc.)
       let isAdminMessage = false;
       try {
         const messageData = JSON.parse(messageStr);
-        
+
         // Check for admin/management messages that should only go to web clients
         if (messageData.verb || messageData.type) {
           isAdminMessage = true;
-          
+
           switch (messageData.type || messageData.verb) {
-            case 'client_ready':
+            case "client_ready":
               // Remote container client ready
               break;
-            case 'client_shutdown':
+            case "client_shutdown":
               // Notify clients about container shutdown
-              this.broadcastConnectionStatus(false, 'Remote container shutting down gracefully');
+              this.broadcastConnectionStatus(
+                false,
+                "Remote container shutting down gracefully"
+              );
               // Don't broadcast the raw shutdown message to clients
               return;
-            case 'add':
-            case 'remove':
-            case 'list':
-            case 'status':
+            case "add":
+            case "remove":
+            case "list":
+            case "status":
               // These are admin commands - only broadcast to web clients
               break;
             default:
@@ -282,20 +315,26 @@ export class McpServerProxyDO extends McpServerDO {
           }
         }
         // Check for JSON-RPC messages (these should go to MCP transports)
-        else if (messageData.jsonrpc || messageData.id !== undefined || messageData.method || messageData.result !== undefined || messageData.error !== undefined) {
+        else if (
+          messageData.jsonrpc ||
+          messageData.id !== undefined ||
+          messageData.method ||
+          messageData.result !== undefined ||
+          messageData.error !== undefined
+        ) {
           isAdminMessage = false; // This is an MCP protocol message
         }
       } catch (error) {
         // If we can't parse it, assume it might be an MCP message
-        console.warn('Could not parse message from remote container');
+        console.warn("Could not parse message from remote container");
         isAdminMessage = false;
       }
-      
+
       // Forward to MCP transport only if it's NOT an admin message
       if (!isAdminMessage) {
         this.mcpProxy.handleProxyMessage(data);
       }
-      
+
       // Always broadcast admin messages to web clients
       // For MCP messages, broadcast only if there are web clients interested
       if (isAdminMessage || this.clientConnections.size > 0) {
@@ -303,33 +342,35 @@ export class McpServerProxyDO extends McpServerDO {
       }
     }
     // Handle messages from clients
-    else if (attachment && 'isClient' in attachment && attachment.isClient) {
-      const messageStr = typeof data === 'string' ? data : new TextDecoder().decode(data);
-      console.log('MCP Proxy: Received message from client');
-      
+    else if (attachment && "isClient" in attachment && attachment.isClient) {
+      const messageStr =
+        typeof data === "string" ? data : new TextDecoder().decode(data);
+      console.log("MCP Proxy: Received message from client");
+
       // Check connection state before forwarding
       if (!this.mcpProxy.isConnected()) {
         // Send error response back to client
         const errorResponse = {
-          verb: 'error',
+          verb: "error",
           success: false,
-          message: 'Remote container not connected',
-          timestamp: new Date().toISOString()
+          message: "Remote container not connected",
+          timestamp: new Date().toISOString(),
         };
-        
+
         try {
           ws.send(JSON.stringify(errorResponse));
         } catch (error) {
-          console.error('Failed to send error response to client:', error);
+          console.error("Failed to send error response to client:", error);
         }
         return;
       }
-      
-      console.log('MCP Proxy: Forwarding client message to remote container');
+
+      console.log("MCP Proxy: Forwarding client message to remote container");
       this.mcpProxy.forwardToProxy(messageStr);
-    }
-    else {
-      console.log('MCP Proxy: Processing message via transport for MCP client connection');
+    } else {
+      console.log(
+        "MCP Proxy: Processing message via transport for MCP client connection"
+      );
       // Process the message via transport for consistency (MCP client connections)
       super.webSocketMessage(ws, data);
     }
@@ -338,25 +379,40 @@ export class McpServerProxyDO extends McpServerDO {
   /**
    * Override webSocketClose to handle client and remote container disconnections
    */
-  override async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean): Promise<void> {
-    const attachment = ws.deserializeAttachment() as RemoteContainerAttachment | ClientAttachment | { sessionId: string } | null;
-    
+  override async webSocketClose(
+    ws: WebSocket,
+    code: number,
+    reason: string,
+    wasClean: boolean
+  ): Promise<void> {
+    const attachment = ws.deserializeAttachment() as
+      | RemoteContainerAttachment
+      | ClientAttachment
+      | { sessionId: string }
+      | null;
+
     // Handle remote container disconnection
-    if (attachment && 'isRemoteContainer' in attachment && attachment.isRemoteContainer) {
+    if (
+      attachment &&
+      "isRemoteContainer" in attachment &&
+      attachment.isRemoteContainer
+    ) {
       this.mcpProxy.setProxyConnection(null);
-      
+
       // Determine disconnect reason and broadcast status
-      const disconnectReason = wasClean 
-        ? (code === 1000 ? 'Remote container disconnected gracefully' : `Remote container closed (code: ${code})`)
-        : 'Remote container disconnected unexpectedly';
-      
+      const disconnectReason = wasClean
+        ? code === 1000
+          ? "Remote container disconnected gracefully"
+          : `Remote container closed (code: ${code})`
+        : "Remote container disconnected unexpectedly";
+
       this.broadcastConnectionStatus(false, disconnectReason);
     }
     // Handle client disconnection
-    else if (attachment && 'isClient' in attachment && attachment.isClient) {
+    else if (attachment && "isClient" in attachment && attachment.isClient) {
       this.clientConnections.delete(ws);
     }
-    
+
     // Delegate to parent for regular client handling
     return super.webSocketClose(ws, code, reason, wasClean);
   }
@@ -365,20 +421,28 @@ export class McpServerProxyDO extends McpServerDO {
    * Override webSocketError to handle client and remote container errors
    */
   override async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
-    const attachment = ws.deserializeAttachment() as RemoteContainerAttachment | ClientAttachment | { sessionId: string } | null;
-    
-    console.error('WebSocket error:', error);
-    
+    const attachment = ws.deserializeAttachment() as
+      | RemoteContainerAttachment
+      | ClientAttachment
+      | { sessionId: string }
+      | null;
+
+    console.error("WebSocket error:", error);
+
     // Handle remote container error
-    if (attachment && 'isRemoteContainer' in attachment && attachment.isRemoteContainer) {
+    if (
+      attachment &&
+      "isRemoteContainer" in attachment &&
+      attachment.isRemoteContainer
+    ) {
       this.mcpProxy.setProxyConnection(null);
-      this.broadcastConnectionStatus(false, 'Remote container error occurred');
+      this.broadcastConnectionStatus(false, "Remote container error occurred");
     }
     // Handle client error
-    else if (attachment && 'isClient' in attachment && attachment.isClient) {
+    else if (attachment && "isClient" in attachment && attachment.isClient) {
       this.clientConnections.delete(ws);
     }
-    
+
     // Delegate to parent for regular client handling
     return super.webSocketError(ws, error);
   }
@@ -397,25 +461,41 @@ export class McpServerProxyDO extends McpServerDO {
     }
 
     // Process remote container WebSocket upgrade requests
-    if (path === REMOTE_CONTAINER_WS_ENDPOINT || path.endsWith(REMOTE_CONTAINER_WS_ENDPOINT)) {
+    if (
+      path === REMOTE_CONTAINER_WS_ENDPOINT ||
+      path.endsWith(REMOTE_CONTAINER_WS_ENDPOINT)
+    ) {
       return this.processRemoteContainerConnection(request);
     }
 
     // Only delegate to parent for MCP-related endpoints
-    if (path.endsWith('/ws') || path.endsWith('/sse') || path.endsWith('/message')) {
+    if (
+      path.endsWith("/ws") ||
+      path.endsWith("/sse") ||
+      path.endsWith("/message")
+    ) {
       return super.fetch(request);
     }
 
     // For any other paths, return 404
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Endpoint not found',
-      path: path,
-      method: method,
-      availableEndpoints: [CLIENT_WS_ENDPOINT, REMOTE_CONTAINER_WS_ENDPOINT, '/sse', '/ws', '/message']
-    }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Endpoint not found",
+        path: path,
+        method: method,
+        availableEndpoints: [
+          CLIENT_WS_ENDPOINT,
+          REMOTE_CONTAINER_WS_ENDPOINT,
+          "/sse",
+          "/ws",
+          "/message",
+        ],
+      }),
+      {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
-} 
+}
