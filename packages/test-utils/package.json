@@ -1,6 +1,6 @@
 {
   "name": "@null-shot/test-utils",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Testing utilities for null-shot projects",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

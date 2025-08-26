@@ -1,5 +1,12 @@
 # playground
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [4af1485]
+  - @null-shot/mcp@0.3.0
+
 ## 0.2.2
 
 ### Patch Changes

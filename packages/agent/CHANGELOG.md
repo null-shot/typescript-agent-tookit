@@ -1,5 +1,11 @@
 # @null-shot/agent
 
+## 0.3.0
+
+### Minor Changes
+
+- 4af1485: New repo, agents dependency bumps, cli tool
+
 ## 0.2.0
 
 ### Minor Changes
