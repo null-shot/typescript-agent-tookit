@@ -19,7 +19,8 @@
   ],
   "scripts": {
     "dev": "wrangler dev -c ../mcp-proxy/wrangler.jsonc --port 6050 & next dev",
-    "build": "next build",
+    "build": "pnpm run build:lib",
+    "build:app": "next build",
     "build:lib": "tsup --config tsup.config.ts --tsconfig tsconfig.lib.json",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
@@ -29,7 +30,7 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "preview": "opennextjs-cloudflare build && wrangler dev -c ./wrangler.jsonc -c ../mcp-proxy/wrangler.jsonc",
     "codegen": "wrangler types --env-interface CloudflareEnv env.d.ts",
-    "prepublishOnly": "npm run build:lib"
+    "prepublishOnly": "pnpm run build:lib"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
