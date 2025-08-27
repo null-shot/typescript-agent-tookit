@@ -15,7 +15,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}/mcp-toolbox
 
 jobs:
-  build-preview:
+  mcp-toolbox-preview:
     runs-on: ubuntu-latest
     permissions:
       contents: read
