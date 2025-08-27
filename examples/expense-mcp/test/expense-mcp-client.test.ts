@@ -22,7 +22,6 @@ describe('Expense MCP Client Integration Tests', () => {
   const baseUrl = 'http://localhost';
   let client: Client;
   let ctx: ExecutionContext;
-  let transport: WorkerSSEClientTransport | null = null;
   // Store expenses created in tests
   let testExpenses: {[key: string]: string} = {};
   
@@ -41,29 +40,19 @@ describe('Expense MCP Client Integration Tests', () => {
   afterEach(async () => {
     console.log(`--------- ENDING EXPENSE MCP TEST ---------`);
     try {
-      // Close client first
+      // Only call close if client is properly initialized
       if (client && typeof client.close === 'function') {
         await client.close();
         console.log(`Client closed successfully`);
       }
-      
-      // Clean up transport if it exists
-      if (transport && typeof transport.close === 'function') {
-        await transport.close();
-        console.log(`Transport closed successfully`);
-      }
     } catch (err) {
-      console.warn(`Error during cleanup:`, err);
-    } finally {
-      // Reset transport reference
-      transport = null;
+      console.warn(`Error closing client:`, err);
     }
   });
   
   function createTransport(ctx: ExecutionContext) {
     const url = new URL(`${baseUrl}/sse`);
-    transport = new WorkerSSEClientTransport(url, ctx);
-    return transport;
+    return new WorkerSSEClientTransport(url, ctx);
   }
   
   it('should initialize the client properly', () => {

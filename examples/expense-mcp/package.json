@@ -4,26 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "wrangler build",
     "deploy": "wrangler deploy",
-    "test": "vitest run",
     "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
-    "cf-typegen": "wrangler types --include-runtime=false",
-    "start": "wrangler dev"
+    "dev:vite": "vite dev",
+    "start": "wrangler dev",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "catalog:",
-    "typescript": "catalog:",
     "@cloudflare/vitest-pool-workers": "catalog:",
+    "@types/node": "catalog:",
     "@null-shot/test-utils": "workspace:*",
-    "vitest": "catalog:",
+    "@types/chai": "^5.2.2",
+    "chai": "^6.0.1",
     "concurrently": "^9.1.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
     "wrangler": "catalog:"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
     "@null-shot/mcp": "workspace:*",
-    "hono": "^4.0.0",
     "zod": "^3.23.8"
   }
 }
