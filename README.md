@@ -53,7 +53,7 @@ Get started with the Null Shot CLI to create MCP servers and AI agents:
 ### Install the CLI
 
 ```bash
-npm install -g @null-shot/cli
+npm install -g @nullshot/cli
 ```
 
 ### Create a new MCP server

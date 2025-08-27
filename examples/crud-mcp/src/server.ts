@@ -1,5 +1,5 @@
 import { Implementation } from "@modelcontextprotocol/sdk/types.js";
-import { McpHonoServerDO } from "@null-shot/mcp";
+import { McpHonoServerDO } from "@nullshot/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { TodoRepository } from "./repository";
 import { setupServerTools } from "./tools";

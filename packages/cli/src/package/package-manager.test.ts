@@ -123,14 +123,17 @@ describe("PackageManager", () => {
       "package.json": JSON.stringify({
         name: "test",
         devDependencies: {
-          "solitary-bar-c2b2": "github:null-shot/typescript-mcp-template",
+          "solitary-bar-c2b2": "github:nullshot/typescript-mcp-template",
         },
         mcpServers: {},
       }),
     });
 
     const manager = new PackageManager();
-    await manager.installPackage("github:null-shot/typescript-mcp-template", "mcp-template");
+    await manager.installPackage(
+      "github:nullshot/typescript-mcp-template",
+      "mcp-template",
+    );
 
     expect(mockExec).not.toHaveBeenCalled();
   });
@@ -165,9 +168,13 @@ describe("PackageManager", () => {
     });
 
     const manager = new PackageManager();
-    const extractPackageName = (manager as any).extractPackageName.bind(manager);
+    const extractPackageName = (manager as any).extractPackageName.bind(
+      manager,
+    );
 
-    expect(extractPackageName("github:null-shot/typescript-mcp-template")).toBe("null-shot-typescript-mcp-template");
+    expect(extractPackageName("github:nullshot/typescript-mcp-template")).toBe(
+      "nullshot-typescript-mcp-template",
+    );
     expect(extractPackageName("@scoped/package")).toBe("@scoped/package");
     expect(extractPackageName("simple-package")).toBe("simple-package");
     expect(extractPackageName("package@1.0.0")).toBe("package");

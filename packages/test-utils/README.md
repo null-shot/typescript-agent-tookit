@@ -1,11 +1,11 @@
-# @null-shot/test-utils
+# @nullshot/test-utils
 
-Testing utilities for null-shot projects.
+Testing utilities for nullshot projects.
 
 ## Installation
 
 ```bash
-yarn add -D @null-shot/test-utils
+yarn add -D @nullshot/test-utils
 ```
 
 ## Usage
@@ -20,11 +20,11 @@ This package provides utilities for testing MCP applications, particularly in Cl
 ### Example
 
 ```typescript
-import { WorkerSSEClientTransport } from '@null-shot/test-utils';
+import { WorkerSSEClientTransport } from "@nullshot/test-utils";
 
 // Set up test client
 const transport = new WorkerSSEClientTransport({
-  endpoint: 'https://your-worker.example.com/sse'
+  endpoint: "https://your-worker.example.com/sse",
 });
 
 // Use in tests
@@ -33,4 +33,4 @@ const transport = new WorkerSSEClientTransport({
 
 ## License
 
-MIT 
+MIT

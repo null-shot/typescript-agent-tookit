@@ -1,4 +1,10 @@
-# @null-shot/cli
+# @nullshot/cli
+
+## 0.2.2
+
+### Patch Changes
+
+- c35a604: Fix dependencies
 
 ## 0.2.0
 

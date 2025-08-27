@@ -1,3 +1,3 @@
-import { createMcpWorkersConfig } from "@null-shot/test-utils/vitest/mcpWorkersConfig";
+import { createMcpWorkersConfig } from "@nullshot/test-utils/vitest/mcpWorkersConfig";
 
 export default createMcpWorkersConfig();

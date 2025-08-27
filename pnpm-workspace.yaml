@@ -26,3 +26,5 @@ catalog:
   wrangler: "^4.32.0"
   workerd: "1.20250823.0"
   "@modelcontextprotocol/sdk": "^1.17.4"
+  "ai": "^5.0.25"
+  "zod": "^3.25.76"

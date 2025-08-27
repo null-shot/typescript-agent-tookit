@@ -5,7 +5,7 @@
 ### Patch Changes
 
 - Updated dependencies [4af1485]
-  - @null-shot/mcp@0.3.0
+  - @nullshot/mcp@0.3.0
 
 ## 1.0.1
 

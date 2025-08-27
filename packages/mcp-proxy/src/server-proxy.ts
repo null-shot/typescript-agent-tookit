@@ -1,6 +1,6 @@
 import { Implementation } from "@modelcontextprotocol/sdk/types.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { McpServerDO, MCP_SUBPROTOCOL } from "@null-shot/mcp/src/mcp/server";
+import { McpServerDO, MCP_SUBPROTOCOL } from "@nullshot/mcp/src/mcp/server";
 import { McpServerProxy } from "./mcp-server-proxy";
 
 const REMOTE_CONTAINER_WS_ENDPOINT = "/remote-container/ws";
