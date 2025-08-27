@@ -68,7 +68,7 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 		}
 
 		console.log(
-			`🔍 Found ${Object.keys(fetcherBindings).length} Fetcher service bindings to test: ${Object.keys(fetcherBindings).join(', ')}`
+			`🔍 Found ${Object.keys(fetcherBindings).length} Fetcher service bindings to test: ${Object.keys(fetcherBindings).join(', ')}`,
 		);
 		return fetcherBindings;
 	}
@@ -112,7 +112,7 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 						'Cache-Control': 'no-cache',
 						Connection: 'keep-alive',
 					},
-				})
+				}),
 			);
 
 			// Check response characteristics
@@ -126,7 +126,7 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 
 			// Log detailed test results
 			console.log(
-				`🔍 ${bindingName} test results: status=${response.status}, SSE=${isSSE}, cache=${hasProperCaching}, keepalive=${hasKeepAlive}`
+				`🔍 ${bindingName} test results: status=${response.status}, SSE=${isSSE}, cache=${hasProperCaching}, keepalive=${hasKeepAlive}`,
 			);
 
 			// Consider it an MCP service if it has all the characteristics of an SSE MCP endpoint
@@ -152,7 +152,7 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 		console.log(
 			`🔧 Toolbox Service: Initializing with ${Object.keys(mcpServers).length} configured servers and ${
 				Object.keys(fetcherBindings).length
-			} Fetcher bindings to test`
+			} Fetcher bindings to test`,
 		);
 
 		// Track initialization results
@@ -218,7 +218,7 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 	 */
 	private logInitializationSummary(
 		initResults: { successful: number; failed: number; skipped: number },
-		mcpServers: Record<string, MCPServerConfig>
+		mcpServers: Record<string, MCPServerConfig>,
 	): void {
 		const totalProcessed = initResults.successful + initResults.failed + initResults.skipped;
 
@@ -237,11 +237,14 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 		console.log(`🛠️  Total tools available: ${allTools.length} (${uniqueTools} unique)`);
 
 		// Break down tools by connection type if available
-		const toolsByType = allTools.reduce((acc, tool) => {
-			const type = (tool as any).connectionType || 'unknown';
-			acc[type] = (acc[type] || 0) + 1;
-			return acc;
-		}, {} as Record<string, number>);
+		const toolsByType = allTools.reduce(
+			(acc, tool) => {
+				const type = (tool as any).connectionType || 'unknown';
+				acc[type] = (acc[type] || 0) + 1;
+				return acc;
+			},
+			{} as Record<string, number>,
+		);
 
 		if (Object.keys(toolsByType).length > 0) {
 			console.log(`📊 Tools by connection type:`, toolsByType);
