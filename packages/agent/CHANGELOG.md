@@ -1,5 +1,11 @@
 # @null-shot/agent
 
+## 0.3.1
+
+### Patch Changes
+
+- c35a604: Fix dependencies
+
 ## 0.3.0
 
 ### Minor Changes

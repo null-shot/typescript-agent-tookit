@@ -1,6 +1,6 @@
 {
   "name": "@nullshot/test-utils",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Testing utilities for Cloudflare Workers projects - designed specifically for Workers runtime",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

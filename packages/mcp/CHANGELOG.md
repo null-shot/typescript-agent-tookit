@@ -1,5 +1,11 @@
 # @null-shot/mcp
 
+## 0.3.2
+
+### Patch Changes
+
+- c35a604: Fix dependencies
+
 ## 0.3.0
 
 ### Minor Changes
