@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/*",
-    "examples/*"
+    "packages/*"
   ],
   "scripts": {
     "build": "pnpm -r run build",
