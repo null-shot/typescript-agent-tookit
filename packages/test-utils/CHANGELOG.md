@@ -1,4 +1,4 @@
-# @null-shot/test-utils
+# @nullshot/test-utils
 
 ## 0.3.1
 

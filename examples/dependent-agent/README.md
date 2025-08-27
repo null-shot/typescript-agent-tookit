@@ -114,8 +114,13 @@ curl -X POST https://your-worker.your-subdomain.workers.dev/agent/chat/my-sessio
 class AgentClient {
   constructor(private baseUrl: string) {}
 
-  async sendMessage(message: string, sessionId?: string): Promise<ReadableStream> {
-    const url = sessionId ? `${this.baseUrl}/agent/chat/${sessionId}` : `${this.baseUrl}/agent/chat`;
+  async sendMessage(
+    message: string,
+    sessionId?: string
+  ): Promise<ReadableStream> {
+    const url = sessionId
+      ? `${this.baseUrl}/agent/chat/${sessionId}`
+      : `${this.baseUrl}/agent/chat`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -153,10 +158,15 @@ class AgentClient {
 }
 
 // Usage
-const client = new AgentClient("https://your-worker.your-subdomain.workers.dev");
+const client = new AgentClient(
+  "https://your-worker.your-subdomain.workers.dev"
+);
 
 async function chatExample() {
-  const stream = await client.sendMessage("What's the weather like?", "session-123");
+  const stream = await client.sendMessage(
+    "What's the weather like?",
+    "session-123"
+  );
 
   for await (const chunk of client.streamResponse(stream)) {
     console.log(chunk); // Process streaming response
@@ -209,7 +219,10 @@ export function useAgent(baseUrl: string) {
           const chunk = decoder.decode(value, { stream: true });
           assistantMessage += chunk;
 
-          setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content: assistantMessage }]);
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: assistantMessage },
+          ]);
         }
       } catch (error) {
         console.error("Error sending message:", error);
@@ -217,7 +230,7 @@ export function useAgent(baseUrl: string) {
         setIsLoading(false);
       }
     },
-    [baseUrl, sessionId, messages],
+    [baseUrl, sessionId, messages]
   );
 
   return { messages, sendMessage, isLoading, sessionId };
@@ -330,5 +343,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For issues and questions:
 
 - Check the [Cloudflare Workers documentation](https://developers.cloudflare.com/workers/)
-- Review the [null-shot Agent SDK documentation](https://github.com/null-shot/typescript-agent-framework)
+- Review the [nullshot Agent SDK documentation](https://github.com/nullshot/typescript-agent-framework)
 - Open an issue in this repository

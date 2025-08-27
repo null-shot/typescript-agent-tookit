@@ -43,6 +43,6 @@
       }
     ]
   ],
-  "tagFormat": "null-shot-cli-v${version}",
+  "tagFormat": "nullshot-cli-v${version}",
   "preset": "angular"
 }

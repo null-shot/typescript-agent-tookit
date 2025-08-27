@@ -1,4 +1,4 @@
-# @null-shot/agent
+# @nullshot/agent
 
 ## 0.3.1
 

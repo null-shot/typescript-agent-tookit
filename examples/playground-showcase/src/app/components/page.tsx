@@ -83,7 +83,7 @@ export default function ComponentsPage() {
                     <CardContent>
                       <div className="bg-secondary rounded-md p-4 overflow-x-auto">
                         <pre className="text-sm">
-                          <code>{`import { ChatContainer } from '@null-shot/playground'
+                          <code>{`import { ChatContainer } from '@nullshot/playground'
 
 <ChatContainer 
   className="h-96"
@@ -137,7 +137,7 @@ export default function ComponentsPage() {
                     <CardContent>
                       <div className="bg-secondary rounded-md p-4 overflow-x-auto">
                         <pre className="text-sm">
-                          <code>{`import { MCPServerDirectory } from '@null-shot/playground'
+                          <code>{`import { MCPServerDirectory } from '@nullshot/playground'
 
 <MCPServerDirectory 
   enableSearch={true}
@@ -190,7 +190,7 @@ export default function ComponentsPage() {
                     <CardContent>
                       <div className="bg-secondary rounded-md p-4 overflow-x-auto">
                         <pre className="text-sm">
-                          <code>{`import { ModelSelector } from '@null-shot/playground'
+                          <code>{`import { ModelSelector } from '@nullshot/playground'
 
 <ModelSelector 
   providers={['openai', 'anthropic']}
@@ -283,7 +283,7 @@ export default function ComponentsPage() {
   PlaygroundHeader, 
   LocalToolboxStatusBadge,
   DockerInstallModal 
-} from '@null-shot/playground'
+} from '@nullshot/playground'
 
 <PlaygroundHeader 
   isToolboxInstalled={isInstalled}

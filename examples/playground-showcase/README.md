@@ -1,6 +1,6 @@
 # MCP Playground Showcase
 
-A Next.js application showcasing the `@null-shot/playground` React component library for building MCP (Model Context Protocol) server management interfaces.
+A Next.js application showcasing the `@nullshot/playground` React component library for building MCP (Model Context Protocol) server management interfaces.
 
 ## 🚀 Features
 
@@ -81,7 +81,7 @@ Or connect your GitHub repository to Cloudflare Pages with these settings:
 The project exports to static files and can be deployed to:
 
 - Vercel
-- Netlify  
+- Netlify
 - GitHub Pages
 - Any static file hosting service
 
@@ -135,8 +135,8 @@ Add new examples by:
 
 ## 🔗 Related Projects
 
-- [`@null-shot/playground`](../../packages/playground) - The component library being showcased
-- [`@null-shot/mcp`](../../packages/mcp) - MCP server implementation for Cloudflare Workers
+- [`@nullshot/playground`](../../packages/playground) - The component library being showcased
+- [`@nullshot/mcp`](../../packages/mcp) - MCP server implementation for Cloudflare Workers
 - [MCP Proxy](../../packages/mcp-proxy) - Proxy server for MCP connections
 
 ## 📖 Documentation
@@ -161,4 +161,4 @@ This project is licensed under the MIT License - see the [LICENSE](../../LICENSE
 
 - [GitHub Issues](https://github.com/cloudflare/typescript-agent-vibework/issues)
 - [Documentation](../../README.md)
-- [MCP Community](https://github.com/modelcontextprotocol) 
+- [MCP Community](https://github.com/modelcontextprotocol)

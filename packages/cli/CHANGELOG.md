@@ -1,4 +1,4 @@
-# @null-shot/cli
+# @nullshot/cli
 
 ## 0.2.2
 

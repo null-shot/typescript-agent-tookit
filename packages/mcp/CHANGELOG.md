@@ -1,4 +1,4 @@
-# @null-shot/mcp
+# @nullshot/mcp
 
 ## 0.3.2
 
