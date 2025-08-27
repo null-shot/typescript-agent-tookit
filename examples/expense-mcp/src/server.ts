@@ -7,9 +7,9 @@ import { Hono } from 'hono';
 type HonoType = any;
 */
 
-import { Implementation } from '@modelcontextprotocol/sdk/types.js';
-import { McpHonoServerDO } from '@xava-labs/mcp/dist/mcp/src/mcp/hono-server.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { Implementation } from "@modelcontextprotocol/sdk/types.js";
+import { McpHonoServerDO } from "@null-shot/mcp";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ExpenseRepository } from './repository';
 import { setupServerTools } from './tools';
 import { setupServerResources } from './resources';
@@ -42,7 +42,7 @@ export class ExpenseMcpServer extends McpHonoServerDO {
    */
   configureServer(server: McpServer): void {
     // Pass DurableObjectState context to repository for proper session isolation
-    const repository = new ExpenseRepository(this.ctx);
+    const repository = new ExpenseRepository((this as any).ctx);
     
     // Remove the initializeDatabase call since it's not needed for in-memory storage
     // this.ctx.blockConcurrencyWhile(async () => {
@@ -51,7 +51,7 @@ export class ExpenseMcpServer extends McpHonoServerDO {
 
     // Create and set up tools and resources with our repository
     // Pass the environment to enable workflow access
-    setupServerTools(server, repository, this.env as any);
+    setupServerTools(server, repository, (this as any).env);
     setupServerResources(server, repository);
   }
 
