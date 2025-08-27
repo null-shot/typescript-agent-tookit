@@ -31,6 +31,7 @@ describe("Todo MCP Client Integration Tests", () => {
   const baseUrl = "http://localhost";
   let client: Client;
   let ctx: ExecutionContext;
+  let transport: WorkerSSEClientTransport | null = null;
   // We'll store todos created in tests here
   let testTodos: { [key: string]: string } = {};
 
@@ -50,20 +51,30 @@ describe("Todo MCP Client Integration Tests", () => {
   afterEach(async () => {
     console.log(`--------- ENDING TODO MCP TEST ---------`);
     try {
-      // Only call close if client is properly initialized
+      // Close client first
       if (client && typeof client.close === "function") {
         await client.close();
         console.log(`Client closed successfully`);
       }
+      
+      // Clean up transport if it exists
+      if (transport && typeof transport.close === "function") {
+        await transport.close();
+        console.log(`Transport closed successfully`);
+      }
     } catch (err) {
-      console.warn(`Error closing client:`, err);
+      console.warn(`Error during cleanup:`, err);
+    } finally {
+      // Reset transport reference
+      transport = null;
     }
   });
 
   // Helper function to create the transport
   function createTransport(ctx: ExecutionContext) {
     const url = new URL(`${baseUrl}/sse`);
-    return new WorkerSSEClientTransport(url, ctx);
+    transport = new WorkerSSEClientTransport(url, ctx);
+    return transport;
   }
 
   // Test for basic functionality
