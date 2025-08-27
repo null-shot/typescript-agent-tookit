@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "email-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-10",
+
+  "durable_objects": {
+    "bindings": [
+      { "name": "EMAIL_MCP_SERVER", "class_name": "EmailMcpServer" }
+    ]
+  },
+
+  // Register the Durable Object class. remove "tag" if you rename the class in the future.
+  "migrations": [
+    { "tag": "v1", "new_classes": ["EmailMcpServer"] }
+  ],
+
+  "d1_databases": [
+    {
+      "binding": "EMAILS_DB",
+      "database_name": "email_db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+    }
+  ],
+
+  // Cloudflare Email Workers "Send Email" binding
+  "send_email": [
+    { "name": "SEND_EMAIL" }
+  ],
+
+  "vars": {
+    "MAIL_FROM": "no-reply@example.com",
+    "ALLOWED_RECIPIENTS": "alice@example.com,bob@example.com,@example.com"
+  },
+
+  // logs/traces 
+  "observability": {
+    "enabled": true
+  }
+}
