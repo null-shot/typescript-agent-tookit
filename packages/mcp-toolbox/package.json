@@ -23,7 +23,7 @@
     "hono": "^4.8.2",
     "sql.js": "^1.13.0",
     "ws": "^8.18.0",
-    "zod": "^3.22.4",
+    "zod": "catalog:",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "@null-shot/mcp": "workspace:*"
   },

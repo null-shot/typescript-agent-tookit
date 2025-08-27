@@ -1,5 +1,5 @@
 {
-  "name": "mcp-proxy",
+  "name": "@null-shot/mcp-proxy",
   "version": "1.0.2",
   "private": true,
   "description": "MCP Server Proxy Example",

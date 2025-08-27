@@ -33,6 +33,6 @@
       "assets": []
     }]
   ],
-  "tagFormat": "nullshot-v${version}",
+  "tagFormat": "null-shot-cli-v${version}",
   "preset": "angular"
 }

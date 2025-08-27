@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { ExternalService } from '../service';
 import { AgentEnv } from '../env';
-import { LanguageModelV1CallOptions, ToolSet } from 'ai';
+import { ToolSet } from 'ai';
 import { MiddlewareService } from '../aisdk/middleware';
 import { NullShotMCPClientManager } from '../client/mcp-client-manager';
 
