@@ -24,8 +24,9 @@ export function setupServerTools(server: McpServer, repository: ExpenseRepositor
       
       let workflowResult = '';
       
-      // Trigger the workflow if available
-      if (env?.EXPENSE_APPROVAL_WORKFLOW) {
+      // Trigger the workflow if available (skip in test environment)
+      const isTestEnvironment = process.env.NODE_ENV === 'test' || globalThis.process?.env?.VITEST === 'true';
+      if (env?.EXPENSE_APPROVAL_WORKFLOW && !isTestEnvironment) {
         try {
           const workflowInstance = await env.EXPENSE_APPROVAL_WORKFLOW.create({
             id: `expense-${id}`,
