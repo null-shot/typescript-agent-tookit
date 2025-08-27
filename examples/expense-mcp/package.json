@@ -12,17 +12,17 @@
     "start": "wrangler dev"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250410.0",
-    "typescript": "^5.8.3",
-    "@cloudflare/vitest-pool-workers": "^0.8.15",
-    "@xava-labs/test-utils": "file:../../packages/test-utils",
-    "vitest": "3.0.x",
+    "@cloudflare/workers-types": "catalog:",
+    "typescript": "catalog:",
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@null-shot/test-utils": "workspace:*",
+    "vitest": "catalog:",
     "concurrently": "^9.1.2",
-    "wrangler": "^4.9.1"
+    "wrangler": "catalog:"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.9.0",
-    "@xava-labs/mcp": "file:../../packages/mcp",
+    "@modelcontextprotocol/sdk": "catalog:",
+    "@null-shot/mcp": "workspace:*",
     "hono": "^4.0.0",
     "zod": "^3.23.8"
   }
