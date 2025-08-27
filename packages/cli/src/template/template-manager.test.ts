@@ -48,12 +48,12 @@ describe("TemplateManager", () => {
       expect(templates[0]).toEqual({
         type: "mcp",
         name: "MCP Server",
-        url: "https://github.com/nullshot/typescript-mcp-template",
+        url: "https://github.com/null-shot/typescript-mcp-template",
       });
       expect(templates[1]).toEqual({
         type: "agent",
         name: "Agent",
-        url: "https://github.com/nullshot/typescript-agent-template",
+        url: "https://github.com/null-shot/typescript-agent-template",
       });
     });
   });
