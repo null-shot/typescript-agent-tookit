@@ -10,6 +10,7 @@
   "ignore": [
     "@nullshot/mcp-toolbox",
     "@nullshot/mcp-proxy",
-    "@nullshot/playground"
+    "@nullshot/playground",
+    "playground-showcase"
   ]
 }
