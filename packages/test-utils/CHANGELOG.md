@@ -1,4 +1,10 @@
-# @null-shot/test-utils
+# @nullshot/test-utils
+
+## 0.3.1
+
+### Patch Changes
+
+- c35a604: Fix dependencies
 
 ## 0.3.0
 

@@ -1,16 +1,22 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExternalLink, Code, Zap, Settings, Terminal } from 'lucide-react'
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { ExternalLink, Code, Zap, Settings, Terminal } from "lucide-react";
 
 const examples = [
   {
-    title: 'Basic Integration',
-    description: 'Simple setup with default configuration',
-    href: '/examples/basic',
+    title: "Basic Integration",
+    description: "Simple setup with default configuration",
+    href: "/examples/basic",
     icon: Code,
-    code: `import { PlaygroundProvider, Playground } from '@null-shot/playground'
+    code: `import { PlaygroundProvider, Playground } from '@nullshot/playground'
 
 function App() {
   return (
@@ -18,12 +24,12 @@ function App() {
       <Playground />
     </PlaygroundProvider>
   )
-}`
+}`,
   },
   {
-    title: 'Custom MCP Proxy',
-    description: 'Using a custom MCP proxy URL and WebSocket endpoint',
-    href: '/examples/custom-proxy',
+    title: "Custom MCP Proxy",
+    description: "Using a custom MCP proxy URL and WebSocket endpoint",
+    href: "/examples/custom-proxy",
     icon: Settings,
     code: `<PlaygroundProvider 
   config={{
@@ -32,14 +38,14 @@ function App() {
   }}
 >
   <Playground />
-</PlaygroundProvider>`
+</PlaygroundProvider>`,
   },
   {
-    title: 'Component Composition',
-    description: 'Using individual components to build custom layouts',
-    href: '/examples/composition',
+    title: "Component Composition",
+    description: "Using individual components to build custom layouts",
+    href: "/examples/composition",
     icon: Zap,
-    code: `import { ChatContainer, MCPServerDirectory } from '@null-shot/playground'
+    code: `import { ChatContainer, MCPServerDirectory } from '@nullshot/playground'
 
 function CustomLayout() {
   return (
@@ -48,12 +54,13 @@ function CustomLayout() {
       <MCPServerDirectory />
     </div>
   )
-}`
+}`,
   },
   {
-    title: 'Full Playground Interface',
-    description: 'Complete playground with header, toolbox management, and modal flows',
-    href: '/examples/full-playground',
+    title: "Full Playground Interface",
+    description:
+      "Complete playground with header, toolbox management, and modal flows",
+    href: "/examples/full-playground",
     icon: Terminal,
     code: `import { 
   PlaygroundProvider, 
@@ -62,7 +69,7 @@ function CustomLayout() {
   MCPServerDirectory,
   DockerInstallModal,
   useConfigurableMcpServerManager
-} from '@null-shot/playground'
+} from '@nullshot/playground'
 
 function FullPlayground() {
   const [isDockerModalOpen, setIsDockerModalOpen] = useState(false)
@@ -94,17 +101,17 @@ function FullPlayground() {
       />
     </PlaygroundProvider>
   )
-}`
+}`,
   },
   {
-    title: 'Using MCP Server Manager Hook',
-    description: 'Direct access to MCP server management functionality',
-    href: '/examples/server-manager',
+    title: "Using MCP Server Manager Hook",
+    description: "Direct access to MCP server management functionality",
+    href: "/examples/server-manager",
     icon: Settings,
     code: `import { 
   PlaygroundProvider,
   useConfigurableMcpServerManager 
-} from '@null-shot/playground'
+} from '@nullshot/playground'
 
 function ServerManager() {
   const {
@@ -135,9 +142,9 @@ function ServerManager() {
       </ul>
     </div>
   )
-}`
-  }
-]
+}`,
+  },
+];
 
 export default function ExamplesPage() {
   return (
@@ -147,7 +154,8 @@ export default function ExamplesPage() {
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Integration Examples</h1>
             <p className="text-lg text-muted-foreground">
-              Learn how to integrate playground components into your applications
+              Learn how to integrate playground components into your
+              applications
             </p>
           </div>
 
@@ -167,7 +175,7 @@ export default function ExamplesPage() {
                       <code>{example.code}</code>
                     </pre>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
                     <div className="text-sm text-muted-foreground">
                       Copy and paste this code into your React application
@@ -217,5 +225,5 @@ export default function ExamplesPage() {
         </div>
       </div>
     </div>
-  )
-} 
+  );
+}

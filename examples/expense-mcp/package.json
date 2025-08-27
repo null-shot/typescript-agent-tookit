@@ -1,0 +1,31 @@
+{
+  "name": "expense-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler build",
+    "deploy": "wrangler deploy",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
+    "dev:vite": "vite dev",
+    "start": "wrangler dev",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@types/node": "catalog:",
+    "@null-shot/test-utils": "workspace:*",
+    "@types/chai": "^5.2.2",
+    "chai": "^6.0.1",
+    "concurrently": "^9.1.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
+    "@null-shot/mcp": "workspace:*",
+    "zod": "^3.23.8"
+  }
+}

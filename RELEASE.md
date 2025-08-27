@@ -10,10 +10,10 @@ This monorepo uses [Changesets](https://github.com/changesets/changesets) for ve
 
 The following packages are published to npm:
 
-- `@null-shot/agent` - Core agent framework for Cloudflare Workers
-- `@null-shot/cli` - CLI tool for managing MCP servers and agents  
-- `@null-shot/mcp` - Model Context Protocol server implementation
-- `@null-shot/test-utils` - Testing utilities for the framework
+- `@nullshot/agent` - Core agent framework for Cloudflare Workers
+- `@nullshot/cli` - CLI tool for managing MCP servers and agents
+- `@nullshot/mcp` - Model Context Protocol server implementation
+- `@nullshot/test-utils` - Testing utilities for the framework
 
 ## Release Workflow
 
@@ -51,7 +51,7 @@ When creating a changeset:
 2. Select which packages have changes
 3. Choose the appropriate semantic version bump:
    - **Major**: Breaking changes
-   - **Minor**: New features (backwards compatible)  
+   - **Minor**: New features (backwards compatible)
    - **Patch**: Bug fixes
 4. Write a clear summary of the changes
 
@@ -73,14 +73,17 @@ The release workflow requires these secrets:
 ## Troubleshooting
 
 ### Build Fails
+
 - Check that all packages have proper `tsconfig.json` with `"declaration": true`
 - Ensure all dependencies are properly specified
 
-### Publishing Fails  
+### Publishing Fails
+
 - Verify `NPM_TOKEN` is set correctly in repository secrets
 - Check package.json has correct `publishConfig.access: "public"`
 
 ### Version Not Updated
+
 - Ensure changeset was created and committed
 - Check that the changeset includes the correct packages
 
@@ -88,9 +91,9 @@ The release workflow requires these secrets:
 
 A changeset has been created for the initial publication of all packages with minor version bumps. This will publish:
 
-- `@null-shot/agent@0.3.0`
-- `@null-shot/cli@0.2.0` 
-- `@null-shot/mcp@0.4.0`
-- `@null-shot/test-utils@0.3.0`
+- `@nullshot/agent@0.3.0`
+- `@nullshot/cli@0.2.0`
+- `@nullshot/mcp@0.4.0`
+- `@nullshot/test-utils@0.3.0`
 
 To apply these versions and publish, merge the "Version Packages" PR that will be created by the GitHub Action.

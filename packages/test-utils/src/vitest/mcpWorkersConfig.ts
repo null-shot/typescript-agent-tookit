@@ -31,7 +31,7 @@ export function createMcpWorkersConfig(options: McpWorkersConfigOptions = {}) {
     wranglerConfigPath = "./wrangler.jsonc",
     additionalAliases = {},
     includeAjvMock = true,
-    ajvMockPath = "@null-shot/test-utils/vitest/ajv-mock",
+    ajvMockPath = "@nullshot/test-utils/vitest/ajv-mock",
     additionalSsrExternals = [],
     ...otherOptions
   } = options;

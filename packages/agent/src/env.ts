@@ -1,3 +1,3 @@
 export interface AgentEnv {
-	AGENT: DurableObjectNamespace;
+	AGENT: any; // Must be a DurableObjectNamespace otherwise it will error
 }

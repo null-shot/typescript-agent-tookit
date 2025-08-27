@@ -1,19 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { type AgentEnv } from "@null-shot/agent";
-import type { LanguageModel } from "ai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { AiSdkAgent, type AIUISDKMessage } from "@null-shot/agent/aisdk";
-import { ToolboxService } from "@null-shot/agent/services";
+import {
+  AiSdkAgent,
+  type AIUISDKMessage,
+  ToolboxService,
+} from "@nullshot/agent";
 
-interface EnvWithAgent extends Env, AgentEnv {
-  ANTHROPIC_API_KEY: string;
-  AGENT: DurableObjectNamespace<DependentAgent>;
-  MCP_SERVICE: Fetcher;
-}
-
-// Instantiate application with Hono
-const app = new Hono<Env>();
+const app = new Hono<{ Bindings: Env }>();
 
 app.use(
   "*",
@@ -50,49 +43,50 @@ app.all("/agent/chat/:sessionId?", async (c) => {
 });
 
 //
-export class DependentAgent extends AiSdkAgent<EnvWithAgent> {
-  constructor(state: DurableObjectState, env: EnvWithAgent) {
-    let model: LanguageModel;
+export class DependentAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    // Use string model identifier - AI SDK v5 supports this directly
+    let modelId: string;
     switch (env.AI_PROVIDER) {
       case "anthropic":
-        const anthropic = createAnthropic({
-          apiKey: env.ANTHROPIC_API_KEY,
-        });
-        model = anthropic("claude-3-haiku-20240307");
+        modelId = "anthropic:claude-3-haiku-20240307";
         break;
       default:
         // This should never happen due to validation above, but TypeScript requires this
         throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
     }
 
-    super(state, env, model, [new ToolboxService(env)]);
+    super(state, env, modelId, [new ToolboxService(env)]);
   }
 
   async processMessage(
     sessionId: string,
     messages: AIUISDKMessage
   ): Promise<Response> {
-    const result = await this.streamText(sessionId, {
-      model: this.model,
-      system:
-        "You are a conversational expert, enjoying deep, intellectual conversations.",
-      messages: messages.messages,
-      maxSteps: 10,
-      // Enable MCP tools from imported mcp.json
-      experimental_toolCallStreaming: true,
-      onError: (error: unknown) => {
-        console.error("Error processing message", error);
-      },
-    });
+    // Use the protected streamTextWithMessages method - model is handled automatically by the agent
+    const result = await this.streamTextWithMessages(
+      sessionId,
+      messages.messages,
+      {
+        system:
+          "You are a conversational expert, enjoying deep, intellectual conversations.",
+        maxSteps: 10,
+        // Enable MCP tools from imported mcp.json
+        experimental_toolCallStreaming: true,
+        onError: (error: unknown) => {
+          console.error("Error processing message", error);
+        },
+      }
+    );
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
   }
 }
 
 export default {
   async fetch(
     request: Request,
-    env: EnvWithAgent,
+    env: Env,
     ctx: ExecutionContext
   ): Promise<Response> {
     return app.fetch(request, env, ctx);
