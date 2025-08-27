@@ -1,5 +1,5 @@
 {
-  "name": "@null-shot/playground",
+  "name": "@nullshot/playground",
   "version": "0.2.3",
   "private": false,
   "main": "./dist/index.js",
@@ -44,7 +44,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.2.0",
-    "@null-shot/mcp": "workspace:*",
+    "@nullshot/mcp": "workspace:*",
     "agents": "^0.0.75",
     "ai": "catalog:",
     "class-variance-authority": "^0.7.1",

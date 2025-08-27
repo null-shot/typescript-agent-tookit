@@ -8,8 +8,8 @@ import {
   ModelSelector,
   PlaygroundHeader,
   LocalToolboxStatusBadge,
-} from "@null-shot/playground";
-import "@null-shot/playground/styles";
+} from "@nullshot/playground";
+import "@nullshot/playground/styles";
 import {
   Card,
   CardContent,

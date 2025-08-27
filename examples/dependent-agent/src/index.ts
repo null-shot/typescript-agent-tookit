@@ -4,7 +4,7 @@ import {
   AiSdkAgent,
   type AIUISDKMessage,
   ToolboxService,
-} from "@null-shot/agent";
+} from "@nullshot/agent";
 
 const app = new Hono<{ Bindings: Env }>();
 

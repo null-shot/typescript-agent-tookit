@@ -5,7 +5,7 @@ import {
 } from "cloudflare:test";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { WorkerSSEClientTransport } from "@null-shot/test-utils/mcp/WorkerSSEClientTransport";
+import { WorkerSSEClientTransport } from "@nullshot/test-utils/mcp/WorkerSSEClientTransport";
 import { TodoStatus, Todo } from "../src/schema";
 
 // Define response type for clarity

@@ -7,7 +7,7 @@ import { dirname } from "path";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { WebSocketTransport } from "@null-shot/mcp";
+import { WebSocketTransport } from "@nullshot/mcp";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   CallToolRequestSchema,

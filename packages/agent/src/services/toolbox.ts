@@ -27,7 +27,7 @@ export interface MCPConfig {
  * Service for managing and exposing tools configurations and injecting them into the language model
  */
 export class ToolboxService implements ExternalService, MiddlewareService {
-	public name = '@null-shot/agent/toolbox-service';
+	public name = '@nullshot/agent/toolbox-service';
 	private env: AgentEnv;
 	private mcpManager: NullShotMCPClientManager;
 	private mcpConfig?: MCPConfig;

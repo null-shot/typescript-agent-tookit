@@ -1,5 +1,5 @@
 {
-  "name": "@null-shot/test-utils",
+  "name": "@nullshot/test-utils",
   "version": "0.3.0",
   "description": "Testing utilities for Cloudflare Workers projects - designed specifically for Workers runtime",
   "main": "dist/index.js",

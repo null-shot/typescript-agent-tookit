@@ -7,5 +7,5 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["@null-shot/mcp-toolbox", "mcp-proxy", "@null-shot/playground"]
+  "ignore": ["@nullshot/mcp-toolbox", "mcp-proxy", "@nullshot/playground"]
 }

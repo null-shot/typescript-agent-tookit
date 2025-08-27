@@ -1,5 +1,5 @@
 {
-  "name": "@null-shot/mcp-proxy",
+  "name": "@nullshot/mcp-proxy",
   "version": "1.0.2",
   "private": true,
   "description": "MCP Server Proxy Example",
@@ -11,7 +11,7 @@
     "codegen": "wrangler types"
   },
   "dependencies": {
-    "@null-shot/mcp": "workspace:*",
+    "@nullshot/mcp": "workspace:*",
     "@modelcontextprotocol/sdk": "catalog:"
   },
   "devDependencies": {
