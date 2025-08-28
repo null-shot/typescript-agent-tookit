@@ -4,22 +4,28 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "build": "tsc -p tsconfig.json",
+    "build": "wrangler build",
     "deploy": "wrangler deploy",
-    "d1:apply": "wrangler d1 migrations apply email_db --local",
-    "test": "vitest"
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
+    "dev:vite": "vite dev",
+    "start": "wrangler dev",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.6.31",
-    "@cloudflare/workers-types": "^4.20250310.0",
-    "typescript": "^5.6.3",
-    "vitest": "^2.0.5",
-    "wrangler": "^3.102.0",
-    "zod": "^3.23.8"
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@types/node": "catalog:",
+    "@nullshot/test-utils": "workspace:*",
+    "@types/chai": "^5.2.2",
+    "chai": "^6.0.1",
+    "concurrently": "^9.1.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.2.0",
-    "@xava-labs/mcp": "workspace:*"
+    "@modelcontextprotocol/sdk": "catalog:",
+    "@nullshot/mcp": "workspace:*",
+    "zod": "catalog:"
   }
 }
