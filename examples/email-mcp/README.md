@@ -1,4 +1,4 @@
-# Email MCP (D1 + Cloudflare Email)
+# Email MCP (Durable Object SQL DB + Cloudflare Email)
 
 An MCP server that:
 - Sends internal emails via Cloudflare’s Email binding (only to verified addresses).
@@ -11,10 +11,10 @@ Features
   - list_emails(search_text?, limit?, offset?, sort_by?, sort_direction?)
   - get_email(id)
 - Resources:
-  - d1://database/emails
-  - d1://database/emails/{id}
+  - do://database/emails
+  - do://database/emails/{id}
 - Inbound handling:
-  - Cloudflare Email Worker email() event stores inbound email into D1.
+  - Cloudflare Email Worker email() event stores inbound email into the Durable Object SQL database.
 
 Important limitations
 - This is for internal email only. Cloudflare’s Send Email binding delivers only to verified recipients on your zone.
@@ -22,7 +22,7 @@ Important limitations
 
 Setup
 
-1) Create D1 database
+1) Durable Object SQL Database
 - In Cloudflare Dashboard or via CLI:
   - wrangler d1 create email_db
   - Update wrangler.jsonc "d1_databases" database_id and database_name accordingly.

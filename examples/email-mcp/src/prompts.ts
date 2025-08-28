@@ -15,7 +15,7 @@ export function setupServerPrompts(server: McpServer) {
 - Use "list_emails" to browse stored inbound emails.
 - Use "get_email" to fetch a specific stored email.
 
-Only internal routing is supported.`,
+Receiving emails from the public is supported; sending is restricted to internal/verified addresses.`,
           },
         },
       ],

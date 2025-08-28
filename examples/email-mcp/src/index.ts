@@ -9,11 +9,11 @@ export default {
     const url = new URL(request.url);
     let sessionIdStr = url.searchParams.get('sessionId');
 
-    // Fallback stable shard if none provided (helps local/manual calls)
-    if (!sessionIdStr) sessionIdStr = 'default-session';
-    const id = env.EMAIL_MCP_SERVER.idFromName(sessionIdStr);
+    const id = sessionIdStr
+      ? env.EMAIL_MCP_SERVER.idFromString(sessionIdStr)
+      : env.EMAIL_MCP_SERVER.newUniqueId();
 
-    url.searchParams.set('sessionId', id.toString());
+    url.searchParams.set('sessionId', id.toString());    
 
     return env.EMAIL_MCP_SERVER.get(id).fetch(
       new Request(url.toString(), request)
@@ -22,27 +22,6 @@ export default {
 
   // Inbound email handler: validate recipient, parse, forward to DO for persistence
   async email(message: ForwardableEmailMessage, env: Env, _ctx: ExecutionContext): Promise<void> {
-    // Validate recipient
-    const allowed = (env.ALLOWED_RECIPIENTS ?? '')
-      .split(',')
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-
-    // Try to extract "To" header value (envelope to available as message.to)
-    // Worker email headers may contain multiple To headers; we use the envelope for validation
-    const envelopeTo = message.to?.toLowerCase();
-    const toAllowed =
-      envelopeTo &&
-      allowed.some((rule) =>
-        rule.startsWith('@') ? envelopeTo.endsWith(rule) : envelopeTo === rule
-      );
-
-    if (!toAllowed) {
-      message.setReject(
-        `Recipient ${message.to} not allowed. Configure ALLOWED_RECIPIENTS.`
-      );
-      return;
-    }
 
     // Best-effort extraction
     const from = message.from;

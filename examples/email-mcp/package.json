@@ -1,5 +1,5 @@
 {
-  "name": "@xava-labs/examples-email-mcp",
+  "name": "@xava-labs/email-mcp",
   "version": "0.1.0",
   "private": true,
   "type": "module",

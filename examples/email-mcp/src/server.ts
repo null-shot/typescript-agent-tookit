@@ -45,29 +45,5 @@ export class EmailMcpServer extends McpHonoServerDO {
     setupServerTools(server, this.repository, this.env);
     setupServerResources(server, this.repository);
     setupServerPrompts(server);
-
-    // Extra Hono routes for internal ingestion (POST /email/inbound)
-    // McpHonoServerDO exposes this.app (Hono instance)
-    this.app.post('/email/inbound', async (c) => {
-      try {
-        const body = await c.req.json();
-        const parsed = inboundEmailSchema.parse(body);
-        await this.repository.createEmail({
-          id: parsed.id,
-          from_addr: parsed.from_addr,
-          to_addr: parsed.to_addr,
-          subject: parsed.subject ?? null,
-          text: parsed.text ?? null,
-          raw_size: parsed.raw_size,
-          received_at: parsed.received_at,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-        return c.json({ ok: true });
-      } catch (err: any) {
-        console.error('Inbound email error:', err);
-        return c.json({ ok: false, error: String(err?.message ?? err) }, 400);
-      }
-    });
   }
 }
