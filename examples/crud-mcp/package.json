@@ -15,7 +15,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",
     "@types/node": "catalog:",
-    "@null-shot/test-utils": "workspace:*",
+    "@nullshot/test-utils": "workspace:*",
     "@types/chai": "^5.2.2",
     "chai": "^6.0.1",
     "concurrently": "^9.1.2",
@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
-    "@null-shot/mcp": "workspace:*",
-    "zod": "^3.23.8"
+    "@nullshot/mcp": "workspace:*",
+    "zod": "catalog:"
   }
 }

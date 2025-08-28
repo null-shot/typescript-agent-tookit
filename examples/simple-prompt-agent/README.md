@@ -1,6 +1,6 @@
 # Simple Prompt Agent
 
-A Cloudflare Workers-based AI agent implementation that uses the @null-shot/agent SDK to create a simple that can manage your tasks through a todo list.
+A Cloudflare Workers-based AI agent implementation that uses the @nullshot/agent SDK to create a simple that can manage your tasks through a todo list.
 
 ## Overview
 
@@ -25,8 +25,8 @@ This project demonstrates:
 
 ### Key Components
 
-- **Router**: Uses Hono framework with the permissionless agent session router from @null-shot/agent
-- **Agent SDK**: Implements `AiSdkAgent` from @null-shot/agent/aisdk
+- **Router**: Uses Hono framework with the permissionless agent session router from @nullshot/agent
+- **Agent SDK**: Implements `AiSdkAgent` from @nullshot/agent/aisdk
 - **Tools Service**: Integrates `ToolboxService` for registering mcp.json and managing MCP connections as tools for your agent to use
 
 ## Getting Started
@@ -104,7 +104,7 @@ This configuration is automatically serialized into an environment variable duri
 
 The `SimplePromptAgent` class:
 
-- Extends `AiSdkAgent` from @null-shot/agent/aisdk
+- Extends `AiSdkAgent` from @nullshot/agent/aisdk
 - Supports both Anthropic and OpenAI language models
 - Integrates with the ToolboxService for todo list management
 - Uses streaming responses for real-time interaction
@@ -136,7 +136,7 @@ The `SimplePromptAgent` class:
 The project uses:
 
 - Hono framework for routing
-- Permissionless agent session router from @null-shot/agent
+- Permissionless agent session router from @nullshot/agent
 - Type-safe environment bindings
 
 ### Available Endpoints
@@ -189,4 +189,4 @@ pnpm deploy
 
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Hono Framework](https://hono.dev/)
-- [@null-shot/agent Documentation](https://github.com/null-shot/typescript-agent-framework/tree/main/packages/agent)
+- [@nullshot/agent Documentation](https://github.com/nullshot/typescript-agent-framework/tree/main/packages/agent)

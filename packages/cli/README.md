@@ -18,11 +18,11 @@ A comprehensive TypeScript CLI for managing Model Context Protocol (MCP) servers
 ## 📦 Installation
 
 ```bash
-npm install -g @null-shot/cli
+npm install -g @nullshot/cli
 # or
-yarn global add @null-shot/cli
-# or  
-pnpm add -g @null-shot/cli
+yarn global add @nullshot/cli
+# or
+pnpm add -g @nullshot/cli
 ```
 
 ## 🏁 Quick Start
@@ -35,6 +35,7 @@ nullshot init
 ```
 
 This creates:
+
 - `mcp.json` - MCP server configuration
 - Adds `dev:nullshot` script to package.json
 - Adds `postinstall` script for automatic dependency management
@@ -52,7 +53,7 @@ Edit the generated `mcp.json`:
       "command": "npx -y @modelcontextprotocol/server-filesystem"
     },
     "github": {
-      "source": "github:modelcontextprotocol/servers#github", 
+      "source": "github:modelcontextprotocol/servers#github",
       "command": "npx -y @modelcontextprotocol/server-github"
     },
     "custom-mcp": {
@@ -71,6 +72,7 @@ nullshot install
 ```
 
 This will:
+
 - Install packages from GitHub repositories
 - Detect and extract Cloudflare Workers configurations
 - Run D1 database migrations if present
@@ -111,6 +113,7 @@ Options:
 ```
 
 **What it does:**
+
 - Creates `mcp.json` configuration file (skips if exists)
 - Adds `dev:nullshot` and `postinstall` scripts to `package.json`
 - Prompts to add `cf-typegen` script if not present
@@ -129,6 +132,7 @@ Options:
 ```
 
 **What it does:**
+
 - Installs packages from configured sources (GitHub, npm, etc.)
 - Analyzes dependency `wrangler.jsonc` files
 - Generates service bindings for inter-service communication
@@ -149,6 +153,7 @@ Options:
 ```
 
 **What it does:**
+
 - Analyzes all installed dependencies
 - Runs D1 migrations across all services
 - Executes `wrangler dev -c wrangler.jsonc -c dep1/wrangler.jsonc -c dep2/wrangler.jsonc`
@@ -164,6 +169,7 @@ nullshot create agent    # Create AI Agent project
 ```
 
 **Interactive prompts for:**
+
 - Project name and directory
 - Template selection
 - Initial configuration
@@ -197,7 +203,7 @@ nullshot run [options]
 Options:
   --server <name>         Run specific server by name
   --port <port>          Port for local development (default: 8787)
-  --env <environment>    Environment to run in (default: development)  
+  --env <environment>    Environment to run in (default: development)
   --watch               Enable watch mode for development
 ```
 
@@ -209,12 +215,13 @@ Options:
 {
   "servers": {
     "<serverName>": {
-      "source": "string",      // Source URL (GitHub, npm, etc.)
-      "command": "string",     // Startup command
-      "env": [                 // Optional environment variables
+      "source": "string", // Source URL (GitHub, npm, etc.)
+      "command": "string", // Startup command
+      "env": [
+        // Optional environment variables
         {
           "name": "string",
-          "value": "string"    // Optional - reads from process.env if omitted
+          "value": "string" // Optional - reads from process.env if omitted
         }
       ]
     }
@@ -224,12 +231,12 @@ Options:
 
 ### Source URL Formats
 
-| Format | Example | Description |
-|--------|---------|-------------|
-| GitHub | `github:user/repo#branch` | Install from GitHub repository |
-| GitHub subdirectory | `github:modelcontextprotocol/servers#filesystem` | Install specific subdirectory |
-| npm | `@scope/package@version` | Install from npm registry |
-| Git URL | `https://github.com/user/repo.git#tag` | Install from Git URL |
+| Format              | Example                                          | Description                    |
+| ------------------- | ------------------------------------------------ | ------------------------------ |
+| GitHub              | `github:user/repo#branch`                        | Install from GitHub repository |
+| GitHub subdirectory | `github:modelcontextprotocol/servers#filesystem` | Install specific subdirectory  |
+| npm                 | `@scope/package@version`                         | Install from npm registry      |
+| Git URL             | `https://github.com/user/repo.git#tag`           | Install from Git URL           |
 
 ### Generated Service Bindings
 
@@ -238,36 +245,36 @@ After running `nullshot install`, your `wrangler.jsonc` is automatically updated
 ```jsonc
 {
   "name": "my-project",
-  "main": "src/index.ts", 
+  "main": "src/index.ts",
   "compatibility_date": "2025-01-15",
   "compatibility_flags": ["nodejs_compat"],
-  
+
   // Auto-generated service bindings for inter-service communication
   "services": [
     {
-      "binding": "MCP_FILESYSTEM_SERVICE",  // Binding name for your code
-      "service": "mcp-filesystem"           // Actual service name
+      "binding": "MCP_FILESYSTEM_SERVICE", // Binding name for your code
+      "service": "mcp-filesystem", // Actual service name
     },
     {
-      "binding": "MCP_GITHUB_SERVICE", 
-      "service": "mcp-github"
-    }
+      "binding": "MCP_GITHUB_SERVICE",
+      "service": "mcp-github",
+    },
   ],
-  
+
   // Merged environment variables from all dependencies
   "vars": {
     "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_...",
-    "ALLOWED_DIRS": "/tmp,/home/user/docs"
+    "ALLOWED_DIRS": "/tmp,/home/user/docs",
   },
-  
+
   // Auto-detected D1 database bindings (if present in dependencies)
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "my-database",
-      "database_id": "uuid-here"
-    }
-  ]
+      "database_id": "uuid-here",
+    },
+  ],
 }
 ```
 
@@ -281,7 +288,7 @@ The CLI stores dependency metadata in your `package.json`:
     "filesystem": {
       "source": "github:modelcontextprotocol/servers#filesystem",
       "installedAt": "2025-01-15T10:30:00.000Z",
-      "packageName": "mcp-filesystem", 
+      "packageName": "mcp-filesystem",
       "hasWranglerConfig": true,
       "serviceName": "filesystem",
       "d1Databases": ["USER_DB", "CACHE_DB"]
@@ -301,7 +308,7 @@ nullshot init
 # 2. Configure services in mcp.json
 # Edit mcp.json with your desired services
 
-# 3. Install dependencies and configure services  
+# 3. Install dependencies and configure services
 nullshot install
 
 # 4. Start development
@@ -348,12 +355,12 @@ echo '{
       "command": "node dist/auth.js"
     },
     "database-service": {
-      "source": "github:myorg/mcp-database#main", 
+      "source": "github:myorg/mcp-database#main",
       "command": "node dist/db.js"
     },
     "api-gateway": {
       "source": "github:myorg/mcp-gateway#main",
-      "command": "node dist/gateway.js"  
+      "command": "node dist/gateway.js"
     }
   }
 }' > mcp.json
@@ -382,14 +389,15 @@ Example dependency with D1:
   "d1_databases": [
     {
       "binding": "USER_DB",
-      "database_name": "users", 
-      "database_id": "uuid-here"
-    }
-  ]
+      "database_name": "users",
+      "database_id": "uuid-here",
+    },
+  ],
 }
 ```
 
 When you run `nullshot install`, the CLI will:
+
 - Detect the `USER_DB` binding
 - Run migrations: `wrangler d1 migrations apply USER_DB --local --config dependency/wrangler.jsonc`
 - Store `["USER_DB"]` in the dependency metadata
@@ -406,16 +414,16 @@ export default {
   async fetch(request: Request, env: Env) {
     // Call the filesystem service
     const filesystemResponse = await env.MCP_FILESYSTEM_SERVICE.fetch(
-      new Request('https://filesystem/list-files')
+      new Request("https://filesystem/list-files"),
     );
-    
-    // Call the github service  
+
+    // Call the github service
     const githubResponse = await env.MCP_GITHUB_SERVICE.fetch(
-      new Request('https://github/repos/user/repo')
+      new Request("https://github/repos/user/repo"),
     );
-    
-    return new Response('Services orchestrated!');
-  }
+
+    return new Response("Services orchestrated!");
+  },
 };
 ```
 
@@ -437,7 +445,7 @@ Generated types will include your service bindings:
 // worker-configuration.d.ts (auto-generated)
 interface Env {
   MCP_FILESYSTEM_SERVICE: Fetcher;
-  MCP_GITHUB_SERVICE: Fetcher; 
+  MCP_GITHUB_SERVICE: Fetcher;
   // ... other bindings
 }
 ```
@@ -455,7 +463,7 @@ Environment variables are automatically merged from all dependencies:
   }
 }
 
-// dependency2/wrangler.jsonc  
+// dependency2/wrangler.jsonc
 {
   "vars": {
     "DB_URL": "sqlite:///data.db",
@@ -468,7 +476,7 @@ Environment variables are automatically merged from all dependencies:
   "vars": {
     "API_URL": "https://api-v2.example.com",  // Latest value wins
     "DEBUG": "true",                          // Merged from dependency1
-    "DB_URL": "sqlite:///data.db"            // Merged from dependency2  
+    "DB_URL": "sqlite:///data.db"            // Merged from dependency2
   }
 }
 ```
@@ -501,24 +509,28 @@ my-project/
 ### Common Issues
 
 **Configuration validation errors:**
+
 ```bash
 ❌ Invalid configuration: servers.test: missing required property 'command'
 💡 Check your mcp.json file syntax and required fields
 ```
 
 **Package installation failures:**
+
 ```bash
 ❌ Failed to install package github:user/repo: Repository not found
 💡 Verify the GitHub repository exists and is accessible
 ```
 
 **Service binding conflicts:**
+
 ```bash
 ❌ Service binding MCP_TEST_SERVICE already exists
 💡 Check for duplicate service names in your dependencies
 ```
 
 **D1 migration failures:**
+
 ```bash
 ⚠️ D1 migration failed for service:DATABASE: Migration already applied
 💡 This is usually harmless - migrations are idempotent
@@ -542,18 +554,21 @@ nullshot list --cwd ./my-project --verbose
 ### Dependency Issues
 
 **Package name mismatches:**
+
 ```bash
 # The CLI handles GitHub repositories where package.json name differs from repo name
 # Metadata is stored using the actual package name from package.json
 ```
 
 **Wrangler config not found:**
+
 ```bash
 # Some dependencies may not have wrangler.jsonc - this is fine
 # They will be installed but won't generate service bindings
 ```
 
 **Migration conflicts:**
+
 ```bash
 # D1 migrations are run with --local flag during development
 # Production deployments handle migrations separately
@@ -585,7 +600,7 @@ Control what gets updated during installation:
 nullshot install --skip-wrangler-update
 
 # Update configs but don't install new packages
-nullshot install --skip-package-update  
+nullshot install --skip-package-update
 
 # Just run migrations and config updates
 nullshot install --skip-package-update --verbose
@@ -616,11 +631,11 @@ When using TypeScript, your environment interface will include:
 interface Env {
   // Service bindings (auto-generated)
   MCP_[SERVICE_NAME]_SERVICE: Fetcher;
-  
+
   // Environment variables (merged from dependencies)
   [key: string]: string | Fetcher | D1Database;
-  
-  // D1 databases (if present in dependencies)  
+
+  // D1 databases (if present in dependencies)
   [binding: string]: D1Database;
 }
 ```
@@ -663,7 +678,7 @@ wrangler secret put FILESYSTEM_ROOT
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/new-feature`  
+2. Create a feature branch: `git checkout -b feature/new-feature`
 3. Add comprehensive tests for new functionality
 4. Run the full test suite: `npm test`
 5. Submit a pull request with detailed description
@@ -671,7 +686,7 @@ wrangler secret put FILESYSTEM_ROOT
 ### Development Setup
 
 ```bash
-git clone https://github.com/null-shot/typescript-agent-vibework
+git clone https://github.com/nullshot/typescript-agent-vibework
 cd typescript-agent-vibework/packages/cli
 pnpm install
 pnpm build

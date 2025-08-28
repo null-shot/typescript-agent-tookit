@@ -9,13 +9,13 @@
  */
 
 import { Hono } from 'hono';
-import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@null-shot/agent';
+import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@nullshot/agent';
 // Import the ToolsService directly
-import { ToolboxService } from '@null-shot/agent/services';
+import { ToolboxService } from '@nullshot/agent/services';
 import { LanguageModel } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
-import { AiSdkAgent, AIUISDKMessage } from '@null-shot/agent/aisdk';
+import { AiSdkAgent, AIUISDKMessage } from '@nullshot/agent/aisdk';
 import mcpConfig from '../mcp.json';
 // Define AI provider type
 type AIProvider = 'anthropic' | 'openai' | 'deepseek';

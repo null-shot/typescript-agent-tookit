@@ -1,4 +1,5 @@
-import { DurableObject } from 'cloudflare:workers';
+/// <reference types="@cloudflare/workers-types" />
+
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { AgentEnv } from './env';
@@ -7,19 +8,17 @@ import { Service, isExternalService } from './service';
 /**
  * The Null Shot Standard for Agents.
  */
-export abstract class NullShotAgent<ENV extends AgentEnv, MESSAGE extends any = any> extends DurableObject<ENV> {
+export abstract class NullShotAgent<ENV extends AgentEnv, MESSAGE extends any = any> implements DurableObject {
 	protected state: DurableObjectState;
 	protected env: ENV;
 	protected app: Hono<{ Bindings: ENV }>;
 	protected services: Service[];
 
 	constructor(state: DurableObjectState, env: ENV, services: Service[] = []) {
-		super(state, env);
 		this.state = state;
 		this.env = env;
 		this.app = new Hono<{ Bindings: ENV }>();
 		this.services = services;
-
 		// Setup routes
 		this.setupRoutes(this.app);
 

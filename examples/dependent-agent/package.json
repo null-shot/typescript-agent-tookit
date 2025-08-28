@@ -12,13 +12,13 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
-    "@null-shot/agent": "workspace:*",
-    "ai": "^4.3.16",
+    "@nullshot/agent": "workspace:*",
+    "ai": "catalog:",
     "hono": "^4.7.11",
     "solitary-bar-c2b2": "github:null-shot/typescript-mcp-template"
   },
   "devDependencies": {
-    "@null-shot/cli": "workspace:*",
+    "@nullshot/cli": "workspace:*",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "wrangler": "catalog:"

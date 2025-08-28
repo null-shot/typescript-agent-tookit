@@ -9,7 +9,7 @@ This package implements a Durable Object-based Agent architecture for building A
 ┌──────────┐     HTTP        ┌─────────────────┐      ┌───────────────────────┐
 │          │ ──────────────> │     Worker      │      │    Durable Object     │
 │ Browser  │                 │ ┌─────────────┐ │ ───> │  ┌─────────────────┐  │
-│          │ <─ ─ ─ ─ ─ ─ ─  │ │   Router    │ │      │  │  Agent Router   │--│---> [STATE = D1/KV/etc.] 
+│          │ <─ ─ ─ ─ ─ ─ ─  │ │   Router    │ │      │  │  Agent Router   │--│---> [STATE = D1/KV/etc.]
 └──────────┘     Stream      │ │    (Auth)   │ │      │  │ Business Logic  │┐ |
                              │ └─────────────┘ │      │  └─────────────────┘| │
                              └─────────────────┘      │         │           | │
@@ -40,23 +40,23 @@ This package implements a Durable Object-based Agent architecture for building A
 ## Installation
 
 ```bash
-npm install @null-shot/agent
+npm install @nullshot/agent
 ```
 
 ## Packages
 
 The framework consists of the following packages:
 
-- `@null-shot/agent` - Core agent framework
-- `@null-shot/agent/aisdk` - AI SDK integration layer
-- `@null-shot/agent/services` - Services for extending agent functionality
+- `@nullshot/agent` - Core agent framework
+- `@nullshot/agent/aisdk` - AI SDK integration layer
+- `@nullshot/agent/services` - Services for extending agent functionality
 
 ## Basic Usage
 
 ```typescript
-import { XavaAgent, AgentEnv } from '@null-shot/agent';
-import { AiSdkAgent } from '@null-shot/agent/aisdk';
-import { ToolboxService } from '@null-shot/agent/services';
+import { XavaAgent, AgentEnv } from '@nullshot/agent';
+import { AiSdkAgent } from '@nullshot/agent/aisdk';
+import { ToolboxService } from '@nullshot/agent/services';
 import { createOpenAI } from '@ai-sdk/openai';
 
 // Define your environment type
@@ -64,36 +64,36 @@ type MyEnv = Env & AgentEnv;
 
 // Create your agent class
 export class MyAgent extends AiSdkAgent<MyEnv> {
-  constructor(state: DurableObjectState, env: MyEnv) {
-    // Initialize the AI model
-    const openai = createOpenAI({
-      apiKey: env.OPENAI_API_KEY,
-    });
-    const model = openai('gpt-4');
-    
-    // Initialize with services
-    super(state, env, model, [new ToolboxService(env)]);
-  }
+	constructor(state: DurableObjectState, env: MyEnv) {
+		// Initialize the AI model
+		const openai = createOpenAI({
+			apiKey: env.OPENAI_API_KEY,
+		});
+		const model = openai('gpt-4');
 
-  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
-    const result = await this.streamText(sessionId, {
-      model: this.model,
-      system: 'You are a helpful assistant.',
-      messages: messages.messages,
-      maxSteps: 10,
-    });
+		// Initialize with services
+		super(state, env, model, [new ToolboxService(env)]);
+	}
 
-    return result.toDataStreamResponse();
-  }
+	async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+		const result = await this.streamText(sessionId, {
+			model: this.model,
+			system: 'You are a helpful assistant.',
+			messages: messages.messages,
+			maxSteps: 10,
+		});
+
+		return result.toDataStreamResponse();
+	}
 }
 
 // Worker handler
 export default {
-  async fetch(request, env, ctx) {
-    // Apply router
-    applyPermissionlessAgentSessionRouter(app);
-    return app.fetch(request, env, ctx);
-  }
+	async fetch(request, env, ctx) {
+		// Apply router
+		applyPermissionlessAgentSessionRouter(app);
+		return app.fetch(request, env, ctx);
+	},
 };
 ```
 
@@ -116,56 +116,56 @@ Services extend agent capabilities by providing specific functionality. They all
 Services implement the `Service` interface or extend it with additional capabilities:
 
 ```typescript
-import { Service, AgentEnv } from '@null-shot/agent';
+import { Service, AgentEnv } from '@nullshot/agent';
 import { Hono } from 'hono';
 
 // Basic service
 export class MyService implements Service {
-  name = '@my-org/agent/my-service';
-  
-  async initialize(): Promise<void> {
-    // Initialize service resources
-    console.log('Initializing my service');
-  }
+	name = '@my-org/agent/my-service';
+
+	async initialize(): Promise<void> {
+		// Initialize service resources
+		console.log('Initializing my service');
+	}
 }
 
 // External service with HTTP routes
 export class MyExternalService implements ExternalService {
-  name = '@my-org/agent/external-service';
-  
-  registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
-    app.get('/my-service/status', (c) => {
-      return c.json({ status: 'ok' });
-    });
-  }
+	name = '@my-org/agent/external-service';
+
+	registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
+		app.get('/my-service/status', (c) => {
+			return c.json({ status: 'ok' });
+		});
+	}
 }
 
 // Middleware service for AI interactions
 export class MyMiddlewareService implements MiddlewareService {
-  name = '@my-org/agent/middleware-service';
-  middlewareVersion = '1.0.0';
-  
-  transformStreamTextTools(tools) {
-    // Add or modify tools
-    return {
-      ...tools,
-      myTool: {
-        description: 'My custom tool',
-        execute: async (params) => {
-          // Tool implementation
-          return { result: 'success' };
-        }
-      }
-    };
-  }
-  
-  transformParams(params) {
-    // Modify parameters for AI requests
-    return {
-      ...params,
-      temperature: 0.7,
-    };
-  }
+	name = '@my-org/agent/middleware-service';
+	middlewareVersion = '1.0.0';
+
+	transformStreamTextTools(tools) {
+		// Add or modify tools
+		return {
+			...tools,
+			myTool: {
+				description: 'My custom tool',
+				execute: async (params) => {
+					// Tool implementation
+					return { result: 'success' };
+				},
+			},
+		};
+	}
+
+	transformParams(params) {
+		// Modify parameters for AI requests
+		return {
+			...params,
+			temperature: 0.7,
+		};
+	}
 }
 ```
 
@@ -180,7 +180,7 @@ constructor(state: DurableObjectState, env: MyEnv) {
     new MyCustomService(),
     new MyMiddlewareService()
   ];
-  
+
   super(state, env, model, services);
 }
 ```
@@ -195,7 +195,7 @@ Routers act as an API gateway for agents, handling CORS, routing logic, and auth
 
 ```typescript
 import { Hono } from 'hono';
-import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@null-shot/agent';
+import { AgentEnv, applyPermissionlessAgentSessionRouter } from '@nullshot/agent';
 
 // Create Hono app
 const app = new Hono<{ Bindings: MyEnv }>();
@@ -203,7 +203,7 @@ const app = new Hono<{ Bindings: MyEnv }>();
 applyPermissionlessAgentSessionRouter(app);
 // Export worker handler
 export default {
-  fetch: app.fetch,
+	fetch: app.fetch,
 };
 ```
 
@@ -213,8 +213,8 @@ The `AgentEnv` interface provides default Durable Object naming and toolbox serv
 
 ```typescript
 interface AgentEnv {
-  AgentDurableObject: DurableObjectNamespace;
-  TOOLBOX_SERVICE_MCP_SERVERS?: string;
+	AgentDurableObject: DurableObjectNamespace;
+	TOOLBOX_SERVICE_MCP_SERVERS?: string;
 }
 ```
 
@@ -225,13 +225,13 @@ Implement custom environments by extending `AgentEnv`:
 ```typescript
 // Define a custom environment
 type MyEnv = {
-  OPENAI_API_KEY: string;
-  MY_CUSTOM_BINDING: string;
+	OPENAI_API_KEY: string;
+	MY_CUSTOM_BINDING: string;
 } & AgentEnv;
 
 // Use it in your agent
 export class MyAgent extends AiSdkAgent<MyEnv> {
-  // ...
+	// ...
 }
 ```
 
@@ -243,18 +243,18 @@ The framework includes a CLI tool for managing Model Context Protocol (MCP) conf
 
 ```json
 {
-  "mcpServers": {
-    "todo-list": {
-      "url": "http://localhost:8788/sse"
-    },
-    "github": {
-      "command": "npx mcp-github",
-      "args": ["--port", "9000"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      }
-    }
-  }
+	"mcpServers": {
+		"todo-list": {
+			"url": "http://localhost:8788/sse"
+		},
+		"github": {
+			"command": "npx mcp-github",
+			"args": ["--port", "9000"],
+			"env": {
+				"GITHUB_TOKEN": "${GITHUB_TOKEN}"
+			}
+		}
+	}
 }
 ```
 
@@ -264,7 +264,7 @@ The `tools-registry-cli` processes `mcp.json` files and updates environment vari
 
 ```bash
 # Install globally
-npm install -g @null-shot/agent
+npm install -g @nullshot/agent
 
 # Process mcp.json in current directory and update .dev.vars
 npx tools-registry-cli

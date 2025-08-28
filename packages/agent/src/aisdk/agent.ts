@@ -1,5 +1,5 @@
-import { CoreMessage, JSONRPCMessage, LanguageModel, StreamTextResult, ToolSet, streamText, wrapLanguageModel } from 'ai';
-import { isMiddlewareService, MiddlewareService, StreamTextParams } from './middleware';
+import { ModelMessage, LanguageModel, StreamTextResult, ToolSet, streamText, wrapLanguageModel } from 'ai';
+import { isMiddlewareService, MiddlewareService, StreamTextWithMessagesParams, StreamTextWithPromptParams } from './middleware';
 import { NullShotAgent } from '../agent';
 import { AgentEnv } from '../env';
 import { Service } from '../service';
@@ -9,7 +9,7 @@ import { Service } from '../service';
  */
 export interface AIUISDKMessage {
 	id: string;
-	messages: CoreMessage[];
+	messages: ModelMessage[];
 }
 
 /**
@@ -19,7 +19,7 @@ export abstract class AiSdkAgent<ENV extends AgentEnv> extends NullShotAgent<ENV
 	protected model: LanguageModel;
 	protected middleware: MiddlewareService[] = [];
 
-	constructor(state: DurableObjectState, env: ENV, model: LanguageModel, services: Service[] = []) {
+	constructor(state: DurableObjectState, env: ENV, model: string | LanguageModel, services: Service[] = []) {
 		super(state, env, services);
 		this.model = model;
 	}
@@ -35,34 +35,72 @@ export abstract class AiSdkAgent<ENV extends AgentEnv> extends NullShotAgent<ENV
 		}
 
 		// Wrap the language model with middleware if needed
-		this.model = wrapLanguageModel({
-			model: this.model,
-			middleware: this.middleware,
-		});
+		if (this.middleware.length > 0) {
+			this.model = wrapLanguageModel({
+				model: this.model as any, // Must be LanguageModelV2 object - very annoying!
+				middleware: this.middleware,
+			});
+		}
 
 		return Promise.resolve();
 	}
+
 	/**
-	 * Stream text with middleware support
-	 * This method applies the tools transformation middleware
+	 * Stream text with messages (conversation mode)
 	 */
-	protected async streamText(sessionId: string, options: Partial<StreamTextParams> = {}): Promise<StreamTextResult<ToolSet, string>> {
-		// Create initial parameters
-		let params: StreamTextParams = {
+	protected async streamTextWithMessages(
+		sessionId: string,
+		messages: ModelMessage[],
+		options: Omit<Partial<StreamTextWithMessagesParams>, 'model' | 'messages'> = {},
+	): Promise<StreamTextResult<ToolSet, string>> {
+		const params: StreamTextWithMessagesParams = {
 			model: this.model,
+			messages,
 			experimental_generateMessageId: () => `${sessionId}-${crypto.randomUUID()}`,
 			...options,
 		};
 
-		// TODO: consider all params to have a params transform function
+		// Enrich with tools via middleware
+		this.enrichParamsWithTools(params);
+
+		// Call AI SDK v5 streamText - no casting needed!
+		return streamText(params);
+	}
+
+	/**
+	 * Stream text with prompt (single prompt mode)
+	 */
+	protected async streamTextWithPrompt(
+		sessionId: string,
+		prompt: string,
+		options: Omit<Partial<StreamTextWithPromptParams>, 'model' | 'prompt'> = {},
+	): Promise<StreamTextResult<ToolSet, string>> {
+		const params: StreamTextWithPromptParams = {
+			model: this.model,
+			prompt,
+			experimental_generateMessageId: () => `${sessionId}-${crypto.randomUUID()}`,
+			...options,
+		};
+
+		// Enrich with tools via middleware
+		this.enrichParamsWithTools(params);
+
+		// Call AI SDK v5 streamText - no casting needed!
+		return streamText(params);
+	}
+
+	/**
+	 * Common logic to enrich parameters with tools via middleware
+	 */
+	private enrichParamsWithTools(params: StreamTextWithMessagesParams | StreamTextWithPromptParams): void {
+		// Apply middleware transformations for tools
+		// Note: If model is a string and we have middleware, we can only apply tool transformations
+		// The wrapLanguageModel middleware (wrapGenerate, wrapStream) only works with LanguageModelV2 objects
 		for (const middleware of this.middleware) {
 			if (middleware.transformStreamTextTools) {
 				params.tools = middleware.transformStreamTextTools(params.tools);
-				console.log('Transforming tools', params.tools);
+				console.debug('Transforming tools with middleware:', middleware.name || 'unnamed');
 			}
 		}
-
-		// Call streamText with transformed parameters
-		return streamText(params);
 	}
 }
