@@ -30,7 +30,7 @@ describe("CLI Integration", () => {
   it("should handle install command with dry-run", async () => {
     vol.fromJSON({
       "mcp.jsonc": JSON.stringify({
-        servers: {
+        mcpServers: {
           filesystem: {
             source: "github:modelcontextprotocol/servers#filesystem",
             command: "npx @modelcontextprotocol/server-filesystem",
@@ -57,11 +57,15 @@ describe("CLI Integration", () => {
 
   it("should return available templates", () => {
     const templates = TemplateManager.getAvailableTemplates();
-    
+
     expect(templates).toHaveLength(2);
-    expect(templates.find(t => t.type === "mcp")).toBeDefined();
-    expect(templates.find(t => t.type === "agent")).toBeDefined();
-    expect(templates.find(t => t.type === "mcp")?.url).toBe("https://github.com/null-shot/typescript-mcp-template");
-    expect(templates.find(t => t.type === "agent")?.url).toBe("https://github.com/null-shot/typescript-agent-template");
+    expect(templates.find((t) => t.type === "mcp")).toBeDefined();
+    expect(templates.find((t) => t.type === "agent")).toBeDefined();
+    expect(templates.find((t) => t.type === "mcp")?.url).toBe(
+      "https://github.com/null-shot/typescript-mcp-template",
+    );
+    expect(templates.find((t) => t.type === "agent")?.url).toBe(
+      "https://github.com/null-shot/typescript-agent-template",
+    );
   });
 });

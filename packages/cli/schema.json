@@ -4,7 +4,7 @@
   "description": "Configuration schema for MCP servers with Cloudflare Workers integration",
   "type": "object",
   "properties": {
-    "servers": {
+    "mcpServers": {
       "type": "object",
       "description": "Map of server names to their configurations",
       "patternProperties": {
@@ -76,6 +76,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["servers"],
+  "required": ["mcpServers"],
   "additionalProperties": false
 }
