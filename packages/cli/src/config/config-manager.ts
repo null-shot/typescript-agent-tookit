@@ -10,7 +10,7 @@ const logger = new Logger();
 const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
   type: "object",
   properties: {
-    servers: {
+    mcpServers: {
       type: "object",
       patternProperties: {
         "^[a-zA-Z][a-zA-Z0-9_-]*$": {
@@ -19,10 +19,10 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
             source: { type: "string", nullable: true },
             command: { type: "string", nullable: true },
             url: { type: "string", nullable: true },
-            type: { 
-              type: "string", 
-              enum: ["worker", "do"], 
-              nullable: true 
+            type: {
+              type: "string",
+              enum: ["worker", "do"],
+              nullable: true,
             },
             env: {
               type: "array",
@@ -43,7 +43,7 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
                 headers: {
                   type: "object",
                   patternProperties: {
-                    "^[a-zA-Z][a-zA-Z0-9-_]*$": { type: "string" }
+                    "^[a-zA-Z][a-zA-Z0-9-_]*$": { type: "string" },
                   },
                   required: [],
                   additionalProperties: false,
@@ -57,13 +57,13 @@ const mcpConfigSchema: JSONSchemaType<MCPConfig> = {
           },
           required: [],
           additionalProperties: false,
-        }
+        },
       },
       required: [],
       additionalProperties: false,
     },
   },
-  required: ["servers"],
+  required: ["mcpServers"],
   additionalProperties: false,
 } as const;
 
@@ -90,7 +90,9 @@ export class ConfigManager {
       if (!this.#validate(config)) {
         const errors =
           this.#validate.errors
-            ?.map((err) => `${(err as any).instancePath || "root"}: ${err.message}`)
+            ?.map(
+              (err) => `${(err as any).instancePath || "root"}: ${err.message}`,
+            )
             .join(", ") || "Unknown validation error";
 
         throw new ConfigError(
@@ -100,10 +102,16 @@ export class ConfigManager {
       }
 
       // Custom validation: ensure each server has at least one of source, command, or url
-      for (const [serverName, serverConfig] of Object.entries(config.servers)) {
-        if (!serverConfig.source && !serverConfig.command && !serverConfig.url) {
+      for (const [serverName, serverConfig] of Object.entries(
+        config.mcpServers,
+      )) {
+        if (
+          !serverConfig.source &&
+          !serverConfig.command &&
+          !serverConfig.url
+        ) {
           throw new ConfigError(
-            `Invalid configuration: /servers/${serverName}: must have at least one of 'source', 'command', or 'url'`,
+            `Invalid configuration: /mcpServers/${serverName}: must have at least one of 'source', 'command', or 'url'`,
             "Each server must specify either a source (for installation), command (for execution), or url (for connection)",
           );
         }
@@ -124,17 +132,21 @@ export class ConfigManager {
     if (!this.#validate(config)) {
       const errors =
         this.#validate.errors
-          ?.map((err) => `${(err as any).instancePath || "root"}: ${err.message}`)
+          ?.map(
+            (err) => `${(err as any).instancePath || "root"}: ${err.message}`,
+          )
           .join(", ") || "Unknown validation error";
 
       throw new ConfigError(`Invalid configuration: ${errors}`);
     }
 
     // Custom validation: ensure each server has at least one of source, command, or url
-    for (const [serverName, serverConfig] of Object.entries(config.servers)) {
+    for (const [serverName, serverConfig] of Object.entries(
+      config.mcpServers,
+    )) {
       if (!serverConfig.source && !serverConfig.command && !serverConfig.url) {
         throw new ConfigError(
-          `Invalid configuration: /servers/${serverName}: must have at least one of 'source', 'command', or 'url'`,
+          `Invalid configuration: /mcpServers/${serverName}: must have at least one of 'source', 'command', or 'url'`,
         );
       }
     }
@@ -182,7 +194,7 @@ export class ConfigManager {
     }
 
     const defaultConfig: MCPConfig = {
-      servers: {
+      mcpServers: {
         filesystem: {
           source: "github:modelcontextprotocol/servers#filesystem",
           command: "npx -y @modelcontextprotocol/server-filesystem",
@@ -200,23 +212,23 @@ export class ConfigManager {
 
   async addServer(name: string, config: MCPServerConfig): Promise<void> {
     const currentConfig = await this.load();
-    currentConfig.servers[name] = config;
+    currentConfig.mcpServers[name] = config;
     await this.save(currentConfig);
   }
 
   async removeServer(name: string): Promise<void> {
     const currentConfig = await this.load();
-    delete currentConfig.servers[name];
+    delete currentConfig.mcpServers[name];
     await this.save(currentConfig);
   }
 
   async getServer(name: string): Promise<MCPServerConfig | undefined> {
     const config = await this.load();
-    return config.servers[name];
+    return config.mcpServers[name];
   }
 
   async listServers(): Promise<string[]> {
     const config = await this.load();
-    return Object.keys(config.servers);
+    return Object.keys(config.mcpServers);
   }
 }

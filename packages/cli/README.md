@@ -27,27 +27,13 @@ pnpm add -g @nullshot/cli
 
 ## 🏁 Quick Start
 
-### 1. Initialize Your Project
+### 1. Configure Your Services
 
-```bash
-# Initialize configuration and add npm scripts
-nullshot init
-```
-
-This creates:
-
-- `mcp.json` - MCP server configuration
-- Adds `dev:nullshot` script to package.json
-- Adds `postinstall` script for automatic dependency management
-- Optionally configures `cf-typegen` for Cloudflare Workers types
-
-### 2. Configure Your Services
-
-Edit the generated `mcp.json`:
+Create an `mcp.json` configuration file:
 
 ```json
 {
-  "servers": {
+  "mcpServers": {
     "filesystem": {
       "source": "github:modelcontextprotocol/servers#filesystem",
       "command": "npx -y @modelcontextprotocol/server-filesystem"
@@ -64,7 +50,7 @@ Edit the generated `mcp.json`:
 }
 ```
 
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 ```bash
 # Install all configured servers and dependencies
@@ -79,13 +65,11 @@ This will:
 - Generate service bindings in your `wrangler.jsonc`
 - Generate Cloudflare Workers types with `cf-typegen`
 
-### 4. Start Development
+### 3. Start Development
 
 ```bash
 # Run all services in development mode
 nullshot dev
-# or use the generated npm script
-npm run dev:nullshot
 ```
 
 ## 📋 Commands Reference
@@ -100,24 +84,6 @@ All commands support these global options:
 -c, --config <path>  Path to config file (default: "mcp.json")
 --cwd <path>         Run as if nullshot was started in the specified directory
 ```
-
-### `nullshot init`
-
-Initialize a new project configuration.
-
-```bash
-nullshot init [options]
-
-Options:
-  --force              Overwrite existing configuration file
-```
-
-**What it does:**
-
-- Creates `mcp.json` configuration file (skips if exists)
-- Adds `dev:nullshot` and `postinstall` scripts to `package.json`
-- Prompts to add `cf-typegen` script if not present
-- Sets up automated dependency management workflow
 
 ### `nullshot install`
 
@@ -193,27 +159,13 @@ Validate your MCP configuration file against the schema.
 nullshot validate
 ```
 
-### `nullshot run`
-
-Run MCP servers with dedicated workers using service discovery.
-
-```bash
-nullshot run [options]
-
-Options:
-  --server <name>         Run specific server by name
-  --port <port>          Port for local development (default: 8787)
-  --env <environment>    Environment to run in (default: development)
-  --watch               Enable watch mode for development
-```
-
 ## 📁 Configuration
 
 ### MCP Configuration (`mcp.json`)
 
 ```json
 {
-  "servers": {
+  "mcpServers": {
     "<serverName>": {
       "source": "string", // Source URL (GitHub, npm, etc.)
       "command": "string", // Startup command
@@ -302,16 +254,13 @@ The CLI stores dependency metadata in your `package.json`:
 ### Standard Workflow
 
 ```bash
-# 1. Initialize project
-nullshot init
+# 1. Configure services in mcp.json
+# Create mcp.json with your desired services
 
-# 2. Configure services in mcp.json
-# Edit mcp.json with your desired services
-
-# 3. Install dependencies and configure services
+# 2. Install dependencies and configure services
 nullshot install
 
-# 4. Start development
+# 3. Start development
 nullshot dev
 ```
 
@@ -349,7 +298,7 @@ Example multi-service setup:
 ```bash
 # Install multiple related services
 echo '{
-  "servers": {
+  "mcpServers": {
     "auth-service": {
       "source": "github:myorg/mcp-auth#main",
       "command": "node dist/auth.js"
@@ -581,14 +530,14 @@ nullshot list --cwd ./my-project --verbose
 Run commands in different directories:
 
 ```bash
-# Initialize project in specific directory
-nullshot init --cwd ./my-new-project
-
 # Install dependencies for project in different location
 nullshot install --cwd ../other-project
 
 # Run development server from different directory
 nullshot dev --cwd ./projects/main-app
+
+# Validate configuration in specific directory
+nullshot validate --cwd ./my-project
 ```
 
 ### Selective Updates

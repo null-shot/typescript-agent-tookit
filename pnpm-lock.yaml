@@ -22,8 +22,8 @@ catalogs:
       specifier: ~3.2.0
       version: 3.2.4
     ai:
-      specifier: ^5.0.25
-      version: 5.0.25
+      specifier: ^5.0.27
+      version: 5.0.27
     esbuild:
       specifier: 0.25.4
       version: 0.25.4
@@ -94,20 +94,20 @@ importers:
   examples/dependent-agent:
     dependencies:
       '@ai-sdk/anthropic':
-        specifier: ^1.2.12
-        version: 1.2.12(zod@3.25.76)
+        specifier: ^2.0.9
+        version: 2.0.9(zod@3.25.76)
       '@nullshot/agent':
         specifier: workspace:*
         version: link:../../packages/agent
       ai:
         specifier: 'catalog:'
-        version: 5.0.25(zod@3.25.76)
+        version: 5.0.27(zod@3.25.76)
       hono:
         specifier: ^4.7.11
         version: 4.8.4
       solitary-bar-c2b2:
         specifier: github:null-shot/typescript-mcp-template
-        version: https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/2a8f898d4cf08dfd3c4a50ae96a7f299bb920590
+        version: mcp-template@https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/22d3cf69184ed66872279e21e134eb92af29dc83
     devDependencies:
       '@nullshot/cli':
         specifier: workspace:*
@@ -127,7 +127,7 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 'catalog:'
         version: 1.17.4
-      '@null-shot/mcp':
+      '@nullshot/mcp':
         specifier: workspace:*
         version: link:../../packages/mcp
       zod:
@@ -137,7 +137,7 @@ importers:
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
         version: 0.8.66(@cloudflare/workers-types@4.20250826.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4)
-      '@null-shot/test-utils':
+      '@nullshot/test-utils':
         specifier: workspace:*
         version: link:../../packages/test-utils
       '@types/chai':
@@ -242,7 +242,7 @@ importers:
         version: link:../../packages/cli
       ai:
         specifier: 'catalog:'
-        version: 5.0.25(zod@3.25.76)
+        version: 5.0.27(zod@3.25.76)
       hono:
         specifier: ^4.7.7
         version: 4.8.2
@@ -270,7 +270,7 @@ importers:
         version: 0.0.113(@cloudflare/workers-types@4.20250826.0)(react@19.1.0)
       ai:
         specifier: 'catalog:'
-        version: 5.0.25(zod@3.25.76)
+        version: 5.0.27(zod@3.25.76)
       hono:
         specifier: ^4.7.7
         version: 4.8.2
@@ -488,7 +488,7 @@ importers:
         version: 0.0.75(@cloudflare/workers-types@4.20250826.0)(react@19.1.0)
       ai:
         specifier: 'catalog:'
-        version: 5.0.25(zod@3.25.76)
+        version: 5.0.27(zod@3.25.76)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -599,8 +599,14 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/gateway@1.0.14':
-    resolution: {integrity: sha512-qD5yn7JsQp6hP85YD3LPv6h4Obef0NZnGah/8KT0kMCgkwBhFNKWgXLbsn04K26RkgEqAc7G0Q61pC6ZtjeF6Q==}
+  '@ai-sdk/anthropic@2.0.9':
+    resolution: {integrity: sha512-1kQgL2A3PeqfEcHHmqy4NxRc8rbgLS71bHBuvDFfDz3VAAyndkilPMCLNDSP2mJVGAej2EMWJ1sShRAxzn70jA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4
+
+  '@ai-sdk/gateway@1.0.15':
+    resolution: {integrity: sha512-xySXoQ29+KbGuGfmDnABx+O6vc7Gj7qugmj1kGpn0rW0rQNn6UKUuvscKMzWyv1Uv05GyC1vqHq8ZhEOLfXscQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4
@@ -1980,6 +1986,9 @@ packages:
   '@nolyfill/is-core-module@1.0.39':
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
+
+  '@nullshot/mcp@0.3.2':
+    resolution: {integrity: sha512-bDDmEgHoDYYm6/cP7J80PF+ru+f2r9Mr7gFHgdBa/aFyD71jh/SIbmgbjZNce4J5sn606UbK+cFXK3iWylxnOw==}
 
   '@octokit/auth-token@5.1.2':
     resolution: {integrity: sha512-JcQDsBdg49Yky2w2ld20IHAlwr8d/d8N6NiOXbtuoPCqzbsiJgF633mVUw3x4mo0H5ypataQIX7SFu3yy44Mpw==}
@@ -3506,9 +3515,6 @@ packages:
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
-  '@xava-labs/mcp@0.1.1':
-    resolution: {integrity: sha512-ZztwF5RzuAZjo5DgjV14uX2Hav8GGFNRoinR/xjbWhAYjIVyzbN8LiObC1Rrhh7UsfYJ311sqHqIP7mG72fhwg==}
-
   JSONStream@1.3.5:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
     hasBin: true
@@ -3571,16 +3577,6 @@ packages:
     resolution: {integrity: sha512-gOsf2YwSlleG6IjRYG2A7k0HmBMEo6qVNk9Bp/EaLgAJT5ngH6PXbqa4ItvnEwCm/velL5jAnQgsHsWnjhGmvw==}
     engines: {node: '>=18'}
 
-  ai@4.3.16:
-    resolution: {integrity: sha512-KUDwlThJ5tr2Vw0A1ZkbDKNME3wzWhuVfAOwIvFUzl1TPVDFAXDFTXio3p+jaKneB+dKNCvFFlolYmmgHttG1g==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      react: ^18 || ^19 || ^19.0.0-rc
-      zod: ^3.23.8
-    peerDependenciesMeta:
-      react:
-        optional: true
-
   ai@4.3.19:
     resolution: {integrity: sha512-dIE2bfNpqHN3r6IINp9znguYdhIOheKW2LDigAMrgt/upT3B8eBGPSCblENvaZGoq+hxaN9fSMzjWpbqloP+7Q==}
     engines: {node: '>=18'}
@@ -3591,8 +3587,8 @@ packages:
       react:
         optional: true
 
-  ai@5.0.25:
-    resolution: {integrity: sha512-c7WeAeGnWk+aKUCMgUal2Qa7POcC1/75SrrYHPhlYLWE+DJ2G0gde5TftwCEMwG+pQ6BhaTQHIAQoBR2GGNyAw==}
+  ai@5.0.27:
+    resolution: {integrity: sha512-V7I9Rvrap5+3ozAjOrETA5Mv9Z1LmQobyY13U88IkFRahFp0xrEwjvYTwjQa4q5lPgLxwKgbIZRLnZSbUQwnUg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4
@@ -5843,6 +5839,10 @@ packages:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
 
+  mcp-template@https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/22d3cf69184ed66872279e21e134eb92af29dc83:
+    resolution: {tarball: https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/22d3cf69184ed66872279e21e134eb92af29dc83}
+    version: 0.2.0
+
   media-typer@1.1.0:
     resolution: {integrity: sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==}
     engines: {node: '>= 0.8'}
@@ -7017,10 +7017,6 @@ packages:
     resolution: {integrity: sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==}
     engines: {node: '>=14.16'}
 
-  solitary-bar-c2b2@https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/2a8f898d4cf08dfd3c4a50ae96a7f299bb920590:
-    resolution: {tarball: https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/2a8f898d4cf08dfd3c4a50ae96a7f299bb920590}
-    version: 0.0.0
-
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -7984,7 +7980,13 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
       zod: 3.25.76
 
-  '@ai-sdk/gateway@1.0.14(zod@3.25.76)':
+  '@ai-sdk/anthropic@2.0.9(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.7(zod@3.25.76)
+      zod: 3.25.76
+
+  '@ai-sdk/gateway@1.0.15(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@ai-sdk/provider-utils': 3.0.7(zod@3.25.76)
@@ -9956,6 +9958,13 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
+  '@nullshot/mcp@0.3.2':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.17.4
+      hono: 4.8.4
+    transitivePeerDependencies:
+      - supports-color
+
   '@octokit/auth-token@5.1.2': {}
 
   '@octokit/auth-token@6.0.0': {}
@@ -11910,13 +11919,6 @@ snapshots:
       loupe: 3.1.4
       tinyrainbow: 2.0.0
 
-  '@xava-labs/mcp@0.1.1':
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.17.4
-      hono: 4.8.4
-    transitivePeerDependencies:
-      - supports-color
-
   JSONStream@1.3.5:
     dependencies:
       jsonparse: 1.3.1
@@ -11967,7 +11969,7 @@ snapshots:
   agents@0.0.75(@cloudflare/workers-types@4.20250826.0)(react@19.1.0):
     dependencies:
       '@modelcontextprotocol/sdk': 1.17.4
-      ai: 4.3.16(react@19.1.0)(zod@3.25.76)
+      ai: 4.3.19(react@19.1.0)(zod@3.25.76)
       cron-schedule: 5.0.4
       nanoid: 5.1.5
       partyserver: 0.0.68(@cloudflare/workers-types@4.20250826.0)
@@ -11988,18 +11990,6 @@ snapshots:
       clean-stack: 5.2.0
       indent-string: 5.0.0
 
-  ai@4.3.16(react@19.1.0)(zod@3.25.76):
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
-      '@ai-sdk/react': 1.2.12(react@19.1.0)(zod@3.25.76)
-      '@ai-sdk/ui-utils': 1.2.11(zod@3.25.76)
-      '@opentelemetry/api': 1.9.0
-      jsondiffpatch: 0.6.0
-      zod: 3.25.76
-    optionalDependencies:
-      react: 19.1.0
-
   ai@4.3.19(react@19.1.0)(zod@3.25.76):
     dependencies:
       '@ai-sdk/provider': 1.1.3
@@ -12012,9 +12002,9 @@ snapshots:
     optionalDependencies:
       react: 19.1.0
 
-  ai@5.0.25(zod@3.25.76):
+  ai@5.0.27(zod@3.25.76):
     dependencies:
-      '@ai-sdk/gateway': 1.0.14(zod@3.25.76)
+      '@ai-sdk/gateway': 1.0.15(zod@3.25.76)
       '@ai-sdk/provider': 2.0.0
       '@ai-sdk/provider-utils': 3.0.7(zod@3.25.76)
       '@opentelemetry/api': 1.9.0
@@ -14384,6 +14374,14 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
+  mcp-template@https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/22d3cf69184ed66872279e21e134eb92af29dc83:
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.17.4
+      '@nullshot/mcp': 0.3.2
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - supports-color
+
   media-typer@1.1.0: {}
 
   memfs@4.38.1:
@@ -15602,14 +15600,6 @@ snapshots:
   slash@3.0.0: {}
 
   slash@5.1.0: {}
-
-  solitary-bar-c2b2@https://codeload.github.com/null-shot/typescript-mcp-template/tar.gz/2a8f898d4cf08dfd3c4a50ae96a7f299bb920590:
-    dependencies:
-      '@modelcontextprotocol/sdk': 1.17.4
-      '@xava-labs/mcp': 0.1.1
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - supports-color
 
   source-map-js@1.2.1: {}
 

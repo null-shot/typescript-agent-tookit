@@ -20,7 +20,7 @@ export interface MCPServerConfig {
  * Full MCP configuration structure matching mcp.json format
  */
 export interface MCPConfig {
-	servers: Record<string, MCPServerConfig>;
+	mcpServers: Record<string, MCPServerConfig>;
 }
 
 /**
@@ -43,9 +43,9 @@ export class ToolboxService implements ExternalService, MiddlewareService {
 	 * Parse the MCP servers configuration from static config
 	 */
 	private parseServerConfig(): Record<string, MCPServerConfig> {
-		if (this.mcpConfig?.servers) {
+		if (this.mcpConfig?.mcpServers) {
 			console.log('🔧 Using static MCP configuration (imported mcp.json)');
-			return this.mcpConfig.servers;
+			return this.mcpConfig.mcpServers;
 		}
 
 		console.log('ℹ️  No MCP servers configured - no mcp.json provided to ToolboxService');
