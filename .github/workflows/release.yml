@@ -120,27 +120,25 @@ jobs:
             });
 
             // Create a nice markdown body
-            const body = `
-## Packages
+            const body = `## Packages
 
-- @nullshot/mcp: ${MCP_VERSION}
-- @nullshot/test-utils: ${TEST_UTILS_VERSION}
-- @nullshot/agent: ${AGENT_VERSION}
-- @nullshot/cli: ${CLI_VERSION}
+            - @nullshot/mcp: ${MCP_VERSION}
+            - @nullshot/test-utils: ${TEST_UTILS_VERSION}
+            - @nullshot/agent: ${AGENT_VERSION}
+            - @nullshot/cli: ${CLI_VERSION}
 
-## Recent Changes
+            ## Recent Changes
 
-${commits.slice(0, 5).map(commit => (
-  \`- \${commit.commit.message} (\${commit.sha.substring(0, 7)})\`
-)).join('\\n')}
-            `;
+            ${commits.slice(0, 5).map(commit => 
+              `- ${commit.commit.message} (${commit.sha.substring(0, 7)})`
+            ).join('\n')}`;
 
             // Create the release
             await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: RELEASE_TAG,
-              name: \`Release \${RELEASE_TAG}\`,
+              name: `Release ${RELEASE_TAG}`,
               body: body,
               draft: false,
               prerelease: false
