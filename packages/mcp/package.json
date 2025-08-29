@@ -1,6 +1,6 @@
 {
 	"name": "@nullshot/mcp",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"description": "Model Context Protocol (MCP) server implementation for Cloudflare Workers",
 	"type": "module",
 	"main": "dist/index.js",
