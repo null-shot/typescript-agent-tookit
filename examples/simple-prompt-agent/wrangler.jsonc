@@ -9,21 +9,21 @@
 	"compatibility_date": "2025-04-22",
 	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"durable_objects": {
 		"bindings": [
 			{
-				"name": "AgentDurableObject",
-				"class_name": "SimplePromptAgent"
-			}
-		]
+				"name": "AGENT",
+				"class_name": "SimplePromptAgent",
+			},
+		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_sqlite_classes": ["SimplePromptAgent"]
-		}
+			"new_sqlite_classes": ["SimplePromptAgent"],
+		},
 	],
 	/**
 	 * Smart Placement
@@ -42,7 +42,7 @@
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
-	"vars": { 
+	"vars": {
 		"AI_PROVIDER": "anthropic",
 		"OPEN_AI_API_KEY": "",
 		"ANTHROPIC_API_KEY": "",

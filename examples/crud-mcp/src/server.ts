@@ -9,7 +9,7 @@ import { setupServerPrompts } from "./prompts";
 /**
  * TodoMcpServer extends McpHonoServerDO for CRUD operations on todo items
  */
-export class TodoMcpServer extends McpHonoServerDO {
+export class TodoMcpServer extends McpHonoServerDO<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
   }

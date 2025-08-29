@@ -21,7 +21,7 @@ import { setupServerResources } from "./resources";
 /**
  * ExpenseMcpServer extends McpHonoServerDO for CRUD operations on expenses
  */
-export class ExpenseMcpServer extends McpHonoServerDO {
+export class ExpenseMcpServer extends McpHonoServerDO<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
   }
