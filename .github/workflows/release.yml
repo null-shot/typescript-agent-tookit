@@ -37,6 +37,8 @@ jobs:
         run: |
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
           npm config set access public
+          echo "Testing npm auth..."
+          npm whoami || echo "npm auth failed!"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
