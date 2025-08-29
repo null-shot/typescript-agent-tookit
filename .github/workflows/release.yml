@@ -55,9 +55,15 @@ jobs:
       - name: Check for changesets
         id: changesets
         run: |
-          if [ -f .changeset/*.md ]; then
+          # Count changeset files excluding README.md
+          CHANGESET_COUNT=$(find .changeset -name "*.md" -not -name "README.md" | wc -l)
+          if [ "$CHANGESET_COUNT" -gt 0 ]; then
             echo "has_changesets=true" >> $GITHUB_OUTPUT
-            echo "Changesets found, proceeding with release"
+            echo "Changesets found ($CHANGESET_COUNT files), proceeding with release"
+            # List the changeset files for debugging
+            find .changeset -name "*.md" -not -name "README.md" | while read file; do
+              echo "Found changeset: $file"
+            done
           else
             echo "has_changesets=false" >> $GITHUB_OUTPUT  
             echo "No changesets found, skipping release"
