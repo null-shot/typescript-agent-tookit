@@ -1,5 +1,11 @@
 # @nullshot/test-utils
 
+## 0.3.2
+
+### Patch Changes
+
+- e4d4d56: Minor bump to sync with git repository
+
 ## 0.3.1
 
 ### Patch Changes

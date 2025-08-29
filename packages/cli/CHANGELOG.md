@@ -1,5 +1,11 @@
 # @nullshot/cli
 
+## 0.2.4
+
+### Patch Changes
+
+- e4d4d56: Minor bump to sync with git repository
+
 ## 0.2.3
 
 ### Patch Changes
