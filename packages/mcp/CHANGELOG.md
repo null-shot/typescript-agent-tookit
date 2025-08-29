@@ -1,5 +1,11 @@
 # @nullshot/mcp
 
+## 0.3.6
+
+### Patch Changes
+
+- 2c889a5: Introduce Env for Parent classes
+
 ## 0.3.5
 
 ### Patch Changes
