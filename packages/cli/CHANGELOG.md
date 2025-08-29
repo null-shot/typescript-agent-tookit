@@ -1,5 +1,11 @@
 # @nullshot/cli
 
+## 0.2.5
+
+### Patch Changes
+
+- 829fe69: Bump versions again.
+
 ## 0.2.4
 
 ### Patch Changes

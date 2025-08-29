@@ -1,5 +1,11 @@
 # @nullshot/test-utils
 
+## 0.3.3
+
+### Patch Changes
+
+- 829fe69: Bump versions again.
+
 ## 0.3.2
 
 ### Patch Changes

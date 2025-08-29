@@ -1,5 +1,11 @@
 # @nullshot/mcp
 
+## 0.3.5
+
+### Patch Changes
+
+- 829fe69: Bump versions again.
+
 ## 0.3.4
 
 ### Patch Changes
