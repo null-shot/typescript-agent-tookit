@@ -46,65 +46,66 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
 
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Check for changesets
+        id: changesets
+        run: |
+          if [ -f .changeset/*.md ]; then
+            echo "has_changesets=true" >> $GITHUB_OUTPUT
+            echo "Changesets found, proceeding with release"
+          else
+            echo "has_changesets=false" >> $GITHUB_OUTPUT  
+            echo "No changesets found, skipping release"
+          fi
+
       - name: Version and Publish
-        id: publish
+        if: steps.changesets.outputs.has_changesets == 'true'
         run: |
           # Apply changesets (update version numbers)
           pnpm changeset version
-
+          
+          # Check if any versions were actually changed
+          if git diff --quiet; then
+            echo "No version changes to commit"
+            exit 0
+          fi
+          
           # Extract versions for release notes
           MCP_VERSION=$(node -p "require('./packages/mcp/package.json').version")
           TEST_UTILS_VERSION=$(node -p "require('./packages/test-utils/package.json').version")
           AGENT_VERSION=$(node -p "require('./packages/agent/package.json').version")
           CLI_VERSION=$(node -p "require('./packages/cli/package.json').version")
-          echo "MCP_VERSION=${MCP_VERSION}" >> $GITHUB_OUTPUT
-          echo "TEST_UTILS_VERSION=${TEST_UTILS_VERSION}" >> $GITHUB_OUTPUT
-          echo "AGENT_VERSION=${AGENT_VERSION}" >> $GITHUB_OUTPUT
-          echo "CLI_VERSION=${CLI_VERSION}" >> $GITHUB_OUTPUT
-          echo "RELEASE_TAG=v${MCP_VERSION}" >> $GITHUB_OUTPUT
+          
+          echo "MCP_VERSION=${MCP_VERSION}" >> $GITHUB_ENV
+          echo "TEST_UTILS_VERSION=${TEST_UTILS_VERSION}" >> $GITHUB_ENV
+          echo "AGENT_VERSION=${AGENT_VERSION}" >> $GITHUB_ENV
+          echo "CLI_VERSION=${CLI_VERSION}" >> $GITHUB_ENV
+          echo "RELEASE_TAG=v${MCP_VERSION}" >> $GITHUB_ENV
 
           # Commit the version updates
           git add .
-          git commit -m "chore(release): version packages" || echo "No changes to commit"
+          git commit -m "chore(release): version packages"
 
-          # Build once more to ensure latest versions are included
+          # Build again with updated versions
           pnpm build
 
-          # Run tests
-          pnpm test
+          # Publish packages
+          pnpm changeset publish
 
-          # Manually publish each package with npm
-          echo "Publishing packages directly with npm..."
-
-          # Publish test-utils
-          cd packages/test-utils
-          npm publish --access public || echo "Failed to publish test-utils, may already exist"
-
-          # Publish mcp
-          cd ../mcp
-          npm publish --access public || echo "Failed to publish mcp, may already exist"
-
-          # Publish agent
-          cd ../agent
-          npm publish --access public || echo "Failed to publish agent, may already exist"
-
-          # Publish CLI
-          cd ../cli
-          npm publish --access public || echo "Failed to publish cli, may already exist"
-
-          cd ../..
-
-          # Push the version updates and tags
-          git push origin main
-
-          # Create and push a version tag
+          # Push the version updates and create tag
           git tag -a "v${MCP_VERSION}" -m "Release v${MCP_VERSION}"
-          git push --tags
+          git push origin main --tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
+        if: steps.changesets.outputs.has_changesets == 'true' && env.RELEASE_TAG != ''
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -120,18 +121,18 @@ jobs:
 
             // Create a nice markdown body
             const body = `
-            ## Packages
+## Packages
 
-            - @null-shot/mcp: ${MCP_VERSION}
-            - @null-shot/test-utils: ${TEST_UTILS_VERSION}
-            - @null-shot/agent: ${AGENT_VERSION}
-            - @null-shot/cli: ${CLI_VERSION}
+- @nullshot/mcp: ${MCP_VERSION}
+- @nullshot/test-utils: ${TEST_UTILS_VERSION}
+- @nullshot/agent: ${AGENT_VERSION}
+- @nullshot/cli: ${CLI_VERSION}
 
-            ## Recent Changes
+## Recent Changes
 
-            ${commits.slice(0, 5).map(commit => (
-              `- ${commit.commit.message} (${commit.sha.substring(0, 7)})`
-            )).join('\n')}
+${commits.slice(0, 5).map(commit => (
+  \`- \${commit.commit.message} (\${commit.sha.substring(0, 7)})\`
+)).join('\\n')}
             `;
 
             // Create the release
@@ -139,14 +140,8 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: RELEASE_TAG,
-              name: `Release ${RELEASE_TAG}`,
+              name: \`Release \${RELEASE_TAG}\`,
               body: body,
               draft: false,
               prerelease: false
             });
-        env:
-          RELEASE_TAG: ${{ steps.publish.outputs.RELEASE_TAG }}
-          MCP_VERSION: ${{ steps.publish.outputs.MCP_VERSION }}
-          TEST_UTILS_VERSION: ${{ steps.publish.outputs.TEST_UTILS_VERSION }}
-          AGENT_VERSION: ${{ steps.publish.outputs.AGENT_VERSION }}
-          CLI_VERSION: ${{ steps.publish.outputs.CLI_VERSION }}
