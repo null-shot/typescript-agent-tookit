@@ -1,5 +1,11 @@
 # @nullshot/mcp
 
+## 0.3.4
+
+### Patch Changes
+
+- e4d4d56: Minor bump to sync with git repository
+
 ## 0.3.3
 
 ### Patch Changes
