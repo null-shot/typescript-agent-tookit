@@ -78,10 +78,10 @@ wrangler d1 migrations apply browser-mcp-db --local
 
 ```bash
 # Start development server with MCP Inspector
-ppnpm run dev
+pnpm run dev
 
 # Or start just the worker
-ppnpm run dev:worker-only
+pnpm run dev:worker-only
 
 # Or deploy to Cloudflare Workers
 pnpm run deploy
