@@ -1,0 +1,37 @@
+{
+  "name": "browser-mcp-example",
+  "version": "1.0.0",
+  "description": "Browser Rendering MCP server for web scraping and automation",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "wrangler dev --remote",
+    "dev:local": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^1.0.4",
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@nullshot/mcp": "workspace:*",
+    "hono": "^4.6.11"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@nullshot/test-utils": "workspace:*",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wrangler": "^4.33.1"
+  },
+  "keywords": [
+    "mcp",
+    "browser-rendering",
+    "web-scraping",
+    "automation",
+    "cloudflare-workers"
+  ]
+}

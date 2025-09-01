@@ -1,0 +1,9 @@
+{
+  "name": "browser-simple-test",
+  "main": "test-simple.js",
+  "compatibility_date": "2025-02-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "browser": {
+    "binding": "MYBROWSER"
+  }
+}
