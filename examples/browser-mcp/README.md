@@ -77,11 +77,132 @@ wrangler d1 migrations apply browser-mcp-db --local
 ### 4. Development
 
 ```bash
-# Start development server
+# Start development server with MCP Inspector
 npm run dev
+
+# Or start just the worker
+npm run dev:worker-only
 
 # Or deploy to Cloudflare Workers
 npm run deploy
+```
+
+## Using the MCP Inspector
+
+The Browser MCP server is perfect for testing with the MCP Inspector, which provides a visual interface for exploring and testing MCP capabilities.
+
+### 1. Start with Inspector
+
+```bash
+npm run dev
+```
+
+This automatically starts both:
+- **MCP Inspector** at `http://localhost:6274`
+- **Browser MCP Worker** at `http://127.0.0.1:8787`
+
+### 2. Configure Inspector
+
+1. Open `http://localhost:6274` in your browser
+2. Use the session token if prompted
+3. Set transport to: **"Streamable HTTP"**
+4. Enter Worker URL: `http://127.0.0.1:8787`
+
+### 3. Explore Capabilities
+
+#### 🔧 **8 Browser Tools Available:**
+- **`navigate`** - Navigate to websites with custom viewports
+- **`screenshot`** - Take visual screenshots (you can see them!)
+- **`extract_text`** - Extract content using CSS selectors
+- **`extract_links`** - Extract and filter links
+- **`interact`** - Click, fill forms, scroll, hover
+- **`wait_for`** - Wait for elements, network, conditions
+- **`evaluate_js`** - Execute custom JavaScript
+- **`close_session`** - Manage browser sessions
+
+#### 📊 **5 Data Resources:**
+- **`browser://sessions`** - Active browser sessions
+- **`browser://status`** - System health and metrics
+- **`browser://results`** - Recent scraping results
+- **`browser://cache`** - Page cache statistics
+- **`browser://patterns`** - Extraction patterns
+
+#### 🧠 **3 AI Prompts:**
+- **`web_scraper`** - Generate scraping strategies
+- **`automation_flow`** - Create automation workflows
+- **`data_extractor`** - Design extraction patterns
+
+### 4. Recommended Test Scenarios
+
+#### **Scenario A: Visual Web Scraping**
+```json
+// 1. Navigate to Hacker News
+{
+  "name": "navigate",
+  "arguments": {
+    "url": "https://news.ycombinator.com",
+    "viewport": {"width": 1280, "height": 720}
+  }
+}
+
+// 2. Take a screenshot (you'll see it in Inspector!)
+{
+  "name": "screenshot", 
+  "arguments": {
+    "sessionId": "<from_step_1>",
+    "fullPage": false
+  }
+}
+
+// 3. Extract headlines
+{
+  "name": "extract_text",
+  "arguments": {
+    "sessionId": "<from_step_1>",
+    "selectors": {
+      "headlines": ".titleline > a"
+    },
+    "multiple": true
+  }
+}
+```
+
+#### **Scenario B: Weather Data**
+```json
+// Get Hong Kong weather
+{
+  "name": "navigate",
+  "arguments": {
+    "url": "https://wttr.in/Hong+Kong?format=j1"
+  }
+}
+```
+
+#### **Scenario C: AI Strategy Generation**
+```json
+// Generate scraping strategy
+{
+  "name": "web_scraper",
+  "arguments": {
+    "url": "https://example-ecommerce.com",
+    "data_requirements": "product names, prices, ratings",
+    "site_type": "e-commerce",
+    "complexity": "medium"
+  }
+}
+```
+
+### 5. Alternative Startup Options
+
+```bash
+# Start only the worker (for external Inspector)
+npm run dev:worker-only
+
+# Start only the Inspector (for external worker)
+npm run dev:inspector-only
+
+# Start locally without remote Browser Rendering
+npm run dev:local
 ```
 
 ## Usage Examples

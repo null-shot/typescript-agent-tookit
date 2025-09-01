@@ -2,6 +2,7 @@ interface Env {
   MYBROWSER: Fetcher; // Browser Rendering binding
   DB: D1Database;
   CACHE_BUCKET?: R2Bucket; // Optional for testing
+  BROWSER_MCP_SERVER: DurableObjectNamespace<import('./src/server.js').BrowserMcpServer>;
   
   // Environment variables
   MAX_CONCURRENT_SESSIONS: string;

@@ -12,6 +12,20 @@
 	"browser": {
 		"binding": "MYBROWSER"
 	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "BROWSER_MCP_SERVER",
+				"class_name": "BrowserMcpServer"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["BrowserMcpServer"]
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "DB",
