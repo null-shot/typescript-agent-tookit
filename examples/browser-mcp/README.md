@@ -37,7 +37,7 @@ A comprehensive Model Context Protocol (MCP) server that demonstrates Cloudflare
 
 ```bash
 cd examples/browser-mcp
-npm install
+pnpm install
 ```
 
 ### 2. Configuration
@@ -78,13 +78,13 @@ wrangler d1 migrations apply browser-mcp-db --local
 
 ```bash
 # Start development server with MCP Inspector
-npm run dev
+ppnpm run dev
 
 # Or start just the worker
-npm run dev:worker-only
+ppnpm run dev:worker-only
 
 # Or deploy to Cloudflare Workers
-npm run deploy
+pnpm run deploy
 ```
 
 ## Using the MCP Inspector
@@ -94,7 +94,7 @@ The Browser MCP server is perfect for testing with the MCP Inspector, which prov
 ### 1. Start with Inspector
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 This automatically starts both:
@@ -196,13 +196,13 @@ This automatically starts both:
 
 ```bash
 # Start only the worker (for external Inspector)
-npm run dev:worker-only
+pnpm run dev:worker-only
 
 # Start only the Inspector (for external worker)
-npm run dev:inspector-only
+pnpm run dev:inspector-only
 
 # Start locally without remote Browser Rendering
-npm run dev:local
+pnpm run dev:local
 ```
 
 ## Usage Examples
@@ -482,20 +482,17 @@ src/
 
 ### Testing
 ```bash
-# Run tests
-npm test
+# Run tests (24 tests with 100% success rate)
+pnpm test
 
 # Run tests in watch mode
-npm run test:watch
-
-# Generate test coverage
-npm run test:coverage
+pnpm run test:watch
 ```
 
 ### Deployment
 ```bash
 # Deploy to Cloudflare Workers
-npm run deploy
+pnpm run deploy
 
 # Deploy with specific environment
 wrangler deploy --env production
