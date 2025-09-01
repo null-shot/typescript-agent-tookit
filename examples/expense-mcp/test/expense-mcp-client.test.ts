@@ -55,10 +55,12 @@ describe('Expense MCP Client Integration Tests', () => {
     return new WorkerSSEClientTransport(url, ctx);
   }
   
-  it('should initialize the client properly', () => {
+  it('should initialize the client properly', async () => {
     expect(client).toBeDefined();
     const clientOptions = client.constructor.name;
-    expect(clientOptions).toBe('Client');
+    expect(clientOptions).toBe('Client'); 
+    await waitOnExecutionContext(ctx);
+
   });
   
   it('should successfully connect to the expense MCP server', async () => {

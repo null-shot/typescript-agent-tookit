@@ -55,7 +55,10 @@
     "prepare": "pnpm run build",
     "prepublishOnly": "pnpm run build && pnpm run test",
     "format": "prettier --write src/**/*.ts",
-    "format:check": "prettier --check src/**/*.ts"
+    "format:check": "prettier --check src/**/*.ts",
+    "dev:nullshot": "nullshot dev",
+    "postinstall": "nullshot install",
+    "cf-typegen": "wrangler types"
   },
   "license": "MIT",
   "devDependencies": {
@@ -77,6 +80,16 @@
     "ora": "^8.2.0",
     "package-manager-detector": "^1.3.0",
     "prompts": "^2.4.2",
-    "simple-git": "^3.27.0"
+    "simple-git": "^3.27.0",
+    "solitary-bar-c2b2": "github:null-shot/typescript-mcp-template#main"
+  },
+  "mcpServers": {
+    "mcp-template": {
+      "source": "https://github.com/null-shot/typescript-mcp-template.git#main",
+      "installedAt": "2025-08-28T02:09:59.571Z",
+      "packageName": "solitary-bar-c2b2",
+      "hasWranglerConfig": true,
+      "serviceName": "mcp"
+    }
   }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "mcp-worker",
+  "compatibility_date": "2025-08-28",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "services": [
+    {
+      "binding": "MCP_SERVICE",
+      "service": "mcp"
+    }
+  ],
+  "vars": {}
+}
