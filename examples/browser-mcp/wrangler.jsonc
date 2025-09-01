@@ -1,0 +1,43 @@
+{
+	"name": "browser-mcp-server",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-02-11",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"browser": {
+		"binding": "MYBROWSER"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "BROWSER_MCP_SERVER",
+				"class_name": "BrowserMcpServer"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["BrowserMcpServer"]
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "browser-mcp-db",
+			"database_id": "3ad09005-fa02-4df2-a8ff-5fb665d6c247"
+		}
+	],
+
+	"vars": {
+		"MAX_CONCURRENT_SESSIONS": "5",
+		"SESSION_TIMEOUT_MS": "300000",
+		"CACHE_TTL_HOURS": "24",
+		"MAX_PAGE_SIZE_MB": "10"
+	}
+}
