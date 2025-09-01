@@ -64,8 +64,7 @@ if (!PROXY_ID) {
 
 // Construct MCP_PROXY_URL with proxyId and configurable host
 const BASE_MCP_PROXY_URL =
-  process.env.MCP_PROXY_URL ||
-  `ws://${MCP_SERVER_HOST}/api/remote-container/ws`;
+  process.env.MCP_PROXY_URL || `ws://${MCP_SERVER_HOST}/remote-container/ws`;
 const url = new URL(BASE_MCP_PROXY_URL);
 url.searchParams.set("proxyId", PROXY_ID);
 const MCP_PROXY_URL = url.toString();
