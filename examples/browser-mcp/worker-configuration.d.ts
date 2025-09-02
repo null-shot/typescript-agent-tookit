@@ -9,4 +9,5 @@ interface Env {
   SESSION_TIMEOUT_MS: string;
   CACHE_TTL_HOURS: string;
   MAX_PAGE_SIZE_MB: string;
+  BROWSER_MODE: string;
 }

@@ -2,6 +2,25 @@
 
 A comprehensive Model Context Protocol (MCP) server that demonstrates Cloudflare Browser Rendering capabilities for web scraping, automation, and data extraction tasks.
 
+## ⚠️ IMPORTANT: Browser Rendering Quota Limits
+
+**🚨 Cloudflare Browser Rendering has a 10-minute daily quota limit that applies to ALL usage:**
+
+- ✅ **Development (`pnpm dev`)** → Uses quota
+- ✅ **Production deployment** → Uses quota  
+- ✅ **Local development (`wrangler dev`)** → **STILL uses quota!**
+- ⚠️ **No unlimited local testing available** - all browser automation counts against your daily limit
+
+**Quota Behavior:**
+- **Daily Reset:** Quota resets every 24 hours (typically midnight UTC)
+- **Account-Wide:** Shared across all workers in your Cloudflare account
+- **Error Message:** `"Browser Rendering quota exceeded"` or `"Browser time limit exceeded for today"`
+
+**Development Strategy:**
+- Use quota sparingly during development
+- Save quota for final testing and demos
+- Consider using mock data for iterative development
+
 ## Features
 
 ### 🌐 Browser Automation Tools
@@ -74,370 +93,152 @@ wrangler d1 create browser-mcp-db
 wrangler d1 migrations apply browser-mcp-db --local
 ```
 
-### 4. Development
+### 4. Development Options
 
+⚠️ **All options below use the same 10-minute daily quota:**
+
+#### **🚀 Full Development Stack (Recommended)**
 ```bash
-# Start development server with MCP Inspector
-pnpm run dev
+# Start both MCP Inspector + Worker (USES QUOTA)
+pnpm dev
+```
+**Uses:** Browser Rendering quota (10min/day)  
+**Benefits:** Complete testing environment with visual interface
 
-# Or start just the worker
+#### **☁️ Worker Only**
+```bash
+# Start just the worker (USES QUOTA)
 pnpm run dev:worker-only
+```
+**Uses:** Browser Rendering quota (10min/day)  
+**Benefits:** Worker testing without inspector overhead
 
-# Or deploy to Cloudflare Workers
+#### **🧪 Inspector Only**
+```bash
+# Start just MCP Inspector (no quota usage)
+pnpm run dev:inspector-only
+```
+**Uses:** No quota (connect to remote workers)  
+**Benefits:** Test against deployed workers
+
+#### **🚀 Deploy to Production**
+```bash
 pnpm run deploy
 ```
 
 ## Using the MCP Inspector
 
-The Browser MCP server is perfect for testing with the MCP Inspector, which provides a visual interface for exploring and testing MCP capabilities.
+### Connection Options
 
-### 1. Start with Inspector
-
-```bash
-pnpm run dev
+#### **Option 1: Local Development (Uses Quota)**
 ```
+Transport: SSE
+URL: http://localhost:8787/sse
+```
+**Pros:** Local development, faster iteration  
+**Cons:** Uses your daily 10-minute quota
 
-This automatically starts both:
-- **MCP Inspector** at `http://localhost:6274`
-- **Browser MCP Worker** at `http://127.0.0.1:8787`
+#### **Option 2: Remote Production (Uses Quota)**
+```
+Transport: SSE  
+URL: https://your-worker.workers.dev/sse
+```
+**Pros:** Production environment testing  
+**Cons:** Uses your daily 10-minute quota
 
-### 2. Configure Inspector
 
-1. Open `http://localhost:6274` in your browser
-2. Use the session token if prompted
-3. Set transport to: **"Streamable HTTP"**
-4. Enter Worker URL: `http://127.0.0.1:8787`
 
-### 3. Explore Capabilities
+### Quota Management Tips
 
-#### 🔧 **8 Browser Tools Available:**
-- **`navigate`** - Navigate to websites with custom viewports
-- **`screenshot`** - Take visual screenshots (you can see them!)
-- **`extract_text`** - Extract content using CSS selectors
-- **`extract_links`** - Extract and filter links
-- **`interact`** - Click, fill forms, scroll, hover
-- **`wait_for`** - Wait for elements, network, conditions
-- **`evaluate_js`** - Execute custom JavaScript
-- **`close_session`** - Manage browser sessions
+1. **🎯 Focus Your Testing**
+   - Plan your tests carefully
+   - Use simple pages (e.g., `httpbin.org/html`) for basic functionality
+   - Save complex sites for final validation
 
-#### 📊 **5 Data Resources:**
-- **`browser://sessions`** - Active browser sessions
-- **`browser://status`** - System health and metrics
-- **`browser://results`** - Recent scraping results
-- **`browser://cache`** - Page cache statistics
-- **`browser://patterns`** - Extraction patterns
+2. **⏰ Time Your Usage**
+   - Check when your quota resets (typically midnight UTC)
+   - Do intensive testing right after reset
+   - Monitor remaining quota throughout the day
 
-#### 🧠 **3 AI Prompts:**
-- **`web_scraper`** - Generate scraping strategies
-- **`automation_flow`** - Create automation workflows
-- **`data_extractor`** - Design extraction patterns
+3. **🔄 Efficient Development**
+   - Use the same browser session for multiple operations
+   - Test tool logic with simple pages first
+   - Validate selectors on lightweight sites
 
-### 4. Recommended Test Scenarios
+### Recommended Test Workflow
 
-#### **Scenario A: Visual Web Scraping**
 ```json
-// 1. Navigate to Hacker News
+// 1. Simple navigation test (minimal quota usage)
 {
   "name": "navigate",
   "arguments": {
-    "url": "https://news.ycombinator.com",
-    "viewport": {"width": 1280, "height": 720}
+    "url": "https://httpbin.org/html",
+    "timeout": 15000
   }
 }
 
-// 2. Take a screenshot (you'll see it in Inspector!)
+// 2. Take screenshot to verify it's working (check the current time!)
 {
   "name": "screenshot", 
   "arguments": {
-    "sessionId": "<from_step_1>",
-    "fullPage": false
+    "url": "https://www.timeanddate.com/",
+    "fullPage": false,
+    "timeout": 20000
   }
 }
 
-// 3. Extract headlines
+// 3. Extract text content
 {
   "name": "extract_text",
   "arguments": {
-    "sessionId": "<from_step_1>",
+    "url": "https://httpbin.org/html",
+    "selectors": {
+      "title": "h1",
+      "content": "p"
+    },
+    "timeout": 15000
+  }
+}
+
+// 4. Test with a real website (uses more quota)
+{
+  "name": "extract_text",
+  "arguments": {
+    "url": "https://news.ycombinator.com",
     "selectors": {
       "headlines": ".titleline > a"
     },
-    "multiple": true
+    "multiple": true,
+    "timeout": 20000
   }
 }
 ```
 
-#### **Scenario B: Weather Data**
+## Error Handling
+
+### Expected Quota Errors
+
+When you hit the quota limit, you'll see:
+
 ```json
-// Get Hong Kong weather
 {
-  "name": "navigate",
-  "arguments": {
-    "url": "https://wttr.in/Hong+Kong?format=j1"
-  }
+  "error": "Navigation failed: Failed to create Cloudflare Puppeteer session session_xxx: Browser Rendering quota exceeded. Try the remote version: https://browser-mcp-server.raycoderhk.workers.dev/sse"
 }
 ```
 
-#### **Scenario C: AI Strategy Generation**
-```json
-// Generate scraping strategy
-{
-  "name": "web_scraper",
-  "arguments": {
-    "url": "https://example-ecommerce.com",
-    "data_requirements": "product names, prices, ratings",
-    "site_type": "e-commerce",
-    "complexity": "medium"
-  }
-}
-```
+**This is normal and expected behavior!**
 
-### 5. Alternative Startup Options
+### Troubleshooting
 
-```bash
-# Start only the worker (for external Inspector)
-pnpm run dev:worker-only
+**"Quota exceeded" errors:**
+- ✅ **Expected** - you've used your daily 10-minute limit
+- ⏰ **Solution** - Wait for daily reset (typically midnight UTC)
+- 🔄 **Alternative** - Try different Cloudflare account if available
 
-# Start only the Inspector (for external worker)
-pnpm run dev:inspector-only
-
-# Start locally without remote Browser Rendering
-pnpm run dev:local
-```
-
-## Usage Examples
-
-### Basic Web Scraping
-
-```javascript
-// Navigate to a website
-const navResult = await mcp.call("navigate", {
-  url: "https://example.com",
-  viewport: { width: 1280, height: 720 },
-  waitUntil: "networkidle2"
-});
-
-// Extract structured data
-const extractResult = await mcp.call("extract_text", {
-  sessionId: navResult.sessionId,
-  selectors: {
-    title: "h1, .title",
-    price: ".price, .cost",
-    description: ".description, .summary"
-  },
-  multiple: true
-});
-
-// Take a screenshot for verification
-const screenshot = await mcp.call("screenshot", {
-  sessionId: navResult.sessionId,
-  fullPage: true,
-  format: "png"
-});
-```
-
-### Form Automation
-
-```javascript
-// Navigate and interact with forms
-const navResult = await mcp.call("navigate", {
-  url: "https://example.com/contact",
-  waitUntil: "domcontentloaded"
-});
-
-// Fill and submit form
-const formResult = await mcp.call("interact", {
-  sessionId: navResult.sessionId,
-  actions: [
-    { type: "fill", selector: "#name", value: "John Doe" },
-    { type: "fill", selector: "#email", value: "john@example.com" },
-    { type: "fill", selector: "#message", value: "Hello from MCP!" },
-    { type: "click", selector: "#submit" }
-  ],
-  waitBetweenActions: 500
-});
-
-// Wait for confirmation
-const confirmation = await mcp.call("wait_for", {
-  sessionId: navResult.sessionId,
-  condition: "element",
-  selector: ".success, .confirmation",
-  timeout: 10000
-});
-```
-
-### Multi-Page Data Extraction
-
-```javascript
-async function extractAllPages(startUrl) {
-  const allData = [];
-  let currentPage = 1;
-  let hasNextPage = true;
-  
-  // Initial navigation
-  const navResult = await mcp.call("navigate", {
-    url: startUrl,
-    viewport: { width: 1280, height: 720 }
-  });
-  
-  while (hasNextPage) {
-    // Extract data from current page
-    const pageData = await mcp.call("extract_text", {
-      sessionId: navResult.sessionId,
-      selectors: {
-        items: ".product, .item, .result",
-        titles: ".title, h2, h3",
-        prices: ".price, .cost"
-      },
-      multiple: true
-    });
-    
-    allData.push(...pageData.data);
-    
-    // Check for next page
-    const nextPageExists = await mcp.call("evaluate_js", {
-      sessionId: navResult.sessionId,
-      code: "return !!document.querySelector('.next, .pagination .next')"
-    });
-    
-    if (nextPageExists.result) {
-      // Click next page
-      await mcp.call("interact", {
-        sessionId: navResult.sessionId,
-        actions: [{ type: "click", selector: ".next, .pagination .next" }]
-      });
-      
-      // Wait for new content
-      await mcp.call("wait_for", {
-        sessionId: navResult.sessionId,
-        condition: "network",
-        timeout: 10000
-      });
-      
-      currentPage++;
-    } else {
-      hasNextPage = false;
-    }
-  }
-  
-  return allData;
-}
-```
-
-### Using Intelligent Prompts
-
-```javascript
-// Generate a scraping strategy
-const strategy = await mcp.call("web_scraper", {
-  url: "https://news-site.com",
-  data_requirements: "article headlines, publication dates, and author names",
-  site_type: "news",
-  complexity: "medium"
-});
-
-// Create an automation workflow
-const workflow = await mcp.call("automation_flow", {
-  task_description: "search for products and compare prices",
-  starting_url: "https://shop.example.com",
-  data_inputs: JSON.stringify({ searchTerm: "laptop" })
-});
-
-// Design extraction patterns
-const patterns = await mcp.call("data_extractor", {
-  url: "https://ecommerce.example.com/products",
-  data_structure: "list of products with name, price, rating, and image",
-  output_format: "json",
-  pagination: "true"
-});
-```
-
-## Resource Management
-
-### Browser Sessions
-Access session information:
-- `browser://sessions` - List all sessions
-- `browser://sessions/{sessionId}` - Get specific session details
-
-### Scraping Results
-View extraction history:
-- `browser://results` - Recent scraping results and statistics
-- `browser://results/{url}` - Results for specific URL
-
-### Page Cache
-Manage cached content:
-- `browser://cache` - Cache statistics and management
-- `browser://cache/{url}` - Cached content for specific URL
-
-### Extraction Patterns
-Reusable patterns:
-- `browser://patterns` - All extraction patterns
-- `browser://patterns/{domain}` - Patterns for specific domain
-
-### System Status
-Monitor health:
-- `browser://status` - System health and configuration
-
-## Configuration Options
-
-### Environment Variables
-
-```jsonc
-{
-  "vars": {
-    "MAX_CONCURRENT_SESSIONS": "5",      // Maximum browser sessions
-    "SESSION_TIMEOUT_MS": "300000",      // Session timeout (5 minutes)
-    "CACHE_TTL_HOURS": "24",            // Cache time-to-live
-    "MAX_PAGE_SIZE_MB": "10"            // Maximum cached page size
-  }
-}
-```
-
-### Browser Options
-- **Viewport**: Customizable browser viewport size
-- **User Agent**: Custom user agent strings
-- **Wait Conditions**: Various wait strategies (load, networkidle, etc.)
-- **Timeouts**: Configurable timeouts for all operations
-- **Cookies**: Session cookie management
-
-## API Endpoints
-
-### Health & Status
-- `GET /` - Service information and capabilities
-- `GET /health` - Health check endpoint
-- `GET /status` - Detailed status with metrics
-- `POST /maintenance` - Trigger maintenance tasks
-
-### MCP Protocol
-- `POST /mcp` - Main MCP protocol endpoint
-- `GET /mcp/ws` - WebSocket upgrade for MCP (if supported)
-
-## Performance & Best Practices
-
-### Session Management
-- Reuse sessions when possible to avoid setup overhead
+**Session timeout errors:**
+- Sessions timeout after 5 minutes of inactivity
+- Create new sessions as needed
 - Close sessions when done to free resources
-- Monitor session limits and implement queuing if needed
-- Use session timeouts to prevent resource leaks
-
-### Caching Strategy
-- Enable page caching for repeated visits
-- Set appropriate TTL values for your use case
-- Monitor cache size and implement cleanup
-- Use selective caching for large pages
-
-### Respectful Scraping
-- Implement delays between requests
-- Respect robots.txt and terms of service
-- Use appropriate user agents
-- Monitor and limit concurrent requests
-- Implement exponential backoff for errors
-
-### Error Handling
-- Always use try/catch blocks
-- Implement retry logic with backoff
-- Capture screenshots on errors for debugging
-- Log detailed error information
-- Gracefully handle network timeouts
 
 ## Architecture
 
@@ -455,7 +256,7 @@ Monitor health:
 │          data_extractor                 │
 ├─────────────────────────────────────────┤
 │        Browser Manager                  │
-│    (Puppeteer + Session Management)    │
+│    (Cloudflare Browser Rendering)      │
 ├─────────────────────────────────────────┤
 │           Repository Layer              │
 │      (D1 Database + R2 Cache)          │
@@ -465,74 +266,52 @@ Monitor health:
 └─────────────────────────────────────────┘
 ```
 
-## Development
+## Production Deployment
 
-### Project Structure
-```
-src/
-├── index.ts           # Main Worker entry point
-├── server.ts          # MCP server implementation  
-├── browser-manager.ts # Browser session management
-├── repository.ts      # Data storage layer
-├── tools.ts           # MCP tools implementation
-├── resources.ts       # MCP resources
-├── prompts.ts         # Intelligent prompts
-└── schema.ts          # Data models and types
-```
-
-### Testing
+### 1. Deploy Worker
 ```bash
-# Run tests (24 tests with 100% success rate)
-pnpm test
-
-# Run tests in watch mode
-pnpm run test:watch
-```
-
-### Deployment
-```bash
-# Deploy to Cloudflare Workers
 pnpm run deploy
-
-# Deploy with specific environment
-wrangler deploy --env production
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-**Session not found errors**:
-- Sessions may timeout after inactivity
-- Check session ID validity
-- Implement session recreation logic
-
-**Navigation timeouts**:
-- Increase timeout values for slow sites
-- Use appropriate wait conditions
-- Check for JavaScript-heavy pages
-
-**Extraction returns empty results**:
-- Verify selectors are correct
-- Wait for dynamic content to load
-- Check for anti-bot measures
-
-**Memory or resource limits**:
-- Close unused sessions promptly
-- Implement session pooling
-- Monitor resource usage
-
-### Debug Mode
-Enable verbose logging by setting environment variables:
+### 2. Test Production
 ```bash
-DEBUG=true wrangler dev
+# Test deployed worker
+curl https://your-worker.workers.dev/health
+
+# Test with MCP Inspector
+# URL: https://your-worker.workers.dev/sse
 ```
+
+### 3. Monitor Quota Usage
+- Watch for quota exceeded errors
+- Plan usage around daily reset times
+- Consider multiple Cloudflare accounts for development teams
+
+## Best Practices
+
+### Quota Conservation
+- **Reuse sessions** when possible to avoid setup overhead
+- **Close sessions** when done to free resources  
+- **Test with lightweight pages** during development
+- **Batch operations** in single sessions when possible
+
+### Respectful Scraping
+- Implement delays between requests
+- Respect robots.txt and terms of service
+- Use appropriate user agents
+- Monitor and limit concurrent requests
+
+### Error Handling
+- Always handle quota exceeded errors gracefully
+- Implement retry logic for transient failures
+- Log quota usage for monitoring
+- Provide clear error messages to users
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes
+3. Make your changes (be mindful of quota usage in testing!)
 4. Add tests for new functionality
 5. Submit a pull request
 
@@ -542,4 +321,4 @@ MIT License - see LICENSE file for details.
 
 ---
 
-For more examples and advanced usage, check the `/test` directory and the MCP protocol documentation.
+**Remember: The 10-minute daily quota applies to ALL Browser Rendering usage - plan your development and testing accordingly!**
