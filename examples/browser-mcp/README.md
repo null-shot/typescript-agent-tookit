@@ -156,7 +156,7 @@ URL: https://your-worker.workers.dev/sse
 ### Recommended Test Workflow
 
 ```json
-// 1. Simple navigation test (minimal quota usage)
+// 1. Simple navigation test
 {
   "name": "navigate",
   "arguments": {
@@ -165,7 +165,7 @@ URL: https://your-worker.workers.dev/sse
   }
 }
 
-// 2. Take screenshot to verify it's working (check the current time!)
+// 2. Take screenshot to verify it's working (check the time captured on the screenshot!)
 {
   "name": "screenshot", 
   "arguments": {
@@ -185,19 +185,6 @@ URL: https://your-worker.workers.dev/sse
       "content": "p"
     },
     "timeout": 15000
-  }
-}
-
-// 4. Test with a real website
-{
-  "name": "extract_text",
-  "arguments": {
-    "url": "https://news.ycombinator.com",
-    "selectors": {
-      "headlines": ".titleline > a"
-    },
-    "multiple": true,
-    "timeout": 20000
   }
 }
 ```
@@ -229,7 +216,7 @@ The tool returns an HTML display with the screenshot embedded, plus raw base64 d
 3. **Paste the HTML code** and view instantly
 4. **See the live screenshot** with all metadata
 
-#### **Real Test Evidence:**
+#### **Real Test Results:**
 Using Hong Kong Observatory weather page, you can see:
 - **Live weather data** (32.1°C, 65% humidity at 11:20)
 - **Current date** (3 Sep 2025, Wed)
@@ -260,13 +247,7 @@ The extract_links tool provides powerful link extraction with **strict filtering
 ```
 
 #### **Step 2: View the Enhanced Results**
-The tool returns a rich HTML display with organized link information:
-
-**Tool Configuration in MCP Inspector:**
-![Extract Links Configuration - Container Filter](https://i.imgur.com/container-config.png)
-
-**Rendered Result Display:**
-![Extract Links Result - Container Filter](https://i.imgur.com/container-result.png)
+The tool returns a rich HTML display with organized link information.
 
 #### **Real Test Results:**
 ```
@@ -332,13 +313,13 @@ When you hit the quota limit, you'll see:
 │         data_extractor                  │
 ├─────────────────────────────────────────┤
 │        Browser Manager                  │
-│   (Cloudflare Browser Rendering)       │
+│   (Cloudflare Browser Rendering)        │
 ├─────────────────────────────────────────┤
 │          Repository Layer               │
-│     (D1 Database + R2 Cache)           │
+│     (D1 Database + R2 Cache)            │
 ├─────────────────────────────────────────┤
-│      Cloudflare Workers Runtime        │
-│  (Browser Rendering + D1 + R2)         │
+│      Cloudflare Workers Runtime         │
+│  (Browser Rendering + D1 + R2)          │
 └─────────────────────────────────────────┘
 ```
 
