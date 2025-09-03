@@ -4,7 +4,11 @@ A comprehensive Model Context Protocol (MCP) server that demonstrates Cloudflare
 
 ## ⚠️ IMPORTANT: Browser Rendering Quota Limits
 
-**🚨 Cloudflare Browser Rendering has a 10-minute daily quota limit that applies to ALL usage:**
+**🚨 Cloudflare Browser Rendering has quota limits that apply to ALL usage:**
+
+- **Free Plan:** 10 minutes/day
+- **Pro Plan:** 1000 minutes/month
+- **Business/Enterprise:** Higher limits available
 
 - ✅ **Development (`pnpm dev`)** → Uses quota
 - ✅ **Production deployment** → Uses quota  
@@ -154,7 +158,7 @@ wrangler d1 migrations apply browser-mcp-db --local
 
 ### 6. Development Options
 
-⚠️ **All options below use the same 10-minute daily quota:**
+⚠️ **All options below use your Browser Rendering quota:**
 
 #### **🚀 Full Development Stack (Recommended)**
 ```bash
@@ -195,7 +199,7 @@ Transport: SSE
 URL: http://localhost:8787/sse
 ```
 **Pros:** Local development, faster iteration  
-**Cons:** Uses your daily 10-minute quota
+**Cons:** Uses your Browser Rendering quota
 
 #### **Option 2: Remote Production (Uses Quota)**
 ```
@@ -203,7 +207,7 @@ Transport: SSE
 URL: https://your-worker.workers.dev/sse
 ```
 **Pros:** Production environment testing  
-**Cons:** Uses your daily 10-minute quota
+**Cons:** Uses your Browser Rendering quota
 
 ### Screenshot Tool Example
 
