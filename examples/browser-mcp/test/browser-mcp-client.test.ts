@@ -360,26 +360,6 @@ describe("Browser MCP Client Integration Tests", () => {
     await waitOnExecutionContext(ctx);
   });
 
-  it("should perform browser interactions or skip gracefully", async () => {
-    // This test is skipped as the interact tool has been removed for simplification
-    console.log("Interaction test skipped - interact tool removed for project simplification");
-    expect(true).toBe(true);
-    await waitOnExecutionContext(ctx);
-  });
-
-  it("should wait for page conditions or skip gracefully", async () => {
-    // This test is skipped as the wait_for tool has been removed for simplification
-    console.log("Wait condition test skipped - wait_for tool removed for project simplification");
-    expect(true).toBe(true);
-    await waitOnExecutionContext(ctx);
-  });
-
-  it("should evaluate JavaScript code or skip gracefully", async () => {
-    // This test is skipped as the evaluate_js tool has been removed for simplification
-    console.log("JavaScript evaluation test skipped - evaluate_js tool removed for project simplification");
-    expect(true).toBe(true);
-    await waitOnExecutionContext(ctx);
-  });
 
   it("should read browser sessions resource", async () => {
     const transport = createTransport(ctx);
