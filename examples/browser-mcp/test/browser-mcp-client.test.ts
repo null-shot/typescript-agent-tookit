@@ -256,11 +256,12 @@ describe("Browser MCP Client Integration Tests", () => {
     });
 
     if (response && typeof response === 'object' && 'success' in response) {
-      expect(response.success).toBe(true);
-      expect(response.screenshot).toBeDefined();
-      expect(response.screenshot).toContain("data:image/png;base64,");
-      expect(response.format).toBe("png");
-      expect(response.size).toBeGreaterThan(0);
+      const typedResponse = response as any;
+      expect(typedResponse.success).toBe(true);
+      expect(typedResponse.screenshot_data || typedResponse.screenshot_base64).toBeDefined();
+      expect(typedResponse.screenshot_data || typedResponse.screenshot_base64).toContain("data:image/png;base64,");
+      expect(typedResponse.format).toBe("png");
+      expect(typedResponse.size).toBeGreaterThan(0);
 
       if (response.sessionId) {
         testSessions.screenshotTest = response.sessionId;
