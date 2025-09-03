@@ -12,7 +12,11 @@
   },
   "include": [
     "src/**/*",
-    "test/**/*",
     "worker-configuration.d.ts"
+  ],
+  "exclude": [
+    "test/**/*",
+    "dist/**/*",
+    "node_modules/**/*"
   ]
 }

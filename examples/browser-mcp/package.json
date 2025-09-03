@@ -11,8 +11,8 @@
     "dev:worker-only": "wrangler dev --remote",
     "dev:inspector-only": "npx @modelcontextprotocol/inspector",
     "deploy": "wrangler deploy",
-    "test": "vitest run",
-    "test:watch": "vitest --watch",
+    "test": "pnpm build && vitest run",
+    "test:watch": "pnpm build && vitest --watch",
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
