@@ -205,76 +205,16 @@ URL: https://your-worker.workers.dev/sse
 **Pros:** Production environment testing  
 **Cons:** Uses your daily 10-minute quota
 
-
-
-### Quota Management Tips
-
-1. **🎯 Focus Your Testing**
-   - Plan your tests carefully
-   - Use simple pages (e.g., `httpbin.org/html`) for basic functionality
-   - Save complex sites for final validation
-
-2. **⏰ Time Your Usage**
-   - Check when your quota resets (typically midnight UTC)
-   - Do intensive testing right after reset
-   - Monitor remaining quota throughout the day
-
-3. **🔄 Efficient Development**
-   - Use the same browser session for multiple operations
-   - Test tool logic with simple pages first
-   - Validate selectors on lightweight sites
-
-### Recommended Test Workflow
-
-```json
-// 1. Simple navigation test
-{
-  "name": "navigate",
-  "arguments": {
-    "url": "https://httpbin.org/html",
-    "timeout": 15000
-  }
-}
-
-// 2. Take screenshot to verify it's working (check the time captured on the screenshot!)
-{
-  "name": "screenshot", 
-  "arguments": {
-    "url": "https://www.timeanddate.com/",
-    "fullPage": false,
-    "timeout": 20000
-  }
-}
-
-// 3. Extract text content
-{
-  "name": "extract_text",
-  "arguments": {
-    "url": "https://httpbin.org/html",
-    "selectors": {
-      "title": "h1",
-      "content": "p"
-    },
-    "timeout": 15000
-  }
-}
-```
-
 ### Screenshot Tool Example
 
 The screenshot tool returns base64-encoded image data that displays directly in MCP Inspector and can be easily viewed using an HTML viewer:
 
 #### **Step 1: Take a Screenshot**
-```json
-{
-  "name": "screenshot", 
-  "arguments": {
-    "url": "https://www.weather.gov.hk/en/wxinfo/currwx/fnd.htm",
-    "fullPage": false,
-    "timeout": 20000
-  }
-}
-```
+
+**Tool:** `screenshot`  
+**URL:** `https://www.weather.gov.hk/en/wxinfo/currwx/fnd.htm`  
+**Full Page:** `false`  
+**Timeout:** `60000`
 
 #### **Step 2: View the Result**
 The tool returns an HTML display with the screenshot embedded, plus raw base64 data.
@@ -306,16 +246,11 @@ Using Hong Kong Observatory weather page, you can see:
 The extract_links tool provides powerful link extraction with **strict filtering** that only matches visible link text or URLs:
 
 #### **Step 1: Extract Links with Container Filter**
-```json
-{
-  "name": "extract_links",
-  "arguments": {
-    "url": "https://github.com/null-shot/typescript-agent-framework/pulls?q=is%3Apr+",
-    "filter": "container",
-    "timeout": 60000
-  }
-}
-```
+
+**Tool:** `extract_links`  
+**URL:** `https://github.com/null-shot/typescript-agent-framework/pulls?q=is%3Apr+`  
+**Filter:** `container`  
+**Timeout:** `60000`
 
 #### **Step 2: View the Enhanced Results**
 The tool returns a rich HTML display with organized link information.
@@ -347,7 +282,7 @@ When you hit the quota limit, you'll see:
 
 ```json
 {
-  "error": "Navigation failed: Failed to create Cloudflare Puppeteer session session_xxx: Browser Rendering quota exceeded. Try the remote version: https://browser-mcp-server.raycoderhk.workers.dev/sse"
+  "error": *** : Browser Rendering quota exceeded."
 }
 ```
 
