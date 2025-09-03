@@ -1,7 +1,7 @@
 import { ScrapingResult, PageCache, ExtractionPattern, BrowserSession } from "./schema.js";
 
 export class BrowserRepository {
-  constructor(private db: D1Database, private cache?: R2Bucket) {}
+  constructor(public db: D1Database, public cache?: R2Bucket) {}
 
   // Initialize database tables
   async initialize(): Promise<void> {

@@ -72,7 +72,7 @@ export function setupBrowserResources(
             cacheTTL: parseInt(process.env.CACHE_TTL_HOURS || '24'),
             maxPageSize: parseInt(process.env.MAX_PAGE_SIZE_MB || '10'),
           },
-          warnings: [],
+          warnings: [] as string[],
         };
 
         // Add warnings
