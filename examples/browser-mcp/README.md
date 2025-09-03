@@ -36,16 +36,7 @@ A comprehensive Model Context Protocol (MCP) server that demonstrates Cloudflare
 - **Extraction History** - D1 database storage of all scraping results
 - **Extraction Patterns** - Reusable extraction patterns for different websites
 
-### 🤖 Intelligent Prompts
-- **web_scraper** - Generate comprehensive scraping strategies for any website
-- **automation_flow** - Create step-by-step browser automation workflows
-- **data_extractor** - Design extraction patterns for structured data
 
-### 📈 Monitoring & Analytics
-- Real-time session monitoring and health checks
-- Scraping statistics and performance metrics
-- Automated cleanup of idle sessions and expired cache
-- Comprehensive error handling and logging
 
 ## Quick Start
 
@@ -197,7 +188,7 @@ URL: https://your-worker.workers.dev/sse
   }
 }
 
-// 4. Test with a real website (uses more quota)
+// 4. Test with a real website
 {
   "name": "extract_text",
   "arguments": {
@@ -228,13 +219,7 @@ The screenshot tool returns base64-encoded image data that displays directly in 
 ```
 
 #### **Step 2: View the Result**
-The tool returns an HTML display with the screenshot embedded, plus raw base64 data:
-
-**Screenshot Tool Configuration:**
-![Screenshot Configuration](https://i.imgur.com/screenshot-config.png)
-
-**HTML Viewer Result:**
-![Screenshot HTML Viewer](https://i.imgur.com/screenshot-html-viewer.png)
+The tool returns an HTML display with the screenshot embedded, plus raw base64 data.
 
 #### **Step 3: Easy Viewing with HTML Viewer**
 **Simplest method** - Copy the HTML output and paste into any HTML viewer:
@@ -300,18 +285,7 @@ Filters applied: Filter: "container"
     "Docker Container Is Not Running"
 ```
 
-#### **Key Features:**
-- **Strict filtering**: Only matches if filter text appears in **URL** OR **visible link text**
-- **Precise results**: Filters out noise - went from 32+ links to exactly 2 relevant matches
-- **Visual display**: Color-coded badges show Total (2), Internal (2), External (0) counts
-- **Rich metadata**: Shows link text, domain, and full URLs with click-to-open functionality
-- **Perfect precision**: No false positives - only links that actually contain "container"
 
-#### **Filter Logic:**
-- ✅ **URL Match**: `https://example.com/container/page` → Included
-- ✅ **Text Match**: `"Docker Container Setup"` → Included  
-- ❌ **Hidden/Meta**: Links without visible "container" text → Excluded
-- ❌ **Partial**: Links that don't contain the exact filter term → Excluded
 
 ## Error Handling
 
@@ -334,17 +308,12 @@ When you hit the quota limit, you'll see:
 - ⏰ **Solution** - Wait for daily reset (typically midnight UTC)
 - 🔄 **Alternative** - Try different Cloudflare account if available
 
-**Session timeout errors:**
-- Sessions timeout after 5 minutes of inactivity
-- Create new sessions as needed
-- Close sessions when done to free resources
+
 
 **MCP timeout errors:**
 - If you see `"MCP error -32001: Request timed out"`:
   - ✅ **Try again** - Often resolves on retry (most effective solution)
   - ⏱️ **Increase timeout** - Add larger `timeout` value (e.g., `10000` for 10 seconds)
-  - 🔄 **Check connection** - Ensure stable internet connection
-  - 📱 **Complex pages** - Some pages take longer to load and process
 
 ## Architecture
 
@@ -352,79 +321,35 @@ When you hit the quota limit, you'll see:
 ┌─────────────────────────────────────────┐
 │           Browser MCP Server            │
 ├─────────────────────────────────────────┤
-│  Tools: navigate, screenshot,           │
-│         extract_text, extract_links     │
+│ Tools: navigate, screenshot,            │
+│        extract_text, extract_links,     │
+│        close_session                    │
 ├─────────────────────────────────────────┤
-│  Resources: sessions, results, cache,   │
-│            patterns, status             │
+│ Resources: sessions, results, cache,    │
+│           patterns, status              │
 ├─────────────────────────────────────────┤
-│  Prompts: web_scraper, automation_flow, │
-│          data_extractor                 │
+│ Prompts: web_scraper, automation_flow,  │
+│         data_extractor                  │
 ├─────────────────────────────────────────┤
 │        Browser Manager                  │
-│    (Cloudflare Browser Rendering)      │
+│   (Cloudflare Browser Rendering)       │
 ├─────────────────────────────────────────┤
-│           Repository Layer              │
-│      (D1 Database + R2 Cache)          │
+│          Repository Layer               │
+│     (D1 Database + R2 Cache)           │
 ├─────────────────────────────────────────┤
-│       Cloudflare Workers Runtime       │
-│   (Browser Rendering + D1 + R2)        │
+│      Cloudflare Workers Runtime        │
+│  (Browser Rendering + D1 + R2)         │
 └─────────────────────────────────────────┘
 ```
-
-## Production Deployment
-
-### 1. Deploy Worker
-```bash
-pnpm run deploy
-```
-
-### 2. Test Production
-```bash
-# Test deployed worker
-curl https://your-worker.workers.dev/health
-
-# Test with MCP Inspector
-# URL: https://your-worker.workers.dev/sse
-```
-
-### 3. Monitor Quota Usage
-- Watch for quota exceeded errors
-- Plan usage around daily reset times
-- Consider multiple Cloudflare accounts for development teams
-
-## Best Practices
-
-### Quota Conservation
-- **Reuse sessions** when possible to avoid setup overhead
-- **Close sessions** when done to free resources  
-- **Test with lightweight pages** during development
-- **Batch operations** in single sessions when possible
-
-### Respectful Scraping
-- Implement delays between requests
-- Respect robots.txt and terms of service
-- Use appropriate user agents
-- Monitor and limit concurrent requests
-
-### Error Handling
-- Always handle quota exceeded errors gracefully
-- Implement retry logic for transient failures
-- Log quota usage for monitoring
-- Provide clear error messages to users
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
-3. Make your changes (be mindful of quota usage in testing!)
+3. Make your changes
 4. Add tests for new functionality
 5. Submit a pull request
 
 ## License
 
 MIT License - see LICENSE file for details.
-
----
-
-**Remember: The 10-minute daily quota applies to ALL Browser Rendering usage - plan your development and testing accordingly!**
