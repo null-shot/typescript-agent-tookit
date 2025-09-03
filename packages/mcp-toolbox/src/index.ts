@@ -7,7 +7,7 @@ import { dirname } from "path";
 import { z } from "zod";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { WebSocketTransport } from "@nullshot/mcp";
+import { WebSocketTransport } from "@nullshot/mcp/dist/mcp/websocket-transport.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   CallToolRequestSchema,
@@ -64,8 +64,7 @@ if (!PROXY_ID) {
 
 // Construct MCP_PROXY_URL with proxyId and configurable host
 const BASE_MCP_PROXY_URL =
-  process.env.MCP_PROXY_URL ||
-  `ws://${MCP_SERVER_HOST}/api/remote-container/ws`;
+  process.env.MCP_PROXY_URL || `ws://${MCP_SERVER_HOST}/remote-container/ws`;
 const url = new URL(BASE_MCP_PROXY_URL);
 url.searchParams.set("proxyId", PROXY_ID);
 const MCP_PROXY_URL = url.toString();

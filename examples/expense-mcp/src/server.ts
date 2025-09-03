@@ -8,11 +8,11 @@ type HonoType = any;
 */
 
 import { Implementation } from "@modelcontextprotocol/sdk/types.js";
-import { McpHonoServerDO } from "@null-shot/mcp";
+import { McpHonoServerDO } from "@nullshot/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { ExpenseRepository } from './repository';
-import { setupServerTools } from './tools';
-import { setupServerResources } from './resources';
+import { ExpenseRepository } from "./repository";
+import { setupServerTools } from "./tools";
+import { setupServerResources } from "./resources";
 
 /**
  * @typedef {import('@cloudflare/workers-types').DurableObjectState} DurableObjectState
@@ -21,7 +21,7 @@ import { setupServerResources } from './resources';
 /**
  * ExpenseMcpServer extends McpHonoServerDO for CRUD operations on expenses
  */
-export class ExpenseMcpServer extends McpHonoServerDO {
+export class ExpenseMcpServer extends McpHonoServerDO<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
   }
@@ -31,8 +31,8 @@ export class ExpenseMcpServer extends McpHonoServerDO {
    */
   getImplementation(): Implementation {
     return {
-      name: 'ExpenseMcpServer',
-      version: '1.0.0',
+      name: "ExpenseMcpServer",
+      version: "1.0.0",
     };
   }
 
@@ -43,7 +43,7 @@ export class ExpenseMcpServer extends McpHonoServerDO {
   configureServer(server: McpServer): void {
     // Pass DurableObjectState context to repository for proper session isolation
     const repository = new ExpenseRepository((this as any).ctx);
-    
+
     // Remove the initializeDatabase call since it's not needed for in-memory storage
     // this.ctx.blockConcurrencyWhile(async () => {
     //   repository.initializeDatabase();
@@ -58,67 +58,72 @@ export class ExpenseMcpServer extends McpHonoServerDO {
   // Add session logging to debug
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const sessionId = url.searchParams.get('sessionId');
-    console.log(`[ExpenseMcpServer] Processing request for sessionId: ${sessionId}`);
+    const sessionId = url.searchParams.get("sessionId");
+    console.log(
+      `[ExpenseMcpServer] Processing request for sessionId: ${sessionId}`
+    );
     console.log(`[ExpenseMcpServer] Request path: ${url.pathname}`);
-    
+
     return super.fetch(request);
   }
 
   // Override processSSEConnection to add debugging
   protected processSSEConnection(request: Request): Response {
     const url = new URL(request.url);
-    const sessionId = url.searchParams.get('sessionId');
+    const sessionId = url.searchParams.get("sessionId");
     console.log(`[MCP Session ${sessionId}] Processing SSE connection`);
-    console.log('[MCP] SSE sessionId:', sessionId);
-    
+    console.log("[MCP] SSE sessionId:", sessionId);
+
     const result = super.processSSEConnection(request);
-    
+
     // Log session count after processing
-    console.log('[MCP] Active sessions after SSE connection:', (this as any).sessions?.size || 'unknown');
-    
+    console.log(
+      "[MCP] Active sessions after SSE connection:",
+      (this as any).sessions?.size || "unknown"
+    );
+
     return result;
   }
 
-  // Override processMcpRequest to add debugging  
+  // Override processMcpRequest to add debugging
   protected processMcpRequest(request: Request) {
-    console.log('[MCP] Processing MCP request:', request.url);
+    console.log("[MCP] Processing MCP request:", request.url);
     const url = new URL(request.url);
-    const sessionId = url.searchParams.get('sessionId');
-    console.log('[MCP] MCP request sessionId:', sessionId);
-    
+    const sessionId = url.searchParams.get("sessionId");
+    console.log("[MCP] MCP request sessionId:", sessionId);
+
     // Log session map state
     const sessions = (this as any).sessions;
     if (sessions) {
-      console.log('[MCP] Available sessions:', Array.from(sessions.keys()));
-      console.log('[MCP] Session exists?', sessions.has(sessionId));
+      console.log("[MCP] Available sessions:", Array.from(sessions.keys()));
+      console.log("[MCP] Session exists?", sessions.has(sessionId));
     }
-    
+
     return super.processMcpRequest(request);
   }
 
   protected setupRoutes(app: any): void {
     // Call the parent implementation to setup SSE and other MCP routes
     super.setupRoutes(app);
-    
+
     // Handle root path - process SSE requests directly
-    app.get('/', (c: any) => {
-      const acceptHeader = c.req.header('Accept');
-      if (acceptHeader && acceptHeader.includes('text/event-stream')) {
+    app.get("/", (c: any) => {
+      const acceptHeader = c.req.header("Accept");
+      if (acceptHeader && acceptHeader.includes("text/event-stream")) {
         // This is an SSE request from the MCP Inspector
         const sessionId = crypto.randomUUID();
         const url = new URL(c.req.url);
-        url.searchParams.set('sessionId', sessionId);
-        
+        url.searchParams.set("sessionId", sessionId);
+
         // Create a new request with the sessionId and process it
         const newRequest = new Request(url.toString(), {
-          method: 'GET',
-          headers: c.req.raw.headers
+          method: "GET",
+          headers: c.req.raw.headers,
         });
-        
+
         return this.processSSEConnection(newRequest);
       }
-      return c.text('Expense MCP Server - Connected via SSE at /sse');
+      return c.text("Expense MCP Server - Connected via SSE at /sse");
     });
   }
-} 
+}

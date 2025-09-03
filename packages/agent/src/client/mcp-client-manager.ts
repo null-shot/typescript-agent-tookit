@@ -189,7 +189,7 @@ export class NullShotMCPClientManager extends MCPClientManager {
 
 			// Convert each tool to AI SDK v5 format
 			for (const tool of toolsToProcess) {
-				const toolKey = `${connectionInfo.name}.${tool.name}`;
+				const toolKey = `${connectionInfo.name}-${tool.name}`;
 				aiTools[toolKey] = {
 					description: tool.description,
 					// AI SDK v5 Tool interface expects FlexibleSchema, convert MCP schema to JSONSchema7 then to FlexibleSchema

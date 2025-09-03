@@ -11,12 +11,18 @@ import {
 	StreamTextOnStepFinishCallback,
 	ToolCallRepairFunction,
 	LanguageModelMiddleware,
+	StopCondition,
+	PrepareStepFunction,
+	StepResult,
 } from 'ai';
 
 import { Service } from '../service';
 
 // Type for ID generator function
 type IDGenerator = () => string;
+
+// Define abort callback type since it's not exported from AI SDK
+type StreamTextOnAbortCallback<TOOLS extends ToolSet> = (event: { readonly steps: StepResult<TOOLS>[] }) => PromiseLike<void> | void;
 
 /**
  * Base parameters shared between messages and prompt modes
@@ -49,9 +55,12 @@ interface StreamTextParams {
 	maxSteps?: number;
 	experimental_generateMessageId?: IDGenerator;
 	experimental_continueSteps?: boolean;
+	stopWhen?: StopCondition<ToolSet> | Array<StopCondition<ToolSet>>;
+	prepareStep?: PrepareStepFunction<ToolSet>;
 
 	// Tool control
 	experimental_activeTools?: Array<keyof ToolSet>;
+	activeTools?: Array<keyof ToolSet>;
 	experimental_repairToolCall?: ToolCallRepairFunction<ToolSet>;
 	toolCallStreaming?: boolean;
 	experimental_toolCallStreaming?: boolean;
@@ -59,12 +68,15 @@ interface StreamTextParams {
 	// Output and streaming
 	experimental_output?: any;
 	experimental_transform?: StreamTextTransform<ToolSet> | Array<StreamTextTransform<ToolSet>>;
+	includeRawChunks?: boolean;
+	experimental_context?: unknown;
 
 	// Callbacks
 	onChunk?: StreamTextOnChunkCallback<ToolSet>;
 	onError?: StreamTextOnErrorCallback;
 	onFinish?: StreamTextOnFinishCallback<ToolSet>;
 	onStepFinish?: StreamTextOnStepFinishCallback<ToolSet>;
+	onAbort?: StreamTextOnAbortCallback<ToolSet>;
 
 	// Provider options
 	providerOptions?: Record<string, any>;

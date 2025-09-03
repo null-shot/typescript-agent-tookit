@@ -23,7 +23,7 @@ describe("ConfigManager", () => {
 
   it("should load valid configuration", async () => {
     const config = {
-      servers: {
+      mcpServers: {
         test: {
           source: "github:test/repo",
           command: "npm start",
@@ -49,8 +49,9 @@ describe("ConfigManager", () => {
 
   it("should reject configuration with invalid server name", async () => {
     const invalidConfig = {
-      servers: {
-        "123invalid": { // starts with number, should fail pattern ^[a-zA-Z][a-zA-Z0-9_-]*$
+      mcpServers: {
+        "123invalid": {
+          // starts with number, should fail pattern ^[a-zA-Z][a-zA-Z0-9_-]*$
           source: "github:test/repo",
         },
       },
@@ -67,7 +68,7 @@ describe("ConfigManager", () => {
 
   it("should accept source-only configuration", async () => {
     const config = {
-      servers: {
+      mcpServers: {
         test: {
           source: "github:test/repo",
         },
@@ -86,7 +87,7 @@ describe("ConfigManager", () => {
 
   it("should accept command-only configuration", async () => {
     const config = {
-      servers: {
+      mcpServers: {
         test: {
           command: "npx some-mcp-server",
         },
@@ -105,7 +106,7 @@ describe("ConfigManager", () => {
 
   it("should accept url-only configuration", async () => {
     const config = {
-      servers: {
+      mcpServers: {
         test: {
           url: "https://example.com/mcp",
         },
@@ -124,7 +125,7 @@ describe("ConfigManager", () => {
 
   it("should accept configuration with all three properties", async () => {
     const config = {
-      servers: {
+      mcpServers: {
         test: {
           source: "github:test/repo",
           command: "npm start",
@@ -145,7 +146,7 @@ describe("ConfigManager", () => {
 
   it("should reject configuration with none of the required properties", async () => {
     const invalidConfig = {
-      servers: {
+      mcpServers: {
         test: {
           type: "worker",
           // missing source, command, and url
@@ -160,12 +161,14 @@ describe("ConfigManager", () => {
     const manager = new ConfigManager("mcp.json");
 
     await expect(manager.load()).rejects.toThrow(ConfigError);
-    await expect(manager.load()).rejects.toThrow(/must have at least one of 'source', 'command', or 'url'/);
+    await expect(manager.load()).rejects.toThrow(
+      /must have at least one of 'source', 'command', or 'url'/,
+    );
   });
 
   it("should validate with mixed server configurations", async () => {
     const config = {
-      servers: {
+      mcpServers: {
         sourceServer: {
           source: "github:test/repo",
         },
@@ -193,13 +196,13 @@ describe("ConfigManager", () => {
     await manager.init();
 
     const config = await manager.load();
-    expect(config.servers).toBeDefined();
-    expect(Object.keys(config.servers)).toContain("filesystem");
+    expect(config.mcpServers).toBeDefined();
+    expect(Object.keys(config.mcpServers)).toContain("filesystem");
   });
 
   it("should preserve JSON formatting on save", async () => {
     const originalContent = `{
-  "servers": {
+  "mcpServers": {
     "test": {
       "source": "github:test/repo",
       "command": "npm start"
@@ -213,7 +216,7 @@ describe("ConfigManager", () => {
 
     const manager = new ConfigManager("mcp.json");
     const config = await manager.load();
-    config.servers.newServer = {
+    config.mcpServers.newServer = {
       source: "github:new/repo",
       command: "npm run new",
     };
@@ -226,9 +229,9 @@ describe("ConfigManager", () => {
 
   it("should validate configuration on save", async () => {
     const manager = new ConfigManager("mcp.json");
-    
+
     const invalidConfig = {
-      servers: {
+      mcpServers: {
         test: {
           type: "worker",
           // missing source, command, and url
@@ -236,7 +239,11 @@ describe("ConfigManager", () => {
       },
     };
 
-    await expect(manager.save(invalidConfig as any)).rejects.toThrow(ConfigError);
-    await expect(manager.save(invalidConfig as any)).rejects.toThrow(/must have at least one of 'source', 'command', or 'url'/);
+    await expect(manager.save(invalidConfig as any)).rejects.toThrow(
+      ConfigError,
+    );
+    await expect(manager.save(invalidConfig as any)).rejects.toThrow(
+      /must have at least one of 'source', 'command', or 'url'/,
+    );
   });
 });
