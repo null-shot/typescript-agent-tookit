@@ -28,9 +28,6 @@ A comprehensive Model Context Protocol (MCP) server that demonstrates Cloudflare
 - **screenshot** - Capture full page or element screenshots in multiple formats
 - **extract_text** - Extract text content using CSS selectors or full page
 - **extract_links** - Extract all links with filtering options (internal/external, text matching)
-- **interact** - Perform browser interactions (click, fill forms, hover, scroll, evaluate JS)
-- **wait_for** - Wait for elements, network idle, timeouts, or custom conditions
-- **evaluate_js** - Execute custom JavaScript code in browser context
 - **close_session** - Manage browser session lifecycle
 
 ### 📊 Session & Data Management
@@ -214,6 +211,108 @@ URL: https://your-worker.workers.dev/sse
 }
 ```
 
+### Screenshot Tool Example
+
+The screenshot tool returns base64-encoded image data that displays directly in MCP Inspector and can be easily viewed using an HTML viewer:
+
+#### **Step 1: Take a Screenshot**
+```json
+{
+  "name": "screenshot", 
+  "arguments": {
+    "url": "https://www.weather.gov.hk/en/wxinfo/currwx/fnd.htm",
+    "fullPage": false,
+    "timeout": 20000
+  }
+}
+```
+
+#### **Step 2: View the Result**
+The tool returns an HTML display with the screenshot embedded, plus raw base64 data:
+
+**Screenshot Tool Configuration:**
+![Screenshot Configuration](https://i.imgur.com/screenshot-config.png)
+
+**HTML Viewer Result:**
+![Screenshot HTML Viewer](https://i.imgur.com/screenshot-html-viewer.png)
+
+#### **Step 3: Easy Viewing with HTML Viewer**
+**Simplest method** - Copy the HTML output and paste into any HTML viewer:
+
+1. **Copy the HTML output** from the MCP Inspector result
+2. **Visit** [https://html.onlineviewer.net/](https://html.onlineviewer.net/) 
+3. **Paste the HTML code** and view instantly
+4. **See the live screenshot** with all metadata
+
+#### **Real Test Evidence:**
+Using Hong Kong Observatory weather page, you can see:
+- **Live weather data** (32.1°C, 65% humidity at 11:20)
+- **Current date** (3 Sep 2025, Wed)
+- **9-day forecast** with real temperatures
+- **Screenshot metadata** (Format: png, Size: 80KB, Full page: No)
+
+**Key Benefits:**
+- ✅ **Instant viewing** - No download or conversion needed
+- 📱 **Mobile friendly** - Works on any device with a browser
+- 🔍 **Full quality** - See the screenshot exactly as captured
+- 📊 **Rich metadata** - Format, size, and capture settings included
+- 🕒 **Real-time verification** - Timestamps and live data prove authenticity
+
+### Extract Links Tool Example
+
+The extract_links tool provides powerful link extraction with **strict filtering** that only matches visible link text or URLs:
+
+#### **Step 1: Extract Links with Container Filter**
+```json
+{
+  "name": "extract_links",
+  "arguments": {
+    "url": "https://github.com/null-shot/typescript-agent-framework/pulls?q=is%3Apr+",
+    "filter": "container",
+    "timeout": 60000
+  }
+}
+```
+
+#### **Step 2: View the Enhanced Results**
+The tool returns a rich HTML display with organized link information:
+
+**Tool Configuration in MCP Inspector:**
+![Extract Links Configuration - Container Filter](https://i.imgur.com/container-config.png)
+
+**Rendered Result Display:**
+![Extract Links Result - Container Filter](https://i.imgur.com/container-result.png)
+
+#### **Real Test Results:**
+```
+🔗 Extracted Links from https://github.com/null-shot/typescript-agent-framework/pulls?q=is%3Apr+
+
+Filters applied: Filter: "container"
+
+[Total: 2] [Internal: 2] [External: 0]
+
+[1] Internal | github.com
+    https://github.com/null-shot/typescript-agent-framework/pull/80
+    "🐛 Incorrect endpoint for remote container"
+
+[2] Internal | github.com  
+    https://github.com/null-shot/typescript-agent-framework/pull/75
+    "Docker Container Is Not Running"
+```
+
+#### **Key Features:**
+- **Strict filtering**: Only matches if filter text appears in **URL** OR **visible link text**
+- **Precise results**: Filters out noise - went from 32+ links to exactly 2 relevant matches
+- **Visual display**: Color-coded badges show Total (2), Internal (2), External (0) counts
+- **Rich metadata**: Shows link text, domain, and full URLs with click-to-open functionality
+- **Perfect precision**: No false positives - only links that actually contain "container"
+
+#### **Filter Logic:**
+- ✅ **URL Match**: `https://example.com/container/page` → Included
+- ✅ **Text Match**: `"Docker Container Setup"` → Included  
+- ❌ **Hidden/Meta**: Links without visible "container" text → Excluded
+- ❌ **Partial**: Links that don't contain the exact filter term → Excluded
+
 ## Error Handling
 
 ### Expected Quota Errors
@@ -240,14 +339,21 @@ When you hit the quota limit, you'll see:
 - Create new sessions as needed
 - Close sessions when done to free resources
 
+**MCP timeout errors:**
+- If you see `"MCP error -32001: Request timed out"`:
+  - ✅ **Try again** - Often resolves on retry (most effective solution)
+  - ⏱️ **Increase timeout** - Add larger `timeout` value (e.g., `10000` for 10 seconds)
+  - 🔄 **Check connection** - Ensure stable internet connection
+  - 📱 **Complex pages** - Some pages take longer to load and process
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
 │           Browser MCP Server            │
 ├─────────────────────────────────────────┤
-│  Tools: navigate, screenshot, extract,  │
-│         interact, wait_for, evaluate    │
+│  Tools: navigate, screenshot,           │
+│         extract_text, extract_links     │
 ├─────────────────────────────────────────┤
 │  Resources: sessions, results, cache,   │
 │            patterns, status             │

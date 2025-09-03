@@ -31,8 +31,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "browser-mcp-db",
-			"database_id": "236b3d55-49ed-4939-a5d0-9b840d3bc10f"
+			"database_name": "browser-mcp-db-raymondcuhk",
+			"database_id": "c200cc34-078f-4cf3-babb-8fc0e36a04c3"
 		}
 	],
 	"vars": {

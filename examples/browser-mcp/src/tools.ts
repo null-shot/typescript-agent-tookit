@@ -6,13 +6,12 @@ import {
   NavigationOptions,
   ScreenshotOptions,
   ExtractionOptions,
-  InteractionOptions,
-  WaitOptions,
   ScrapingResult,
   SessionError,
   ExtractionError,
   NavigationError,
 } from "./schema.js";
+import { browserErrorHandler, BrowserError } from "./browser-error-handler.js";
 
 export function setupBrowserTools(
   server: McpServer,
@@ -32,7 +31,7 @@ export function setupBrowserTools(
       }).optional().describe("Browser viewport size"),
       userAgent: z.string().optional().describe("Custom user agent string"),
       waitUntil: z.enum(["load", "domcontentloaded", "networkidle0", "networkidle2"]).default("networkidle2").describe("When to consider navigation complete"),
-      timeout: z.number().default(30000).describe("Navigation timeout in milliseconds"),
+      timeout: z.number().default(60000).describe("Navigation timeout in milliseconds"),
     },
     async (args: NavigationOptions) => {
       try {
@@ -107,93 +106,154 @@ export function setupBrowserTools(
       quality: z.number().min(1).max(100).optional().describe("Screenshot quality (for jpeg/webp)"),
       width: z.number().optional().describe("Screenshot width"),
       height: z.number().optional().describe("Screenshot height"),
+      waitForSelector: z.string().optional().describe("Wait for this CSS selector to be visible before taking screenshot"),
+      waitDelay: z.number().default(2000).describe("Additional delay in milliseconds before taking screenshot (for dynamic content)"),
     },
     async (args: ScreenshotOptions) => {
-      try {
-        let page;
-        let sessionId = args.sessionId;
+      return await browserErrorHandler.executeWithRetry(
+        async () => {
+          let page;
+          let sessionId = args.sessionId;
+          let isTemporarySession = false;
 
-        if (args.url && !sessionId) {
-          sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          page = await browserManager.createSession(sessionId, {
-            url: args.url,
-            viewport: args.width && args.height ? { width: args.width, height: args.height } : undefined,
-          });
-        } else if (sessionId) {
-          page = await browserManager.getSession(sessionId);
-          if (!page) {
-            throw new SessionError(`Session ${sessionId} not found`, sessionId);
+          if (args.url && !sessionId) {
+            sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            isTemporarySession = true;
+            page = await browserManager.createSession(sessionId, {
+              url: args.url,
+              viewport: args.width && args.height ? { width: args.width, height: args.height } : undefined,
+            });
+          } else if (sessionId) {
+            page = await browserManager.getSession(sessionId);
+            if (!page) {
+              throw new SessionError(`Session ${sessionId} not found`, sessionId);
+            }
+            if (args.url) {
+              await browserManager.navigateSession(sessionId, { url: args.url });
+            }
+          } else {
+            throw new Error("Either sessionId or url must be provided");
           }
-          if (args.url) {
-            await browserManager.navigateSession(sessionId, { url: args.url });
+
+          // Wait for specific selector if provided
+          if (args.waitForSelector) {
+            try {
+              await page.waitForSelector(args.waitForSelector, { timeout: 10000 });
+              console.log(`✅ Found selector: ${args.waitForSelector}`);
+            } catch (error) {
+              console.log(`⚠️  Selector not found: ${args.waitForSelector}, continuing anyway`);
+            }
           }
-        } else {
-          throw new Error("Either sessionId or url must be provided");
-        }
-
-        // Take screenshot
-        const screenshotOptions: any = {
-          type: args.format || 'png',
-          fullPage: args.fullPage || false,
-          encoding: 'base64',
-        };
-
-        if (args.quality && (args.format === 'jpeg' || args.format === 'webp')) {
-          screenshotOptions.quality = args.quality;
-        }
-
-        let screenshot: string;
-        if (args.selector) {
-          const element = await page.$(args.selector);
-          if (!element) {
-            throw new ExtractionError(`Element not found: ${args.selector}`, args.selector);
+          
+          // Wait additional time for dynamic content to load (especially for JavaScript-heavy pages like clocks)
+          const waitDelay = args.waitDelay ?? 2000; // Default 2 seconds
+          if (waitDelay > 0) {
+            await new Promise(resolve => setTimeout(resolve, waitDelay));
           }
-          screenshot = await element.screenshot(screenshotOptions) as string;
-        } else {
-          screenshot = await page.screenshot(screenshotOptions) as string;
-        }
-
-        const title = await page.title();
-        const currentUrl = page.url();
-
-        // Save screenshot result
-        const scrapingResult: ScrapingResult = {
-          id: `screenshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          sessionId,
-          url: currentUrl,
-          timestamp: new Date(),
-          data: {
-            screenshot: true,
-            format: args.format || 'png',
+          
+          // Take screenshot
+          const screenshotOptions: any = {
+            type: args.format || 'png',
             fullPage: args.fullPage || false,
-            selector: args.selector,
-          },
-          metadata: {
-            title,
-            loadTime: 0,
-            statusCode: 200,
-            screenshot: `data:image/${args.format || 'png'};base64,${screenshot}`,
-          },
-        };
+            encoding: 'base64',
+          };
 
-        await repository.saveScrapingResult(scrapingResult);
+          if (args.quality && (args.format === 'jpeg' || args.format === 'webp')) {
+            screenshotOptions.quality = args.quality;
+          }
 
-        return {
-          content: [{
-            type: "text",
-            text: "Screenshot captured successfully"
-          }],
-          success: true,
-          sessionId,
-          url: currentUrl,
-          screenshot: `data:image/${args.format || 'png'};base64,${screenshot}`,
-          format: args.format || 'png',
-          size: screenshot.length,
-          message: "Screenshot captured successfully",
-        };
-      } catch (error) {
-        throw new Error(`Screenshot failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
+          let screenshot: string;
+          if (args.selector) {
+            const element = await page.$(args.selector);
+            if (!element) {
+              throw new ExtractionError(`Element not found: ${args.selector}`, args.selector);
+            }
+            screenshot = await element.screenshot(screenshotOptions) as string;
+          } else {
+            screenshot = await page.screenshot(screenshotOptions) as string;
+          }
+
+          const title = await page.title();
+          const currentUrl = page.url();
+
+          // Save screenshot result
+          const scrapingResult: ScrapingResult = {
+            id: `screenshot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            sessionId,
+            url: currentUrl,
+            timestamp: new Date(),
+            data: {
+              screenshot: true,
+              format: args.format || 'png',
+              fullPage: args.fullPage || false,
+              selector: args.selector,
+            },
+            metadata: {
+              title,
+              loadTime: 0,
+              statusCode: 200,
+              screenshot: `data:image/${args.format || 'png'};base64,${screenshot}`,
+            },
+          };
+
+          await repository.saveScrapingResult(scrapingResult);
+
+          // Create HTML image for immediate viewing
+          const imageDataUrl = `data:image/${args.format || 'png'};base64,${screenshot}`;
+          const imageHtml = `<div style="border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin: 10px 0; background: #f9f9f9;">
+            <h3 style="margin-top: 0; color: #333;">📸 Screenshot from ${currentUrl}</h3>
+            <img src="${imageDataUrl}" style="max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px;" alt="Screenshot" />
+            <div style="margin-top: 8px; font-size: 12px; color: #666;">
+              <strong>Format:</strong> ${args.format || 'png'} | 
+              <strong>Size:</strong> ${Math.round(screenshot.length / 1024)}KB | 
+              <strong>Full page:</strong> ${args.fullPage ? 'Yes' : 'No'}
+              ${args.selector ? ` | <strong>Element:</strong> ${args.selector}` : ''}
+            </div>
+            <details style="margin-top: 8px;">
+              <summary style="cursor: pointer; color: #007acc;">📋 Copy Base64 Data</summary>
+              <textarea readonly style="width: 100%; height: 100px; margin-top: 5px; font-family: monospace; font-size: 10px; resize: vertical;">${imageDataUrl}</textarea>
+              <div style="font-size: 11px; color: #888; margin-top: 4px;">💡 Tip: Copy this data and paste it into any base64 decoder or save as an HTML file to view</div>
+            </details>
+          </div>`;
+
+          return {
+            content: [{
+              type: "text",
+              text: imageHtml
+            }],
+            success: true,
+            sessionId,
+            url: currentUrl,
+            screenshot_display: imageHtml,
+            screenshot_data: imageDataUrl,
+            screenshot_base64: screenshot,
+            format: args.format || 'png',
+            size: screenshot.length,
+            dimensions: args.width && args.height ? `${args.width}x${args.height}` : 'auto',
+            message: "Screenshot captured successfully - view image above!",
+          };
+        },
+        {
+          operation: 'screenshot',
+          sessionId: args.sessionId,
+          url: args.url
+        },
+        {
+          maxRetries: 2, // Screenshots are expensive, so limit retries
+          baseDelay: 2000,
+          maxDelay: 8000
+        },
+        // Cleanup function for temporary sessions
+        async () => {
+          if (args.sessionId && args.sessionId.startsWith('temp_')) {
+            try {
+              await browserManager.closeSession(args.sessionId);
+            } catch (cleanupError) {
+              console.warn(`Failed to cleanup temporary session ${args.sessionId}:`, cleanupError);
+            }
+          }
+        }
+      );
     }
   );
 
@@ -306,16 +366,118 @@ export function setupBrowserTools(
 
         await repository.saveScrapingResult(scrapingResult);
 
+        // Create formatted display of extracted text
+        const createTextDisplay = (data: any, selectors?: Record<string, string>) => {
+          if (typeof data === 'string') {
+            // Single string extraction
+            return `<div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+              <h3 style="margin-top: 0; color: #333;">📝 Extracted Text from ${currentUrl}</h3>
+              <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0; max-height: 300px; overflow-y: auto;">
+                <pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.4;">${data}</pre>
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                <strong>Length:</strong> ${data.length} characters
+              </div>
+            </div>`;
+          } else if (Array.isArray(data)) {
+            // Array of extracted items
+            return `<div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+              <h3 style="margin-top: 0; color: #333;">📝 Extracted Text Array from ${currentUrl}</h3>
+              <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0; max-height: 300px; overflow-y: auto;">
+                ${data.map((item, index) => `<div style="margin-bottom: 8px; padding: 6px; background: #f8f8f8; border-radius: 3px;">
+                  <strong>[${index}]:</strong> ${typeof item === 'string' ? item : JSON.stringify(item)}
+                </div>`).join('')}
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: #666;">
+                <strong>Items found:</strong> ${data.length}
+              </div>
+            </div>`;
+                   } else if (typeof data === 'object' && data !== null) {
+           // Object with multiple fields
+           return `<div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+             <h3 style="margin-top: 0; color: #333;">📝 Extracted Fields from ${currentUrl}</h3>
+             <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0; max-height: 500px; overflow-y: auto;">
+               ${Object.entries(data).map(([key, value]) => {
+                 const selector = selectors?.[key] || 'N/A';
+                 
+                 if (Array.isArray(value)) {
+                   // Enhanced array display with individual items
+                   const previewItems = value.slice(0, 5);
+                   const hasMore = value.length > 5;
+                   
+                   return `<div style="margin-bottom: 15px; padding: 10px; background: #f8f8f8; border-radius: 4px; border-left: 4px solid #007acc;">
+                     <div style="font-weight: bold; color: #333; margin-bottom: 6px; display: flex; align-items: center;">
+                       <span>${key}</span>
+                       <span style="background: #007acc; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 8px;">${value.length}</span>
+                     </div>
+                     <div style="font-size: 11px; color: #666; margin-bottom: 8px;">Selector: <code>${selector}</code></div>
+                     <div style="background: white; padding: 8px; border-radius: 3px; border: 1px solid #e0e0e0;">
+                       ${previewItems.map((item, index) => 
+                         `<div style="padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.4;">
+                           <span style="color: #666; font-size: 11px; margin-right: 8px;">[${index + 1}]</span>
+                           <span>${String(item).length > 100 ? String(item).substring(0, 100) + '...' : String(item)}</span>
+                         </div>`
+                       ).join('')}
+                       ${hasMore ? `<div style="padding: 6px 0; color: #666; font-style: italic; text-align: center; font-size: 11px;">... and ${value.length - 5} more items</div>` : ''}
+                     </div>
+                     <details style="margin-top: 8px;">
+                       <summary style="cursor: pointer; color: #007acc; font-size: 11px;">📋 View All ${value.length} Items</summary>
+                       <div style="margin-top: 6px; max-height: 200px; overflow-y: auto; background: white; padding: 6px; border-radius: 3px; border: 1px solid #e0e0e0;">
+                         ${value.map((item, index) => 
+                           `<div style="padding: 2px 0; font-size: 11px; font-family: monospace;">
+                             <span style="color: #666;">[${index + 1}]</span> ${String(item)}
+                           </div>`
+                         ).join('')}
+                       </div>
+                     </details>
+                   </div>`;
+                 } else {
+                   // Single value display
+                   const displayValue = String(value);
+                   return `<div style="margin-bottom: 15px; padding: 10px; background: #f8f8f8; border-radius: 4px; border-left: 4px solid #28a745;">
+                     <div style="font-weight: bold; color: #333; margin-bottom: 6px;">${key}</div>
+                     <div style="font-size: 11px; color: #666; margin-bottom: 8px;">Selector: <code>${selector}</code></div>
+                     <div style="background: white; padding: 8px; border-radius: 3px; border: 1px solid #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.4;">
+                       ${displayValue.length > 200 ? displayValue.substring(0, 200) + '...' : displayValue}
+                     </div>
+                     ${displayValue.length > 200 ? `
+                       <details style="margin-top: 8px;">
+                         <summary style="cursor: pointer; color: #007acc; font-size: 11px;">📋 View Full Content</summary>
+                         <div style="margin-top: 6px; max-height: 200px; overflow-y: auto; background: white; padding: 6px; border-radius: 3px; border: 1px solid #e0e0e0; font-size: 11px; font-family: monospace; white-space: pre-wrap;">${displayValue}</div>
+                       </details>
+                     ` : ''}
+                   </div>`;
+                 }
+               }).join('')}
+             </div>
+             <div style="margin-top: 8px; font-size: 12px; color: #666;">
+               <strong>Fields extracted:</strong> ${Object.keys(data).length} | 
+               <strong>Total items:</strong> ${Object.values(data).reduce((sum: number, val) => sum + (Array.isArray(val) ? val.length : 1), 0)}
+             </div>
+           </div>`;
+          }
+          return '<div>No data extracted</div>';
+        };
+
+        const textDisplay = createTextDisplay(extractedData, args.selectors);
+
         return {
           content: [{
             type: "text",
-            text: "Text extraction completed successfully"
+            text: textDisplay
           }],
           success: true,
           sessionId,
           url: currentUrl,
           data: extractedData,
-          message: "Text extraction completed successfully",
+          text_display: textDisplay,
+          extraction_summary: {
+            fields: typeof extractedData === 'object' && !Array.isArray(extractedData) ? Object.keys(extractedData).length : 1,
+            total_length: typeof extractedData === 'string' ? extractedData.length : 
+                         Array.isArray(extractedData) ? extractedData.length :
+                         JSON.stringify(extractedData).length
+          },
+          message: "Text extraction completed - view results above!",
         };
       } catch (error) {
         throw new ExtractionError(
@@ -335,6 +497,7 @@ export function setupBrowserTools(
       filter: z.string().optional().describe("Filter links by text content or href pattern"),
       internal: z.boolean().optional().describe("Only extract internal links (same domain)"),
       external: z.boolean().optional().describe("Only extract external links (different domain)"),
+      timeout: z.number().default(60000).describe("Timeout in milliseconds for page operations"),
     },
     async (args: ExtractionOptions) => {
       try {
@@ -384,8 +547,16 @@ export function setupBrowserTools(
               // Apply filters
               if (internal && !isInternal) return null;
               if (external && isInternal) return null;
-              if (filter && text && !text.toLowerCase().includes(filter.toLowerCase()) && 
-                  !fullUrl.toLowerCase().includes(filter.toLowerCase())) return null;
+              
+              // Strict filter: only match if filter text is found in URL OR visible link text
+              if (filter) {
+                const filterLower = filter.toLowerCase();
+                const urlMatch = fullUrl.toLowerCase().includes(filterLower);
+                const textMatch = text && text.trim().toLowerCase().includes(filterLower);
+                
+                // Only include if filter matches URL or visible text (not empty text)
+                if (!urlMatch && !textMatch) return null;
+              }
               
               return {
                 url: fullUrl,
@@ -413,17 +584,111 @@ export function setupBrowserTools(
 
         await repository.saveScrapingResult(scrapingResult);
 
+        // Create formatted display for links
+        const createLinksDisplay = (linksData: any[], filterText?: string, internal?: boolean, external?: boolean) => {
+          if (!linksData || linksData.length === 0) {
+            return '<div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;"><h3 style="margin-top: 0; color: #333;">🔗 No Links Found</h3></div>';
+          }
+
+          const previewLinks = linksData.slice(0, 10);
+          const hasMore = linksData.length > 10;
+          
+          // Group links by type
+          const internalLinks = linksData.filter(link => link.internal);
+          const externalLinks = linksData.filter(link => !link.internal);
+          
+          const filterInfo = [];
+          if (filterText) filterInfo.push(`Filter: "${filterText}"`);
+          if (internal) filterInfo.push('Internal only');
+          if (external) filterInfo.push('External only');
+          
+          return `<div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+            <h3 style="margin-top: 0; color: #333;">🔗 Extracted Links from ${currentUrl}</h3>
+            
+            ${filterInfo.length > 0 ? `<div style="margin-bottom: 10px; padding: 6px 10px; background: #e3f2fd; border-radius: 4px; font-size: 12px; color: #1976d2;">
+              <strong>Filters applied:</strong> ${filterInfo.join(' | ')}
+            </div>` : ''}
+            
+            <div style="margin-bottom: 15px; display: flex; gap: 15px; font-size: 12px;">
+              <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px;">
+                <strong>Total:</strong> ${linksData.length}
+              </span>
+              <span style="background: #007acc; color: white; padding: 4px 8px; border-radius: 12px;">
+                <strong>Internal:</strong> ${internalLinks.length}
+              </span>
+              <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px;">
+                <strong>External:</strong> ${externalLinks.length}
+              </span>
+            </div>
+            
+            <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0; max-height: 400px; overflow-y: auto;">
+              ${previewLinks.map((link, index) => {
+                const isInternal = link.internal;
+                const borderColor = isInternal ? '#28a745' : '#dc3545';
+                const typeLabel = isInternal ? 'Internal' : 'External';
+                const typeBg = isInternal ? '#d4edda' : '#f8d7da';
+                const typeColor = isInternal ? '#155724' : '#721c24';
+                
+                return `<div style="margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid ${borderColor};">
+                  <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                    <span style="background: ${typeBg}; color: ${typeColor}; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-right: 8px;">${typeLabel}</span>
+                    <span style="color: #666; font-size: 11px;">[${index + 1}]</span>
+                    ${link.domain ? `<span style="color: #666; font-size: 10px; margin-left: 8px;">${link.domain}</span>` : ''}
+                  </div>
+                  <div style="margin-bottom: 4px;">
+                    <a href="${link.url}" target="_blank" style="color: #007acc; text-decoration: none; font-weight: 500; word-break: break-all;">${link.url}</a>
+                  </div>
+                  ${link.text ? `<div style="font-size: 11px; color: #666; font-style: italic;">
+                    "${link.text.length > 80 ? link.text.substring(0, 80) + '...' : link.text}"
+                  </div>` : ''}
+                </div>`;
+              }).join('')}
+              
+              ${hasMore ? `<div style="padding: 10px; color: #666; font-style: italic; text-align: center; font-size: 11px; border-top: 1px solid #e0e0e0;">
+                ... and ${linksData.length - 10} more links
+              </div>` : ''}
+            </div>
+            
+            <details style="margin-top: 15px;">
+              <summary style="cursor: pointer; color: #007acc; font-size: 12px; font-weight: 500;">📋 View All ${linksData.length} Links (Raw Data)</summary>
+              <div style="margin-top: 8px; max-height: 300px; overflow-y: auto; background: white; padding: 8px; border-radius: 3px; border: 1px solid #e0e0e0;">
+                ${linksData.map((link, index) => 
+                  `<div style="padding: 4px 0; font-size: 10px; font-family: monospace; border-bottom: 1px solid #f0f0f0;">
+                    <span style="color: #666;">[${index + 1}]</span> 
+                    <span style="color: ${link.internal ? '#28a745' : '#dc3545'};">${link.internal ? 'INT' : 'EXT'}</span> 
+                    <a href="${link.url}" target="_blank" style="color: #007acc;">${link.url}</a>
+                    ${link.text ? `<br><span style="color: #666; margin-left: 40px;">"${link.text}"</span>` : ''}
+                  </div>`
+                ).join('')}
+              </div>
+            </details>
+            
+            <div style="margin-top: 10px; font-size: 11px; color: #666;">
+              💡 <strong>Tip:</strong> Click any link to open in a new tab, or use the raw data section for copying URLs
+            </div>
+          </div>`;
+        };
+
+        const linksDisplay = createLinksDisplay(links, args.filter, args.internal, args.external);
+
         return {
           content: [{
             type: "text",
-            text: `Extracted ${links.length} links successfully`
+            text: linksDisplay
           }],
           success: true,
           sessionId,
           url: currentUrl,
           links,
           count: links.length,
-          message: `Extracted ${links.length} links successfully`,
+          links_display: linksDisplay,
+          summary: {
+            total: links.length,
+            internal: links.filter(l => l && l.internal).length,
+            external: links.filter(l => l && !l.internal).length,
+            filtered: !!(args.filter || args.internal || args.external)
+          },
+          message: `Link extraction completed - found ${links.length} links!`,
         };
       } catch (error) {
         throw new ExtractionError(
@@ -433,256 +698,7 @@ export function setupBrowserTools(
     }
   );
 
-  // Interact tool
-  server.tool(
-    "interact",
-    "Interact with page elements (click, fill forms, etc.)",
-    {
-      sessionId: z.string().optional().describe("Browser session ID"),
-      url: z.string().optional().describe("URL to navigate to before interaction (optional if sessionId provided)"),
-      actions: z.array(z.object({
-        type: z.enum(["click", "fill", "select", "hover", "scroll", "wait", "evaluate"]).describe("Type of action to perform"),
-        selector: z.string().optional().describe("CSS selector for the element"),
-        value: z.string().optional().describe("Value for fill/select actions or JavaScript code for evaluate"),
-        options: z.record(z.any()).optional().describe("Additional options for the action"),
-        timeout: z.number().default(5000).describe("Timeout for this action"),
-      })).describe("Array of actions to perform"),
-      waitBetweenActions: z.number().default(1000).describe("Wait time between actions in milliseconds"),
-    },
-    async (args: InteractionOptions) => {
-      try {
-        let page;
-        let sessionId = args.sessionId;
 
-        if (args.url && !sessionId) {
-          sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          page = await browserManager.createSession(sessionId, { url: args.url });
-        } else if (sessionId) {
-          page = await browserManager.getSession(sessionId);
-          if (!page) {
-            throw new SessionError(`Session ${sessionId} not found`, sessionId);
-          }
-          if (args.url) {
-            await browserManager.navigateSession(sessionId, { url: args.url });
-          }
-        } else {
-          throw new Error("Either sessionId or url must be provided");
-        }
-
-        const results: any[] = [];
-        const currentUrl = page.url();
-
-        for (let i = 0; i < args.actions.length; i++) {
-          const action = args.actions[i];
-          
-          try {
-            switch (action.type) {
-              case 'click':
-                if (!action.selector) throw new Error('Selector required for click action');
-                await page.waitForSelector(action.selector, { timeout: action.timeout });
-                await page.click(action.selector);
-                results.push({ action: i, type: 'click', success: true, selector: action.selector });
-                break;
-
-              case 'fill':
-                if (!action.selector || !action.value) throw new Error('Selector and value required for fill action');
-                await page.waitForSelector(action.selector, { timeout: action.timeout });
-                await page.fill(action.selector, action.value);
-                results.push({ action: i, type: 'fill', success: true, selector: action.selector, value: action.value });
-                break;
-
-              case 'wait':
-                const waitTime = action.options?.time || 1000;
-                if (action.selector) {
-                  await page.waitForSelector(action.selector, { timeout: action.timeout });
-                } else {
-                  await page.waitForTimeout(waitTime);
-                }
-                results.push({ action: i, type: 'wait', success: true, time: waitTime });
-                break;
-
-              case 'evaluate':
-                if (!action.value) throw new Error('JavaScript code required for evaluate action');
-                const evalResult = await page.evaluate(action.value);
-                results.push({ action: i, type: 'evaluate', success: true, result: evalResult });
-                break;
-
-              default:
-                throw new Error(`Unknown action type: ${action.type}`);
-            }
-
-            // Wait between actions
-            if (i < args.actions.length - 1 && args.waitBetweenActions) {
-              await page.waitForTimeout(args.waitBetweenActions);
-            }
-          } catch (error) {
-            results.push({ 
-              action: i, 
-              type: action.type, 
-              success: false, 
-              error: error instanceof Error ? error.message : String(error),
-              selector: action.selector 
-            });
-          }
-        }
-
-        const title = await page.title();
-        const finalUrl = page.url();
-        const successCount = results.filter(r => r.success).length;
-
-        return {
-          content: [{
-            type: "text",
-            text: `Completed ${successCount}/${args.actions.length} actions successfully`
-          }],
-          success: successCount === args.actions.length,
-          sessionId,
-          url: finalUrl,
-          results,
-          successCount,
-          totalActions: args.actions.length,
-          message: `Completed ${successCount}/${args.actions.length} actions successfully`,
-        };
-      } catch (error) {
-        throw new Error(`Interaction failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-  );
-
-  // Wait for condition tool
-  server.tool(
-    "wait_for",
-    "Wait for specific conditions on the page",
-    {
-      sessionId: z.string().optional().describe("Browser session ID"),
-      url: z.string().optional().describe("URL to navigate to before waiting (optional if sessionId provided)"),
-      condition: z.enum(["element", "network", "timeout", "function"]).describe("Type of condition to wait for"),
-      selector: z.string().optional().describe("CSS selector to wait for (required for element condition)"),
-      timeout: z.number().default(30000).describe("Maximum wait time in milliseconds"),
-      networkIdleTimeout: z.number().default(500).describe("Network idle timeout for network condition"),
-      customFunction: z.string().optional().describe("JavaScript function to evaluate (required for function condition)"),
-    },
-    async (args: WaitOptions) => {
-      try {
-        let page;
-        let sessionId = args.sessionId;
-
-        if (args.url && !sessionId) {
-          sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          page = await browserManager.createSession(sessionId, { url: args.url });
-        } else if (sessionId) {
-          page = await browserManager.getSession(sessionId);
-          if (!page) {
-            throw new SessionError(`Session ${sessionId} not found`, sessionId);
-          }
-          if (args.url) {
-            await browserManager.navigateSession(sessionId, { url: args.url });
-          }
-        } else {
-          throw new Error("Either sessionId or url must be provided");
-        }
-
-        const startTime = Date.now();
-        let conditionResult: any = {};
-
-        switch (args.condition) {
-          case 'element':
-            if (!args.selector) throw new Error('Selector required for element condition');
-            await page.waitForSelector(args.selector, { timeout: args.timeout });
-            conditionResult = { condition: 'element', selector: args.selector, found: true };
-            break;
-
-          case 'network':
-            await page.waitForLoadState('networkidle', { timeout: args.timeout });
-            conditionResult = { condition: 'network', networkIdle: true };
-            break;
-
-          case 'timeout':
-            await page.waitForTimeout(args.timeout || 5000);
-            conditionResult = { condition: 'timeout', waited: args.timeout || 5000 };
-            break;
-
-          case 'function':
-            if (!args.customFunction) throw new Error('Custom function required for function condition');
-            await page.waitForFunction(args.customFunction, { timeout: args.timeout });
-            conditionResult = { condition: 'function', function: args.customFunction, satisfied: true };
-            break;
-
-          default:
-            throw new Error(`Unknown condition: ${args.condition}`);
-        }
-
-        const waitTime = Date.now() - startTime;
-        const currentUrl = page.url();
-
-        return {
-          content: [{
-            type: "text",
-            text: `Wait condition satisfied in ${waitTime}ms`
-          }],
-          success: true,
-          sessionId,
-          url: currentUrl,
-          waitTime,
-          ...conditionResult,
-          message: `Wait condition satisfied in ${waitTime}ms`,
-        };
-      } catch (error) {
-        throw new Error(`Wait condition failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-  );
-
-  // Evaluate JavaScript tool
-  server.tool(
-    "evaluate_js",
-    "Execute custom JavaScript code in the browser context",
-    {
-      sessionId: z.string().optional().describe("Browser session ID"),
-      url: z.string().optional().describe("URL to navigate to before evaluation (optional if sessionId provided)"),
-      code: z.string().describe("JavaScript code to execute"),
-      args: z.array(z.any()).optional().describe("Arguments to pass to the JavaScript function"),
-    },
-    async (args: { sessionId?: string; url?: string; code: string; args?: any[] }) => {
-      try {
-        let page;
-        let sessionId = args.sessionId;
-
-        if (args.url && !sessionId) {
-          sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          page = await browserManager.createSession(sessionId, { url: args.url });
-        } else if (sessionId) {
-          page = await browserManager.getSession(sessionId);
-          if (!page) {
-            throw new SessionError(`Session ${sessionId} not found`, sessionId);
-          }
-          if (args.url) {
-            await browserManager.navigateSession(sessionId, { url: args.url });
-          }
-        } else {
-          throw new Error("Either sessionId or url must be provided");
-        }
-
-        // Execute JavaScript code
-        const evalResult = await page.evaluate(args.code, ...(args.args || []));
-        const currentUrl = page.url();
-
-        return {
-          content: [{
-            type: "text",
-            text: "JavaScript evaluation completed successfully"
-          }],
-          success: true,
-          sessionId,
-          url: currentUrl,
-          result: evalResult,
-          message: "JavaScript evaluation completed successfully",
-        };
-      } catch (error) {
-        throw new Error(`JavaScript evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-  );
 
   // Close session tool
   server.tool(
