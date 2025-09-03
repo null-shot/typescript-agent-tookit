@@ -8,10 +8,8 @@
     "build": "tsc",
     "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev --remote\" --kill-others",
     "dev:local": "wrangler dev",
-
     "dev:worker-only": "wrangler dev --remote",
     "dev:inspector-only": "npx @modelcontextprotocol/inspector",
-
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest --watch",

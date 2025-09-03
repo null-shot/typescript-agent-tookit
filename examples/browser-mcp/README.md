@@ -47,23 +47,26 @@ cd examples/browser-mcp
 pnpm install
 ```
 
-### 2. Configuration
+### 2. Account Configuration
 
-Update `wrangler.jsonc` with your database and bucket IDs:
+#### **Step 1: Get Your Account ID**
+```bash
+# Check your account details
+wrangler whoami
+```
+Note the **Account ID** from the output.
+
+#### **Step 2: Update wrangler.jsonc**
+Update `wrangler.jsonc` with your account ID:
 
 ```jsonc
 {
+  "account_id": "your-account-id-here",
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "browser-mcp-db",
       "database_id": "your-database-id-here"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "CACHE_BUCKET",
-      "bucket_name": "your-bucket-name"
     }
   ]
 }
@@ -71,17 +74,85 @@ Update `wrangler.jsonc` with your database and bucket IDs:
 
 ### 3. Database Setup
 
-Create and migrate your D1 database:
-
+#### **Step 1: Create D1 Database**
 ```bash
-# Create database
+# Create database for your account
 wrangler d1 create browser-mcp-db
+```
 
+#### **Step 2: Update Database ID**
+Wrangler will show you the database ID. Update `wrangler.jsonc`:
+- Copy the `database_id` from the wrangler output
+- Replace `"your-database-id-here"` in your config
+
+#### **Step 3: Database Migration**
+```bash
 # Run migrations (tables will be created automatically on first run)
 wrangler d1 migrations apply browser-mcp-db --local
 ```
 
-### 4. Development Options
+### 4. Register Workers.dev Subdomain (Required)
+
+⚠️ **Before running `pnpm dev`, you MUST register a workers.dev subdomain:**
+
+#### 🔍 **Why Subdomain Registration is Required:**
+
+**Wrangler Dev Modes:**
+
+**`wrangler dev` (Local Mode)**
+- **Runtime:** Local Workerd runtime on your machine
+- **Bindings:** Mock/simulated bindings (limited functionality)
+- **Browser Rendering:** ❌ **Not available** - no MYBROWSER binding
+- **Speed:** ⚡ Faster startup, instant deploys
+- **Use Case:** Basic testing without external services
+
+**`wrangler dev --remote` (Remote Mode)**
+- **Runtime:** Cloudflare's edge runtime (real environment)
+- **Bindings:** ✅ **Real bindings** - D1, Browser Rendering, KV, etc.
+- **Browser Rendering:** ✅ **Available** - real MYBROWSER binding
+- **Speed:** 🐌 Slower startup, requires workers.dev subdomain
+- **Use Case:** Full testing with real Cloudflare services
+
+#### 🎯 **For Browser MCP:**
+**You MUST use `--remote` because:**
+- Browser Rendering only works in remote mode
+- Local mode has no MYBROWSER binding
+- Your tools need real Cloudflare services
+
+#### 📋 **Step-by-Step Subdomain Registration:**
+
+1. **Open Cloudflare Dashboard**
+   - Go to: https://dash.cloudflare.com/
+   - Login with your Cloudflare account
+
+2. **Navigate to Workers**
+   - **Left panel:** Click **"Compute (Workers)"**
+   - **Main area:** Click **"Get Started"** for **"Start with Hello World"** option
+
+3. **Register Your Subdomain**
+   - **Choose a subdomain** like `yourname.workers.dev` (free)
+   - **Complete the setup** process
+
+4. **Verification**
+   - **No config changes needed** - Wrangler automatically detects your registered subdomain
+   - **Ready to run:** `pnpm dev` will now work without the subdomain error
+
+**Alternative:** Use a deployed worker URL for testing (see Production Deployment section)
+
+### 5. Pre-Development Checklist
+
+✅ **Before running `pnpm dev`, ensure you have completed:**
+
+1. ✅ **Cloudflare Account** - Registered and logged in with `wrangler login`
+2. ✅ **Workers.dev Subdomain** - Registered via Compute (Workers) → Get Started → Hello World
+3. ✅ **Account ID** - Added to `wrangler.jsonc` (get with `wrangler whoami`)
+4. ✅ **D1 Database** - Created with `wrangler d1 create browser-mcp-db`
+5. ✅ **Database ID** - Updated in `wrangler.jsonc` from wrangler output
+6. ✅ **Dependencies** - Installed with `pnpm install`
+
+⚠️ **If any step is missing, `pnpm dev` will fail with authentication or configuration errors.**
+
+### 6. Development Options
 
 ⚠️ **All options below use the same 10-minute daily quota:**
 

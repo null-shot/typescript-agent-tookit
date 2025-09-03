@@ -1,6 +1,7 @@
 {
 	"name": "browser-mcp-server-v2",
 	"main": "dist/index.js",
+	"account_id": "59084df56e21d828dcbd5811f81c7754",
 	"compatibility_date": "2025-02-11",
 	"compatibility_flags": [
 		"nodejs_compat"
@@ -31,8 +32,8 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "browser-mcp-db-raymondcuhk",
-			"database_id": "c200cc34-078f-4cf3-babb-8fc0e36a04c3"
+			"database_name": "browser-mcp-db-raydp102",
+			"database_id": "00d13a52-a4b2-478b-835a-3d71c22e9bcb"
 		}
 	],
 	"vars": {

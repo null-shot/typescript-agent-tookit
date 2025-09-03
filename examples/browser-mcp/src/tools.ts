@@ -108,6 +108,7 @@ export function setupBrowserTools(
       height: z.number().optional().describe("Screenshot height"),
       waitForSelector: z.string().optional().describe("Wait for this CSS selector to be visible before taking screenshot"),
       waitDelay: z.number().default(2000).describe("Additional delay in milliseconds before taking screenshot (for dynamic content)"),
+      timeout: z.number().default(60000).describe("Operation timeout in milliseconds"),
     },
     async (args: ScreenshotOptions) => {
       return await browserErrorHandler.executeWithRetry(

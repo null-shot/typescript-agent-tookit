@@ -10,6 +10,7 @@ export interface BrowserSession {
   createdAt: Date;
   lastActivity: Date;
   status: 'active' | 'idle' | 'closed';
+  requestCount?: number;
 }
 
 export interface Cookie {
@@ -61,6 +62,9 @@ export interface ScreenshotOptions {
   quality?: number;
   width?: number;
   height?: number;
+  waitForSelector?: string;
+  waitDelay?: number;
+  timeout?: number;
 }
 
 export interface ExtractionOptions {
@@ -72,13 +76,9 @@ export interface ExtractionOptions {
   multiple?: boolean;
   waitForSelector?: string;
   timeout?: number;
-}
-
-export interface InteractionOptions {
-  sessionId?: string;
-  url?: string;
-  actions: BrowserAction[];
-  waitBetweenActions?: number;
+  filter?: string;
+  internal?: boolean;
+  external?: boolean;
 }
 
 export interface BrowserAction {
@@ -87,16 +87,6 @@ export interface BrowserAction {
   value?: string;
   options?: Record<string, any>;
   timeout?: number;
-}
-
-export interface WaitOptions {
-  sessionId?: string;
-  url?: string;
-  condition: 'element' | 'network' | 'timeout' | 'function';
-  selector?: string;
-  timeout?: number;
-  networkIdleTimeout?: number;
-  customFunction?: string;
 }
 
 export interface PageCache {
