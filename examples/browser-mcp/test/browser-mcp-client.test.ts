@@ -2,9 +2,9 @@
 let env: any, createExecutionContext: any, waitOnExecutionContext: any;
 try {
   // const cloudflareTest = await import("cloudflare:test"); // Commented out for CI compatibility
-  // env = cloudflareTest.env;
-  // createExecutionContext = cloudflareTest.createExecutionContext;
-  // waitOnExecutionContext = cloudflareTest.waitOnExecutionContext;
+  env = {};
+  createExecutionContext = () => ({});
+  waitOnExecutionContext = () => Promise.resolve();
 } catch {
   // Fallback for non-Cloudflare test environments
   env = {};
