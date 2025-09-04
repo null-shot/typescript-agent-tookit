@@ -327,7 +327,7 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
     {
       dataset: z.string().describe('Dataset name to query'),
       metric: z.string().describe('Metric name to analyze'),
-      interval: z.enum(['minute', 'hour', 'day', 'week']).describe('Time interval for aggregation'),
+      interval: z.enum(['1m', '5m', '15m', '1h', '1d']).describe('Time interval for aggregation'),
       timeRange: z.object({
         start: z.string().describe('Start time (ISO string)'),
         end: z.string().describe('End time (ISO string)')
@@ -337,7 +337,7 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
     async ({ dataset, metric, interval, timeRange, filters }: {
       dataset: string;
       metric: string;
-      interval: 'minute' | 'hour' | 'day' | 'week';
+      interval: '1m' | '5m' | '15m' | '1h' | '1d';
       timeRange: { start: string; end: string };
       filters?: Record<string, string>;
     }) => {
@@ -390,19 +390,20 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
     {
       dataset: z.string().describe('Dataset name to analyze'),
       metric: z.string().describe('Metric to analyze for trends'),
-      timeRange: z.string().describe('Time range (e.g., "24h", "7d", "30d")'),
+      timeRange: z.enum(['1h', '24h', '7d', '30d']).describe('Time range'),
       algorithm: z.enum(['linear', 'exponential', 'seasonal']).optional().describe('Trend analysis algorithm')
     },
     async ({ dataset, metric, timeRange, algorithm }: {
       dataset: string;
       metric: string;
-      timeRange: string;
+      timeRange: '1h' | '24h' | '7d' | '30d';
       algorithm?: 'linear' | 'exponential' | 'seasonal';
     }) => {
       try {
         const validated = AnalyzeTrendsSchema.parse({ dataset, metric, timeRange, algorithm });
         
-        const result = await repository.analyzeTrends(validated.dataset, validated.metric, validated.timeRange);
+        // Simple trend analysis using basic SQL that Analytics Engine supports
+        const result = await repository.analyzeTrends(validated.dataset, metric, validated.timeRange);
 
         return {
           content: [

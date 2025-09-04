@@ -1,0 +1,313 @@
+{
+  "batch_1_week_1": {
+    "dataset": "github_stats",
+    "dataPoints": [
+      {
+        "timestamp": 1722945600,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-06"
+        },
+        "metrics": {
+          "prs_created": 3,
+          "prs_merged": 2,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1723032000,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-07"
+        },
+        "metrics": {
+          "prs_created": 5,
+          "prs_merged": 3,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1723118400,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-08"
+        },
+        "metrics": {
+          "prs_created": 7,
+          "prs_merged": 4,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1723204800,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-09"
+        },
+        "metrics": {
+          "prs_created": 2,
+          "prs_merged": 1,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1723291200,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-10"
+        },
+        "metrics": {
+          "prs_created": 1,
+          "prs_merged": 1,
+          "prs_closed": 0
+        }
+      }
+    ]
+  },
+  "batch_2_week_2": {
+    "dataset": "github_stats",
+    "dataPoints": [
+      {
+        "timestamp": 1723377600,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-11"
+        },
+        "metrics": {
+          "prs_created": 6,
+          "prs_merged": 4,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1723464000,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-12"
+        },
+        "metrics": {
+          "prs_created": 8,
+          "prs_merged": 5,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1723550400,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-13"
+        },
+        "metrics": {
+          "prs_created": 9,
+          "prs_merged": 6,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1723636800,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-14"
+        },
+        "metrics": {
+          "prs_created": 7,
+          "prs_merged": 5,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1723723200,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-15"
+        },
+        "metrics": {
+          "prs_created": 4,
+          "prs_merged": 3,
+          "prs_closed": 1
+        }
+      }
+    ]
+  },
+  "batch_3_week_3": {
+    "dataset": "github_stats", 
+    "dataPoints": [
+      {
+        "timestamp": 1724155200,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-20"
+        },
+        "metrics": {
+          "prs_created": 10,
+          "prs_merged": 7,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1724241600,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-21"
+        },
+        "metrics": {
+          "prs_created": 11,
+          "prs_merged": 8,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1724328000,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-22"
+        },
+        "metrics": {
+          "prs_created": 6,
+          "prs_merged": 4,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1724587200,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-25"
+        },
+        "metrics": {
+          "prs_created": 7,
+          "prs_merged": 5,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1724673600,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-26"
+        },
+        "metrics": {
+          "prs_created": 9,
+          "prs_merged": 6,
+          "prs_closed": 0
+        }
+      }
+    ]
+  },
+  "batch_4_week_4": {
+    "dataset": "github_stats",
+    "dataPoints": [
+      {
+        "timestamp": 1724760000,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-27"
+        },
+        "metrics": {
+          "prs_created": 12,
+          "prs_merged": 9,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1724846400,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-28"
+        },
+        "metrics": {
+          "prs_created": 8,
+          "prs_merged": 6,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1724932800,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-08-29"
+        },
+        "metrics": {
+          "prs_created": 5,
+          "prs_merged": 4,
+          "prs_closed": 1
+        }
+      },
+      {
+        "timestamp": 1725192000,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-09-01"
+        },
+        "metrics": {
+          "prs_created": 6,
+          "prs_merged": 4,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1725278400,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-09-02"
+        },
+        "metrics": {
+          "prs_created": 10,
+          "prs_merged": 7,
+          "prs_closed": 1
+        }
+      }
+    ]
+  },
+  "batch_5_recent": {
+    "dataset": "github_stats",
+    "dataPoints": [
+      {
+        "timestamp": 1725364800,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-09-03"
+        },
+        "metrics": {
+          "prs_created": 13,
+          "prs_merged": 10,
+          "prs_closed": 0
+        }
+      },
+      {
+        "timestamp": 1725451200,
+        "dimensions": {
+          "repo": "null-shot/typescript-agent-framework",
+          "event_type": "daily_pr_stats",
+          "date": "2025-09-04"
+        },
+        "metrics": {
+          "prs_created": 15,
+          "prs_merged": 11,
+          "prs_closed": 1
+        }
+      }
+    ]
+  }
+}

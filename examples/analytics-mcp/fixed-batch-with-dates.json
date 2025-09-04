@@ -1,0 +1,79 @@
+{
+  "batch_1_historical": [
+    {
+      "dimensions": {
+        "repo": "null-shot/typescript-agent-framework",
+        "event_type": "daily_pr_stats",
+        "date": "2025-08-06",
+        "week": "week_1",
+        "day_offset": "-29"
+      },
+      "metrics": {
+        "prs_created": 3,
+        "prs_merged": 2,
+        "prs_closed": 0,
+        "days_ago": 29
+      }
+    },
+    {
+      "dimensions": {
+        "repo": "null-shot/typescript-agent-framework",
+        "event_type": "daily_pr_stats",
+        "date": "2025-08-07",
+        "week": "week_1",
+        "day_offset": "-28"
+      },
+      "metrics": {
+        "prs_created": 5,
+        "prs_merged": 3,
+        "prs_closed": 1,
+        "days_ago": 28
+      }
+    },
+    {
+      "dimensions": {
+        "repo": "null-shot/typescript-agent-framework",
+        "event_type": "daily_pr_stats",
+        "date": "2025-08-08",
+        "week": "week_1",
+        "day_offset": "-27"
+      },
+      "metrics": {
+        "prs_created": 7,
+        "prs_merged": 4,
+        "prs_closed": 0,
+        "days_ago": 27
+      }
+    },
+    {
+      "dimensions": {
+        "repo": "null-shot/typescript-agent-framework",
+        "event_type": "daily_pr_stats",
+        "date": "2025-08-09",
+        "week": "week_1",
+        "day_offset": "-26"
+      },
+      "metrics": {
+        "prs_created": 2,
+        "prs_merged": 1,
+        "prs_closed": 0,
+        "days_ago": 26
+      }
+    },
+    {
+      "dimensions": {
+        "repo": "null-shot/typescript-agent-framework",
+        "event_type": "daily_pr_stats",
+        "date": "2025-08-10",
+        "week": "week_1",
+        "day_offset": "-25"
+      },
+      "metrics": {
+        "prs_created": 1,
+        "prs_merged": 1,
+        "prs_closed": 0,
+        "days_ago": 25
+      }
+    }
+  ]
+}

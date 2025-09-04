@@ -16,8 +16,11 @@ export function setupServerResources(server: McpServer, repository: AnalyticsRep
               type: "text",
               uri: "analytics://datasets",
               text: JSON.stringify({
-                datasets,
-                count: datasets.length,
+                success: true,
+                data: {
+                  datasets,
+                  count: datasets.length
+                },
                 timestamp: new Date().toISOString()
               }, null, 2)
             }

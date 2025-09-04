@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Links Tool Demo - Browser MCP Server</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .demo-container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .demo-title {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #007acc;
+            padding-bottom: 10px;
+        }
+        .config-section {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .config-title {
+            color: #495057;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .checkbox-group input {
+            margin-right: 8px;
+        }
+        .run-button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .result-section {
+            margin-top: 30px;
+        }
+        .success-badge {
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1 class="demo-title">🔗 Extract Links Tool - Live Demo</h1>
+        
+        <div class="config-section">
+            <h3 class="config-title">Tool Configuration</h3>
+            
+            <div class="form-group">
+                <label class="form-label">sessionId</label>
+                <input type="text" class="form-input" placeholder="Browser session ID" value="">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">url</label>
+                <input type="text" class="form-input" value="https://news.ycombinator.com/">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">filter</label>
+                <input type="text" class="form-input" value="anthropic">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">internal</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="internal">
+                    <label for="internal">Only extract internal links (same domain)</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">external</label>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="external" checked>
+                    <label for="external">Only extract external links (different domain)</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">timeout</label>
+                <input type="text" class="form-input" value="60000">
+            </div>
+            
+            <button class="run-button">🚀 Run Tool</button>
+        </div>
+        
+        <div class="result-section">
+            <div class="success-badge">Tool Result: Success</div>
+            
+            <!-- This is the actual result from the tool -->
+            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+                <h3 style="margin-top: 0; color: #333;">🔗 Extracted Links from https://news.ycombinator.com/</h3>
+                
+                <div style="margin-bottom: 10px; padding: 6px 10px; background: #e3f2fd; border-radius: 4px; font-size: 12px; color: #1976d2;">
+                  <strong>Filters applied:</strong> Filter: "anthropic" | External only
+                </div>
+                
+                <div style="margin-bottom: 15px; display: flex; gap: 15px; font-size: 12px;">
+                  <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px;">
+                    <strong>Total:</strong> 1
+                  </span>
+                  <span style="background: #007acc; color: white; padding: 4px 8px; border-radius: 12px;">
+                    <strong>Internal:</strong> 0
+                  </span>
+                  <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px;">
+                    <strong>External:</strong> 1
+                  </span>
+                </div>
+                
+                <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #e0e0e0; max-height: 400px; overflow-y: auto;">
+                  <div style="margin-bottom: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #dc3545;">
+                      <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                        <span style="background: #f8d7da; color: #721c24; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-right: 8px;">External</span>
+                        <span style="color: #666; font-size: 11px;">[1]</span>
+                        <span style="color: #666; font-size: 10px; margin-left: 8px;">www.anthropic.com</span>
+                      </div>
+                      <div style="margin-bottom: 4px;">
+                        <a href="https://www.anthropic.com/news/anthropic-raises-series-f-at-usd183b-post-money-valuation" target="_blank" style="color: #007acc; text-decoration: none; font-weight: 500; word-break: break-all;">https://www.anthropic.com/news/anthropic-raises-series-f-at-usd183b-post-money-valuation</a>
+                      </div>
+                      <div style="font-size: 11px; color: #666; font-style: italic;">
+                        "Anthropic raises $13B Series F"
+                      </div>
+                    </div>
+                </div>
+                
+                <details style="margin-top: 15px;">
+                  <summary style="cursor: pointer; color: #007acc; font-size: 12px; font-weight: 500;">📋 View All 1 Links (Raw Data)</summary>
+                  <div style="margin-top: 8px; max-height: 300px; overflow-y: auto; background: white; padding: 8px; border-radius: 3px; border: 1px solid #e0e0e0;">
+                    <div style="padding: 4px 0; font-size: 10px; font-family: monospace; border-bottom: 1px solid #f0f0f0;">
+                        <span style="color: #666;">[1]</span> 
+                        <span style="color: #dc3545;">EXT</span> 
+                        <a href="https://www.anthropic.com/news/anthropic-raises-series-f-at-usd183b-post-money-valuation" target="_blank" style="color: #007acc;">https://www.anthropic.com/news/anthropic-raises-series-f-at-usd183b-post-money-valuation</a>
+                        <br><span style="color: #666; margin-left: 40px;">"Anthropic raises $13B Series F"</span>
+                      </div>
+                  </div>
+                </details>
+                
+                <div style="margin-top: 10px; font-size: 11px; color: #666;">
+                  💡 <strong>Tip:</strong> Click any link to open in a new tab, or use the raw data section for copying URLs
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-container">
+        <h2 class="demo-title">📊 Key Features Demonstrated</h2>
+        <ul>
+            <li><strong>Smart Filtering:</strong> Combined text filter ("anthropic") with link type filter (external only)</li>
+            <li><strong>Clean Results:</strong> Filtered out 32+ internal HN links to show only the 1 relevant external link</li>
+            <li><strong>Rich Metadata:</strong> Shows link text, domain, and full URL for each result</li>
+            <li><strong>Visual Design:</strong> Color-coded badges, clickable links, and organized layout</li>
+            <li><strong>Expandable Data:</strong> Raw data section for easy copying and analysis</li>
+            <li><strong>Perfect for Research:</strong> Quickly find external references on any topic from any website</li>
+        </ul>
+    </div>
+</body>
+</html>

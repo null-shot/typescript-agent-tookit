@@ -1,0 +1,122 @@
+{
+  "step1_write_batch_data": {
+    "tool": "track_batch_metrics",
+    "payload": {
+      "dataset": "github_stats",
+      "dataPoints": [
+        {
+          "dimensions": {
+            "repo": "null-shot/typescript-agent-framework",
+            "metric_type": "repository_snapshot",
+            "date": "2025-09-04",
+            "language": "TypeScript",
+            "branch": "main"
+          },
+          "metrics": {
+            "stars": 5,
+            "forks": 4,
+            "watchers": 5,
+            "open_issues": 40,
+            "size_kb": 1700,
+            "contributors_count": 5,
+            "network_count": 4,
+            "subscribers_count": 0,
+            "prs_open": 3,
+            "prs_total": 43,
+            "prs_merged_total": 34
+          },
+          "timestamp": 1756953921730
+        },
+        {
+          "dimensions": {
+            "repo": "null-shot/typescript-agent-framework",
+            "metric_type": "pr_trends",
+            "date": "2025-09-04",
+            "week": "week_4_ago"
+          },
+          "metrics": {
+            "prs_created": 0,
+            "prs_merged": 1,
+            "prs_closed": 0
+          },
+          "timestamp": 1756953921730
+        },
+        {
+          "dimensions": {
+            "repo": "null-shot/typescript-agent-framework",
+            "metric_type": "pr_trends",
+            "date": "2025-09-04",
+            "week": "week_3_ago"
+          },
+          "metrics": {
+            "prs_created": 4,
+            "prs_merged": 5,
+            "prs_closed": 0
+          },
+          "timestamp": 1756953921730
+        },
+        {
+          "dimensions": {
+            "repo": "null-shot/typescript-agent-framework",
+            "metric_type": "pr_trends",
+            "date": "2025-09-04",
+            "week": "week_2_ago"
+          },
+          "metrics": {
+            "prs_created": 13,
+            "prs_merged": 8,
+            "prs_closed": 4
+          },
+          "timestamp": 1756953921730
+        },
+        {
+          "dimensions": {
+            "repo": "null-shot/typescript-agent-framework",
+            "metric_type": "pr_trends",
+            "date": "2025-09-04",
+            "week": "last_week"
+          },
+          "metrics": {
+            "prs_created": 7,
+            "prs_merged": 6,
+            "prs_closed": 0
+          },
+          "timestamp": 1756953921730
+        }
+      ]
+    }
+  },
+  
+  "step2_show_tables": {
+    "tool": "query_analytics",
+    "payload": {
+      "sql": "SHOW TABLES"
+    }
+  },
+  
+  "step3_count_records": {
+    "tool": "query_analytics", 
+    "payload": {
+      "sql": "SELECT COUNT(*) as total_records FROM github_stats"
+    }
+  },
+  
+  "step4_query_pr_trends": {
+    "tool": "query_analytics",
+    "payload": {
+      "sql": "SELECT dataset, index1 as repo, blob1 as metric_type, blob2 as week, double1 as prs_created, double2 as prs_merged, double3 as prs_closed, timestamp FROM github_stats WHERE blob1 = 'pr_trends' ORDER BY timestamp DESC LIMIT 10"
+    }
+  },
+  
+  "step5_query_repository": {
+    "tool": "query_analytics",
+    "payload": {
+      "sql": "SELECT dataset, index1 as repo, blob1 as metric_type, double1 as stars, double2 as forks, double3 as watchers, double4 as open_issues, timestamp FROM github_stats WHERE blob1 = 'repository_snapshot' ORDER BY timestamp DESC LIMIT 5"
+    }
+  },
+  
+  "step6_list_datasets": {
+    "tool": "list_datasets",
+    "payload": {}
+  }
+}

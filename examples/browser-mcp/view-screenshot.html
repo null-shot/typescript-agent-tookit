@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screenshot Viewer - Browser MCP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005a8b;
+        }
+        .screenshot-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .screenshot-image {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #2e7d32;
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+        .download-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .download-link:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Browser MCP Screenshot Viewer</h1>
+        
+        <div class="info">
+            <strong>How to use:</strong>
+            <ol>
+                <li>Take a screenshot using the browser-mcp server (via MCP Inspector or API)</li>
+                <li>Copy the base64 image data from the response</li>
+                <li>Paste it in the textarea below and click "View Screenshot"</li>
+            </ol>
+        </div>
+
+        <div class="input-group">
+            <label for="screenshotData">Base64 Screenshot Data:</label>
+            <textarea 
+                id="screenshotData" 
+                placeholder="Paste the base64 screenshot data here...
+Example: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...
+Or just the base64 part: iVBORw0KGgoAAAANSUhEUgAA..."
+            ></textarea>
+        </div>
+
+        <button onclick="viewScreenshot()">📸 View Screenshot</button>
+        <button onclick="clearScreenshot()">🗑️ Clear</button>
+
+        <div id="result"></div>
+        <div id="screenshotContainer" class="screenshot-container"></div>
+    </div>
+
+    <script>
+        function viewScreenshot() {
+            const data = document.getElementById('screenshotData').value.trim();
+            const resultDiv = document.getElementById('result');
+            const containerDiv = document.getElementById('screenshotContainer');
+            
+            if (!data) {
+                resultDiv.innerHTML = '<div class="error">Please paste the base64 screenshot data.</div>';
+                return;
+            }
+
+            try {
+                let imageData = data;
+                
+                // Handle different input formats
+                if (data.startsWith('data:image/')) {
+                    // Already has data URL prefix
+                    imageData = data;
+                } else if (data.startsWith('{')) {
+                    // JSON response format - extract screenshot field
+                    const jsonData = JSON.parse(data);
+                    if (jsonData.screenshot) {
+                        imageData = jsonData.screenshot;
+                    } else {
+                        throw new Error('No screenshot field found in JSON');
+                    }
+                } else {
+                    // Just base64 data - add data URL prefix
+                    imageData = `data:image/png;base64,${data}`;
+                }
+
+                // Validate base64 format
+                if (!imageData.includes('base64,')) {
+                    throw new Error('Invalid base64 image format');
+                }
+
+                // Create image element
+                const img = document.createElement('img');
+                img.src = imageData;
+                img.className = 'screenshot-image';
+                img.alt = 'Browser Screenshot';
+                
+                // Create download link
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageData;
+                downloadLink.download = `screenshot-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.png`;
+                downloadLink.className = 'download-link';
+                downloadLink.textContent = '💾 Download Screenshot';
+
+                // Handle image load
+                img.onload = function() {
+                    resultDiv.innerHTML = '<div class="success">✅ Screenshot loaded successfully!</div>';
+                    containerDiv.innerHTML = '';
+                    containerDiv.appendChild(img);
+                    containerDiv.appendChild(document.createElement('br'));
+                    containerDiv.appendChild(downloadLink);
+                };
+
+                img.onerror = function() {
+                    resultDiv.innerHTML = '<div class="error">❌ Failed to load image. Please check the base64 data format.</div>';
+                };
+
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function clearScreenshot() {
+            document.getElementById('screenshotData').value = '';
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('screenshotContainer').innerHTML = '';
+        }
+
+        // Sample data for testing
+        function loadSampleData() {
+            const sampleData = `{
+  "content": [{"type": "text", "text": "Screenshot captured successfully"}],
+  "success": true,
+  "sessionId": "session_123",
+  "url": "https://example.com",
+  "screenshot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "format": "png",
+  "size": 234,
+  "message": "Screenshot captured successfully"
+}`;
+            document.getElementById('screenshotData').value = sampleData;
+        }
+
+        // Add sample button
+        document.addEventListener('DOMContentLoaded', function() {
+            const button = document.createElement('button');
+            button.textContent = '📋 Load Sample Data';
+            button.onclick = loadSampleData;
+            button.style.marginLeft = '10px';
+            document.querySelector('button').parentNode.appendChild(button);
+        });
+    </script>
+</body>
+</html>

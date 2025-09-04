@@ -1,0 +1,44 @@
+{
+  "recentResults": [
+    {
+      "id": "screenshot_1756775760449_9fl6idkpz",
+      "sessionId": "temp_1756775760449_jw8v16n2e",
+      "url": "https://www.hko.gov.hk/en/gts/time/clock_e.html",
+      "timestamp": "2025-09-02T01:16:00.449Z",
+      "data": {
+        "screenshot": true,
+        "format": "png",
+        "fullPage": false
+      },
+      "metadata": {
+        "title": "Web Clock｜Hong Kong Observatory(HKO)｜Time Services",
+        "loadTime": 0,
+        "statusCode": 200,
+        "screenshot": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+      }
+    },
+    {
+      "id": "nav_1756775742955_be8xpc7j7",
+      "sessionId": "session_1756775742949_qjm1xzdjo",
+      "url": "https://www.hko.gov.hk/en/gts/time/clock_e.html",
+      "timestamp": "2025-09-02T01:15:42.955Z",
+      "data": {
+        "navigated": true,
+        "requestedUrl": "https://www.hko.gov.hk/en/gts/time/clock_e.html",
+        "finalUrl": "https://www.hko.gov.hk/en/gts/time/clock_e.html",
+        "title": "Web Clock｜Hong Kong Observatory(HKO)｜Time Services"
+      },
+      "metadata": {
+        "title": "Web Clock｜Hong Kong Observatory(HKO)｜Time Services",
+        "loadTime": 6,
+        "statusCode": 200
+      }
+    }
+  ],
+  "stats": {
+    "totalResults": 2,
+    "uniqueUrls": 1,
+    "avgLoadTime": 3,
+    "successRate": 100
+  }
+}

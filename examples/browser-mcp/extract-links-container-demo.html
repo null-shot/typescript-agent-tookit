@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extract Links Tool - Container Filter Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin: 0;
+        }
+        .subtitle {
+            color: #666;
+            margin: 5px 0 0 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🔗 Extract Links Tool - Container Filter Demo</h1>
+            <p class="subtitle">Real test results showing strict filtering in action</p>
+        </div>
+        
+        <!-- This is the actual HTML output from the tool -->
+        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #f9f9f9;">
+            <h3 style="margin-top: 0; color: #333;">🔗 Extracted Links from https://github.com/null-shot/typescript-agent-framework/pulls?q=is%3Apr+</h3>
+            
+            <div style="margin: 10px 0; font-size: 14px;">
+                <span style="color: #007acc; font-weight: 500;">Filters applied:</span> Filter: "container"
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; margin-right: 8px;">Total: 2</span>
+                <span style="background: #007bff; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; margin-right: 8px;">Internal: 2</span>
+                <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500;">External: 0</span>
+            </div>
+            
+            <div style="border-left: 4px solid #007bff; padding-left: 12px; margin: 15px 0; background: white; border-radius: 0 4px 4px 0; padding: 12px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">
+                    <span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Internal</span>
+                    <span style="margin-left: 8px;">[1] github.com</span>
+                </div>
+                <div style="margin: 6px 0;">
+                    <a href="https://github.com/null-shot/typescript-agent-framework/pull/80" target="_blank" style="color: #0366d6; text-decoration: none; font-weight: 500;">https://github.com/null-shot/typescript-agent-framework/pull/80</a>
+                </div>
+                <div style="font-style: italic; color: #586069; font-size: 14px;">
+                    "🐛 Incorrect endpoint for remote container"
+                </div>
+            </div>
+            
+            <div style="border-left: 4px solid #007bff; padding-left: 12px; margin: 15px 0; background: white; border-radius: 0 4px 4px 0; padding: 12px;">
+                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">
+                    <span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">Internal</span>
+                    <span style="margin-left: 8px;">[2] github.com</span>
+                </div>
+                <div style="margin: 6px 0;">
+                    <a href="https://github.com/null-shot/typescript-agent-framework/pull/75" target="_blank" style="color: #0366d6; text-decoration: none; font-weight: 500;">https://github.com/null-shot/typescript-agent-framework/pull/75</a>
+                </div>
+                <div style="font-style: italic; color: #586069; font-size: 14px;">
+                    "Docker Container Is Not Running"
+                </div>
+            </div>
+            
+            <details style="margin-top: 15px;">
+                <summary style="cursor: pointer; color: #007acc; font-weight: 500;">📋 Raw Data (Copy/Paste Format)</summary>
+                <textarea readonly style="width: 100%; height: 120px; margin-top: 8px; font-family: 'Monaco', 'Menlo', monospace; font-size: 11px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;">🔗 Extracted Links from https://github.com/null-shot/typescript-agent-framework/pulls?q=is%3Apr+
+
+Filters applied: Filter: "container"
+
+[Total: 2] [Internal: 2] [External: 0]
+
+[1] Internal | github.com
+    https://github.com/null-shot/typescript-agent-framework/pull/80
+    "🐛 Incorrect endpoint for remote container"
+
+[2] Internal | github.com
+    https://github.com/null-shot/typescript-agent-framework/pull/75
+    "Docker Container Is Not Running"</textarea>
+            </details>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: #e8f5e8; border-radius: 8px; border-left: 4px solid #28a745;">
+            <h4 style="margin-top: 0; color: #155724;">✅ Perfect Filtering Results</h4>
+            <ul style="margin: 0; color: #155724;">
+                <li><strong>Precision:</strong> Found exactly 2 relevant links out of 30+ total links on the page</li>
+                <li><strong>Accuracy:</strong> Both results contain "container" in their visible link text</li>
+                <li><strong>No False Positives:</strong> Filtered out navigation, voting, and unrelated links</li>
+                <li><strong>Rich Display:</strong> Shows link text, URLs, domains, and type badges</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

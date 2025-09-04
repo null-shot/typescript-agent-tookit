@@ -3,10 +3,10 @@ import { z } from 'zod';
 // NullShot Analytics Engine Data Structures
 export interface AnalyticsDataPoint {
   timestamp?: number;           // Unix timestamp (defaults to now)
-  dimensions: {                 // Categorical data for grouping
-    [key: string]: string;
+  dimensions?: {                // Categorical data for grouping (optional per docs)
+    [key: string]: string | number | boolean;  // Support all primitive types per docs
   };
-  metrics: {                   // Numerical measurements
+  metrics?: {                  // Numerical measurements (optional per docs)
     [key: string]: number;
   };
   metadata?: {                 // Additional context
@@ -25,7 +25,7 @@ export interface AnalyticsQueryResult {
 }
 
 export interface MetricsOptions {
-  timeRange: string;           // 1h, 24h, 7d, 30d
+  timeRange: { start: string; end: string };  // Date range object
   dimensions?: string[];       // Grouping dimensions
   filters?: Record<string, any>;
 }
@@ -33,12 +33,12 @@ export interface MetricsOptions {
 export interface MetricsResult {
   metrics: Record<string, number>;
   dimensions: Record<string, any>;
-  timeRange: string;
+  timeRange: { start: string; end: string };
   timestamp: number;
 }
 
 export interface TimeSeriesOptions {
-  timeRange: string;
+  timeRange: { start: string; end: string };
   interval?: string;           // 1m, 5m, 1h, 1d
   filters?: Record<string, any>;
 }
@@ -52,7 +52,7 @@ export interface TimeSeriesResult {
   meta: {
     metric: string;
     interval: string;
-    timeRange: string;
+    timeRange: { start: string; end: string };
   };
 }
 
@@ -111,22 +111,29 @@ export const QueryAnalyticsSchema = z.object({
 
 export const GetMetricsSummarySchema = z.object({
   dataset: z.string().min(1, "Dataset name is required"),
-  timeRange: z.enum(['1h', '24h', '7d', '30d']),
+  timeRange: z.object({
+    start: z.string().describe('Start time (ISO string)'),
+    end: z.string().describe('End time (ISO string)')
+  }).describe('Time range for the query'),
   dimensions: z.array(z.string()).optional()
 });
 
 export const GetTimeSeriesSchema = z.object({
   dataset: z.string().min(1, "Dataset name is required"),
   metric: z.string().min(1, "Metric name is required"),
-  timeRange: z.enum(['1h', '24h', '7d', '30d']),
-  interval: z.enum(['1m', '5m', '15m', '1h', '1d']).optional()
+  interval: z.enum(['1m', '5m', '15m', '1h', '1d']).describe('Time interval for aggregation'),
+  timeRange: z.object({
+    start: z.string().describe('Start time (ISO string)'),
+    end: z.string().describe('End time (ISO string)')
+  }).describe('Time range for the query'),
+  filters: z.record(z.string()).optional().describe('Dimension filters')
 });
 
 export const AnalyzeTrendsSchema = z.object({
   dataset: z.string().min(1, "Dataset name is required"),
-  metrics: z.array(z.string()).min(1, "At least one metric required"),
+  metric: z.string().min(1, "Metric name is required"),
   timeRange: z.enum(['1h', '24h', '7d', '30d']),
-  comparison: z.boolean().optional()
+  algorithm: z.enum(['linear', 'exponential', 'seasonal']).optional()
 });
 
 export const MonitorSystemHealthSchema = z.object({
@@ -152,6 +159,10 @@ export const DetectAnomaliesSchema = z.object({
 export interface Env {
   ANALYTICS_MCP_SERVER: DurableObjectNamespace<any>;
   ANALYTICS: AnalyticsEngineDataset;
+  
+  // Cloudflare Analytics Engine SQL API
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CF_API_TOKEN?: string;
 }
 
 // Error types
