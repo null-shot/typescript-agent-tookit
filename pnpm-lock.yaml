@@ -65,6 +65,9 @@ importers:
       '@nullshot/mcp':
         specifier: workspace:*
         version: link:../../packages/mcp
+      hono:
+        specifier: ^4.7.6
+        version: 4.8.4
       zod:
         specifier: 'catalog:'
         version: 3.25.76

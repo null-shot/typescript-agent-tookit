@@ -153,7 +153,7 @@ describe("Analytics MCP Client Integration Tests", () => {
       const result = await client.callTool({
         name: 'query_analytics',
         arguments: {
-          sql: 'SELECT COUNT(*) as total FROM agent_metrics WHERE timestamp > 1000000000'
+          sql: 'SELECT count() as total FROM agent_metrics LIMIT 10'
         }
       }) as ToolResponse;
 

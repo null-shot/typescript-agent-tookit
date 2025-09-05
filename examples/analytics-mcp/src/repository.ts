@@ -45,11 +45,31 @@ export class AnalyticsRepository {
       }
       
       // Format data for standard Cloudflare Analytics Engine
-      await this.env.ANALYTICS.writeDataPoint({
-        indexes: [data.dimensions?.repo || 'unknown'],
+      // Ensure consistent blob mapping: blob1=repo, blob2=event_type, blob3=date, etc.
+      const dimensions = data.dimensions || {};
+      const blobs = [
+        dimensions.repo || 'unknown',           // blob1
+        dimensions.event_type || '',            // blob2  
+        dimensions.date || '',                  // blob3
+        dimensions.batch_id || '',              // blob4
+        ...Object.entries(dimensions)
+          .filter(([key]) => !['repo', 'event_type', 'date', 'batch_id'].includes(key))
+          .map(([, value]) => String(value))    // blob5+
+      ];
+      
+      const analyticsDataPoint: any = {
+        indexes: [dimensions.repo || 'unknown'],
         doubles: Object.values(data.metrics || {}),
-        blobs: Object.values(data.dimensions || {}).map(String)
-      });
+        blobs: blobs.map(String)
+      };
+      
+      // Include timestamp if provided (convert to milliseconds if needed)
+      if (data.timestamp) {
+        const timestamp = data.timestamp < 1000000000000 ? data.timestamp * 1000 : data.timestamp;
+        analyticsDataPoint.timestamp = timestamp;
+      }
+      
+      await this.env.ANALYTICS.writeDataPoint(analyticsDataPoint);
       
       console.log(`Analytics: Wrote data point to dataset ${dataset}`);
     } catch (error) {
@@ -73,11 +93,31 @@ export class AnalyticsRepository {
       // Standard Cloudflare Analytics Engine only has writeDataPoint (singular)
       // So we need to write each data point individually
       for (const dataPoint of dataPoints) {
-        await this.env.ANALYTICS.writeDataPoint({
-          indexes: [dataPoint.dimensions?.repo || 'unknown'],
+        // Ensure consistent blob mapping: blob1=repo, blob2=event_type, blob3=date, etc.
+        const dimensions = dataPoint.dimensions || {};
+        const blobs = [
+          dimensions.repo || 'unknown',           // blob1
+          dimensions.event_type || '',            // blob2  
+          dimensions.date || '',                  // blob3
+          dimensions.batch_id || '',              // blob4
+          ...Object.entries(dimensions)
+            .filter(([key]) => !['repo', 'event_type', 'date', 'batch_id'].includes(key))
+            .map(([, value]) => String(value))    // blob5+
+        ];
+        
+        const analyticsDataPoint: any = {
+          indexes: [dimensions.repo || 'unknown'],
           doubles: Object.values(dataPoint.metrics || {}),
-          blobs: Object.values(dataPoint.dimensions || {}).map(String)
-        });
+          blobs: blobs.map(String)
+        };
+        
+        // Include timestamp if provided (convert to milliseconds if needed)
+        if (dataPoint.timestamp) {
+          const timestamp = dataPoint.timestamp < 1000000000000 ? dataPoint.timestamp * 1000 : dataPoint.timestamp;
+          analyticsDataPoint.timestamp = timestamp;
+        }
+        
+        await this.env.ANALYTICS.writeDataPoint(analyticsDataPoint);
       }
       
       console.log(`Analytics: Wrote ${dataPoints.length} data points to dataset ${dataset}`);
@@ -504,22 +544,17 @@ export class AnalyticsRepository {
 
   // Simple anomaly detection using SQL
   async detectAnomalies(dataset: string, metric: string, threshold: number = 2): Promise<any> {
+    // Analytics Engine doesn't support STDDEV, use simpler anomaly detection
     const sql = `
-      WITH stats AS (
-        SELECT 
-          AVG(metrics.${metric}) as mean_value,
-          STDDEV(metrics.${metric}) as std_dev
-        FROM ${dataset}
-        WHERE timestamp > NOW() - INTERVAL '24 hours'
-      )
       SELECT 
         timestamp,
-        metrics.${metric} as value,
-        dimensions
-      FROM ${dataset}, stats
-      WHERE timestamp > NOW() - INTERVAL '1 hour'
-        AND ABS(metrics.${metric} - stats.mean_value) > ${threshold} * stats.std_dev
+        double1 as value,
+        blob1 as dimension1,
+        blob2 as dimension2
+      FROM ${dataset}
+      WHERE double1 > ${threshold * 100}
       ORDER BY timestamp DESC
+      LIMIT 50
     `;
 
     return await this.query(sql);
@@ -534,7 +569,7 @@ export class AnalyticsRepository {
         AVG(CASE WHEN dimensions.eventType = 'error_occurred' THEN 1 ELSE 0 END) as error_rate,
         AVG(metrics.processingTime) as avg_processing_time
       FROM agent_metrics
-      WHERE timestamp > NOW() - INTERVAL '1 hour'
+      WHERE timestamp > NOW() - INTERVAL 1 HOUR
       GROUP BY dimensions.agentId
       ORDER BY error_rate DESC, avg_processing_time DESC
     `;

@@ -8,7 +8,7 @@
   "scripts": {
     "build": "wrangler build",
     "deploy": "wrangler deploy",
-    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev --port 8787\" --kill-others",
     "dev:vite": "vite dev",
     "start": "wrangler dev",
     "test": "vitest run",
@@ -26,6 +26,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "catalog:",
     "@nullshot/mcp": "workspace:*",
+    "hono": "^4.7.6",
     "zod": "catalog:"
   },
   "devDependencies": {
