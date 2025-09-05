@@ -1,18 +1,52 @@
-# Analytics MCP Example
+# Analytics MCP Example - GitHub PR Analytics
 
-This example demonstrates how to use NullShot's Analytics Engine via an MCP Server to collect, query, and analyze time-series data, following the MCP server standard.
+This example demonstrates **MCP capabilities with Cloudflare Analytics Engine** using GitHub Pull Request analytics as a concrete use case. It showcases how to build a complete analytics platform with MCP tools for data collection, time-series analysis, and trend monitoring.
 
-## Features
+## 🎯 **Purpose: MCP + Analytics Engine Demonstration**
 
-- **Real-time Analytics**: Track events and metrics as they happen
-- **SQL Querying**: Use familiar SQL to analyze your data  
-- **Time-Series Analysis**: Built-in support for time-based analytics
-- **Agent Performance Tracking**: Monitor AI agent interactions and performance
-- **System Health Monitoring**: Track CPU, memory, and system resources
-- **Anomaly Detection**: Automatically detect unusual patterns in your data
-- **Interactive Dashboards**: Real-time analytics dashboards via MCP resources
-- **Batch Processing**: Efficient bulk data ingestion
-- **Trend Analysis**: Identify patterns and changes over time
+This example serves as a **demonstration of MCP framework capabilities** integrated with Cloudflare Analytics Engine. Using GitHub repository analytics as a concrete, relatable use case, it demonstrates:
+
+- **MCP Tool Integration** - How to build analytics tools that AI agents can use
+- **Real-time Data Collection** - Immediate data ingestion and querying
+- **Time-series Analysis** - Professional analytics workflows via MCP
+- **Cloudflare Workers Integration** - Analytics Engine + MCP + Workers architecture
+- **Production-ready Implementation** - Complete with testing, validation, and error handling
+
+**Why GitHub PR analytics?** It's a familiar domain that clearly demonstrates the value of time-series analytics, trend analysis, and business insights - making it easy to understand the MCP framework's capabilities.
+
+## ⚠️ **Important: GitHub-Specific Implementation**
+
+This example is **intentionally specific to GitHub PR analytics** to provide a clear, working demonstration. The tools are optimized for:
+- GitHub repository metrics (PRs created, merged, closed)
+- Development team productivity tracking
+- Repository health monitoring
+- PR velocity analysis
+
+**For other use cases**, you'll need to adapt the data structure and tool configurations (see [Adaptation Guide](#adapting-for-your-use-case) below).
+
+## 📊 **Demonstrated Features**
+
+This GitHub PR analytics example showcases:
+
+### **Core MCP + Analytics Engine Integration:**
+- **Real-time data collection** - Track GitHub PR metrics as they happen
+- **Flexible SQL querying** - Query analytics data with any SQL
+- **Time-series analysis** - Analyze PR trends over time (18+ data points)
+- **Interactive tools** - Professional analytics interface via MCP Inspector
+- **AI agent compatibility** - Agents can query and analyze repository data
+
+### **Analytics Capabilities:**
+- **Trend analysis** - Track PR velocity changes (e.g., 100% improvement in merges)
+- **Summary statistics** - Aggregate metrics (avg 5.06 PRs created/day)
+- **Date filtering** - Analyze specific time periods (7d, 30d ranges)
+- **Multiple metrics** - Track created, merged, closed PRs simultaneously
+- **Real insights** - Actionable data about development team productivity
+
+### **Technical Features:**
+- **Batch data ingestion** - Add multiple data points efficiently
+- **Schema validation** - Type-safe analytics operations
+- **Error handling** - Graceful failure handling and validation
+- **Test coverage** - Comprehensive integration tests (14/14 passing)
 
 ## Project Structure
 
@@ -564,6 +598,150 @@ This returns live dashboard data with current metrics and visualizations.
   "metric": "processingTime",
   "threshold": 0.95,
   "timeWindow": "24h"
+}
+```
+
+## 🔧 **Adapting for Your Use Case**
+
+While this example demonstrates GitHub PR analytics, you can adapt it for any analytics use case by understanding the data structure and modifying the tools.
+
+### **Understanding the Current Data Structure**
+
+The GitHub implementation uses this Analytics Engine schema:
+```sql
+-- Current GitHub PR data structure
+blob1: repository name ("null-shot/typescript-agent-framework")  
+blob2: event type ("daily_pr_stats", "repository_snapshot")
+blob3: date ("2025-08-06", "2025-08-07")
+double1: PRs created count
+double2: PRs merged count  
+double3: PRs closed count
+timestamp: Analytics Engine write time (auto-generated)
+```
+
+### **Adapting for Other Use Cases**
+
+#### **Example: E-commerce Analytics**
+```json
+// track_metric for e-commerce
+{
+  "dataset": "ecommerce_events",
+  "dimensions": {
+    "event_type": "purchase_completed",    // blob2
+    "product_category": "electronics",     // blob3  
+    "payment_method": "credit_card",       // blob4
+    "date": "2025-09-04"                   // blob5
+  },
+  "metrics": {
+    "order_value": 299.99,                 // double1
+    "quantity": 2,                         // double2
+    "shipping_cost": 15.99                 // double3
+  }
+}
+```
+
+#### **Example: API Analytics**  
+```json
+// track_metric for API monitoring
+{
+  "dataset": "api_metrics",
+  "dimensions": {
+    "event_type": "api_request",           // blob2
+    "endpoint": "/api/users",              // blob3
+    "method": "GET",                       // blob4
+    "status_class": "2xx"                  // blob5
+  },
+  "metrics": {
+    "response_time": 145,                  // double1
+    "request_count": 1,                    // double2  
+    "error_count": 0                       // double3
+  }
+}
+```
+
+### **Modifying Advanced Tools for Your Data**
+
+To adapt the GitHub-specific tools (`get_time_series`, `analyze_trends`, `get_metrics_summary`):
+
+#### **1. Update Event Type Filters**
+In `src/repository.ts`, change the hardcoded event type:
+```typescript
+// Current (GitHub-specific)
+WHERE blob2 = 'daily_pr_stats'
+
+// Change to your event type
+WHERE blob2 = 'your_event_type'
+```
+
+#### **2. Update Metric Column Mappings**
+Update the metric-to-column mappings:
+```typescript
+// Current (GitHub-specific)
+const metricColumnMap = {
+  'prs_created': 'double1',
+  'prs_merged': 'double2', 
+  'prs_closed': 'double3'
+};
+
+// Adapt to your metrics
+const metricColumnMap = {
+  'your_metric_1': 'double1',
+  'your_metric_2': 'double2',
+  'your_metric_3': 'double3'  
+};
+```
+
+#### **3. Update Date Column References**
+Change date column assumptions:
+```typescript
+// Current (assumes dates in blob3)
+row.blob3 
+
+// Adapt to your date column  
+row.blob4  // or wherever your dates are stored
+```
+
+### **Recommended Approach for New Use Cases**
+
+#### **✅ Start with Generic Tools (Work Immediately):**
+- **`query_analytics`** - Execute any SQL query on your data
+- **`track_metric`** - Add any data structure you need
+- **`track_batch_metrics`** - Bulk data ingestion
+- **`list_datasets`** - Show your datasets
+
+#### **⚠️ Adapt GitHub-Specific Tools (Require Code Changes):**
+- `get_time_series` - Update for your metric names and columns
+- `analyze_trends` - Modify for your data structure
+- `get_metrics_summary` - Adapt aggregations for your metrics
+
+#### **🚀 Building Your Own Analytics:**
+
+1. **Deploy the MCP server** as-is
+2. **Use generic tools** to add your data structure
+3. **Query with SQL** to analyze your data
+4. **Adapt advanced tools** if you want the convenience features
+
+**Example workflow for web analytics:**
+```bash
+# 1. Add page view data
+# MCP Inspector -> track_metric:
+{
+  "dataset": "web_analytics",
+  "dimensions": {
+    "event_type": "page_view",
+    "page": "/home",
+    "date": "2025-09-04"
+  },
+  "metrics": {
+    "session_duration": 45,
+    "page_load_time": 1.2
+  }
+}
+
+# 2. Query your data  
+# MCP Inspector -> query_analytics:
+{
+  "sql": "SELECT blob3 as page, AVG(double1) as avg_session FROM web_analytics WHERE blob2 = 'page_view' GROUP BY blob3"
 }
 ```
 
