@@ -1,0 +1,32 @@
+[
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_small",
+      "date": "2025-09-05",
+      "batch_id": "small_test_1757062489006"
+    },
+    "metrics": {
+      "stars_total": 250,
+      "daily_star_growth": 2,
+      "prs_created": 3,
+      "prs_merged": 2
+    },
+    "timestamp": 1757062489006
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "batch_test_small",
+      "date": "2025-09-05",
+      "batch_id": "small_test_1757062489006"
+    },
+    "metrics": {
+      "stars_total": 32100,
+      "daily_star_growth": 5,
+      "prs_created": 4,
+      "prs_merged": 3
+    },
+    "timestamp": 1757062489006
+  }
+]

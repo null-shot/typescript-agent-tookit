@@ -1,0 +1,222 @@
+[
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-06",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 2,
+      "forks_total": 4,
+      "watchers_total": 5,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 1,
+      "issues_closed": 0,
+      "current_open_issues": 44
+    },
+    "timestamp": 1754472242314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-07",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 4,
+      "forks_total": 4,
+      "watchers_total": 1,
+      "prs_created": 2,
+      "prs_merged": 1,
+      "prs_closed": 1,
+      "issues_opened": 1,
+      "issues_closed": 0,
+      "current_open_issues": 38
+    },
+    "timestamp": 1754558642314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-08",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 1,
+      "forks_total": 4,
+      "watchers_total": 1,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 4,
+      "issues_closed": 3,
+      "current_open_issues": 39
+    },
+    "timestamp": 1754645042314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-09",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 4,
+      "daily_star_growth": 2,
+      "forks_total": 4,
+      "watchers_total": 5,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 4,
+      "issues_closed": 3,
+      "current_open_issues": 44
+    },
+    "timestamp": 1754731442314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-10",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 4,
+      "daily_star_growth": 1,
+      "forks_total": 4,
+      "watchers_total": 5,
+      "prs_created": 6,
+      "prs_merged": 4,
+      "prs_closed": 2,
+      "issues_opened": 5,
+      "issues_closed": 4,
+      "current_open_issues": 35
+    },
+    "timestamp": 1754817842314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-11",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 4,
+      "forks_total": 4,
+      "watchers_total": 1,
+      "prs_created": 7,
+      "prs_merged": 4,
+      "prs_closed": 3,
+      "issues_opened": 4,
+      "issues_closed": 3,
+      "current_open_issues": 44
+    },
+    "timestamp": 1754904242314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-12",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 5,
+      "forks_total": 4,
+      "watchers_total": 5,
+      "prs_created": 7,
+      "prs_merged": 4,
+      "prs_closed": 3,
+      "issues_opened": 3,
+      "issues_closed": 2,
+      "current_open_issues": 38
+    },
+    "timestamp": 1754990642314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-13",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 4,
+      "daily_star_growth": 1,
+      "forks_total": 4,
+      "watchers_total": 1,
+      "prs_created": 5,
+      "prs_merged": 3,
+      "prs_closed": 2,
+      "issues_opened": 3,
+      "issues_closed": 2,
+      "current_open_issues": 38
+    },
+    "timestamp": 1755077042314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-14",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 1,
+      "forks_total": 4,
+      "watchers_total": 1,
+      "prs_created": 1,
+      "prs_merged": 0,
+      "prs_closed": 1,
+      "issues_opened": 2,
+      "issues_closed": 1,
+      "current_open_issues": 44
+    },
+    "timestamp": 1755163442314
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "github_real_30days",
+      "date": "2025-08-15",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757064242314",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 1,
+      "daily_star_growth": 2,
+      "forks_total": 4,
+      "watchers_total": 5,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 1,
+      "issues_closed": 0,
+      "current_open_issues": 36
+    },
+    "timestamp": 1755249842314
+  }
+]

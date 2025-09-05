@@ -1,0 +1,202 @@
+[
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-06",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 245,
+      "daily_star_growth": 4,
+      "forks_total": 12,
+      "watchers_total": 8,
+      "prs_created": 2,
+      "prs_merged": 1,
+      "prs_closed": 1,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1754438400000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-07",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 246,
+      "daily_star_growth": 1,
+      "forks_total": 13,
+      "watchers_total": 8,
+      "prs_created": 7,
+      "prs_merged": 4,
+      "prs_closed": 3,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1754524800000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-08",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 251,
+      "daily_star_growth": 3,
+      "forks_total": 12,
+      "watchers_total": 8,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1754611200000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-09",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 257,
+      "daily_star_growth": 4,
+      "forks_total": 15,
+      "watchers_total": 8,
+      "prs_created": 2,
+      "prs_merged": 1,
+      "prs_closed": 1,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1754697600000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-10",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 265,
+      "daily_star_growth": 5,
+      "forks_total": 16,
+      "watchers_total": 8,
+      "prs_created": 4,
+      "prs_merged": 2,
+      "prs_closed": 2,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1754784000000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-11",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 270,
+      "daily_star_growth": 5,
+      "forks_total": 17,
+      "watchers_total": 13,
+      "prs_created": 6,
+      "prs_merged": 4,
+      "prs_closed": 2,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1754870400000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-12",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 269,
+      "daily_star_growth": 4,
+      "forks_total": 18,
+      "watchers_total": 14,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1754956800000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-13",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 266,
+      "daily_star_growth": 3,
+      "forks_total": 12,
+      "watchers_total": 15,
+      "prs_created": 5,
+      "prs_merged": 3,
+      "prs_closed": 2,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1755043200000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-14",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 277,
+      "daily_star_growth": 4,
+      "forks_total": 20,
+      "watchers_total": 8,
+      "prs_created": 2,
+      "prs_merged": 1,
+      "prs_closed": 1,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1755129600000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-15",
+      "batch_id": "null-shot_typescript-agent-framework_batch_1757063632246"
+    },
+    "metrics": {
+      "stars_total": 254,
+      "daily_star_growth": 1,
+      "forks_total": 21,
+      "watchers_total": 8,
+      "prs_created": 5,
+      "prs_merged": 3,
+      "prs_closed": 2,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1755216000000
+  }
+]

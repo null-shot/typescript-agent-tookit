@@ -1,0 +1,202 @@
+[
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-21",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 290,
+      "daily_star_growth": 3,
+      "forks_total": 27,
+      "watchers_total": 8,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1755734400000
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-21",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 32045,
+      "daily_star_growth": 3,
+      "forks_total": 1965,
+      "watchers_total": 3200,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 5,
+      "issues_closed": 4
+    },
+    "timestamp": 1755734400000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-22",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 293,
+      "daily_star_growth": 3,
+      "forks_total": 28,
+      "watchers_total": 24,
+      "prs_created": 4,
+      "prs_merged": 2,
+      "prs_closed": 2,
+      "issues_opened": 2,
+      "issues_closed": 1
+    },
+    "timestamp": 1755820800000
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-22",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 32032,
+      "daily_star_growth": 2,
+      "forks_total": 1950,
+      "watchers_total": 3200,
+      "prs_created": 6,
+      "prs_merged": 4,
+      "prs_closed": 2,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1755820800000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-23",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 279,
+      "daily_star_growth": 2,
+      "forks_total": 12,
+      "watchers_total": 25,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 2,
+      "issues_closed": 1
+    },
+    "timestamp": 1755907200000
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-23",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 32085,
+      "daily_star_growth": 5,
+      "forks_total": 1950,
+      "watchers_total": 3217,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 3,
+      "issues_closed": 2
+    },
+    "timestamp": 1755907200000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-24",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 317,
+      "daily_star_growth": 4,
+      "forks_total": 30,
+      "watchers_total": 26,
+      "prs_created": 6,
+      "prs_merged": 4,
+      "prs_closed": 2,
+      "issues_opened": 1,
+      "issues_closed": 0
+    },
+    "timestamp": 1755993600000
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-24",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 32018,
+      "daily_star_growth": 1,
+      "forks_total": 1950,
+      "watchers_total": 3200,
+      "prs_created": 6,
+      "prs_merged": 4,
+      "prs_closed": 2,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1755993600000
+  },
+  {
+    "dimensions": {
+      "repo": "null-shot/typescript-agent-framework",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-25",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 264,
+      "daily_star_growth": 1,
+      "forks_total": 12,
+      "watchers_total": 27,
+      "prs_created": 4,
+      "prs_merged": 2,
+      "prs_closed": 2,
+      "issues_opened": 2,
+      "issues_closed": 1
+    },
+    "timestamp": 1756080000000
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "batch_test_30days",
+      "date": "2025-08-25",
+      "batch_id": "mcp_inspector_test_1757062203394"
+    },
+    "metrics": {
+      "stars_total": 32019,
+      "daily_star_growth": 1,
+      "forks_total": 1969,
+      "watchers_total": 3219,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 4,
+      "issues_closed": 3
+    },
+    "timestamp": 1756080000000
+  }
+]

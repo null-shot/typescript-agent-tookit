@@ -1,0 +1,222 @@
+[
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-08-26",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32626,
+      "daily_star_growth": 5,
+      "forks_total": 1978,
+      "watchers_total": 32636,
+      "prs_created": 5,
+      "prs_merged": 3,
+      "prs_closed": 2,
+      "issues_opened": 3,
+      "issues_closed": 2,
+      "current_open_issues": 3165
+    },
+    "timestamp": 1756200508081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-08-27",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32628,
+      "daily_star_growth": 3,
+      "forks_total": 1978,
+      "watchers_total": 32645,
+      "prs_created": 2,
+      "prs_merged": 1,
+      "prs_closed": 1,
+      "issues_opened": 2,
+      "issues_closed": 1,
+      "current_open_issues": 2599
+    },
+    "timestamp": 1756286908081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-08-28",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32637,
+      "daily_star_growth": 4,
+      "forks_total": 1978,
+      "watchers_total": 32645,
+      "prs_created": 1,
+      "prs_merged": 0,
+      "prs_closed": 1,
+      "issues_opened": 2,
+      "issues_closed": 1,
+      "current_open_issues": 2528
+    },
+    "timestamp": 1756373308081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-08-29",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32644,
+      "daily_star_growth": 1,
+      "forks_total": 1978,
+      "watchers_total": 32645,
+      "prs_created": 2,
+      "prs_merged": 1,
+      "prs_closed": 1,
+      "issues_opened": 2,
+      "issues_closed": 1,
+      "current_open_issues": 2964
+    },
+    "timestamp": 1756459708081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-08-30",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32639,
+      "daily_star_growth": 2,
+      "forks_total": 1978,
+      "watchers_total": 32640,
+      "prs_created": 5,
+      "prs_merged": 3,
+      "prs_closed": 2,
+      "issues_opened": 1,
+      "issues_closed": 0,
+      "current_open_issues": 2951
+    },
+    "timestamp": 1756546108081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-08-31",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32636,
+      "daily_star_growth": 3,
+      "forks_total": 1978,
+      "watchers_total": 32641,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 1,
+      "issues_closed": 0,
+      "current_open_issues": 2576
+    },
+    "timestamp": 1756632508081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-09-01",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32644,
+      "daily_star_growth": 3,
+      "forks_total": 1978,
+      "watchers_total": 32645,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 3,
+      "issues_closed": 2,
+      "current_open_issues": 3478
+    },
+    "timestamp": 1756718908081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-09-02",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32642,
+      "daily_star_growth": 1,
+      "forks_total": 1978,
+      "watchers_total": 32643,
+      "prs_created": 3,
+      "prs_merged": 2,
+      "prs_closed": 1,
+      "issues_opened": 3,
+      "issues_closed": 2,
+      "current_open_issues": 2872
+    },
+    "timestamp": 1756805308081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-09-03",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32643,
+      "daily_star_growth": 3,
+      "forks_total": 1978,
+      "watchers_total": 32645,
+      "prs_created": 4,
+      "prs_merged": 2,
+      "prs_closed": 2,
+      "issues_opened": 2,
+      "issues_closed": 1,
+      "current_open_issues": 3320
+    },
+    "timestamp": 1756891708081
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "github_real_30days",
+      "date": "2025-09-04",
+      "batch_id": "anthropics_claude-code_batch_1757064508083",
+      "data_source": "github_api"
+    },
+    "metrics": {
+      "stars_total": 32644,
+      "daily_star_growth": 1,
+      "forks_total": 1978,
+      "watchers_total": 32645,
+      "prs_created": 8,
+      "prs_merged": 5,
+      "prs_closed": 3,
+      "issues_opened": 3,
+      "issues_closed": 2,
+      "current_open_issues": 2444
+    },
+    "timestamp": 1756978108081
+  }
+]
