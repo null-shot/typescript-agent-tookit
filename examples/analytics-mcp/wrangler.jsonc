@@ -1,0 +1,33 @@
+{
+  "name": "analytics-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-02-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ANALYTICS_MCP_SERVER",
+        "class_name": "AnalyticsMcpServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["AnalyticsMcpServer"]
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "github_stats"
+    }
+  ],
+  "vars": {
+    "CLOUDFLARE_ACCOUNT_ID": "59084df56e21d828dcbd5811f81c7754"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
