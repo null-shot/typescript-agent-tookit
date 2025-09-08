@@ -149,7 +149,7 @@ This opens:
 2. **Test `query_analytics` tool**:
    ```json
    {
-     "sql": "SELECT blob2 as EventType, blob3, double1 as PRsCreated, double2 as PRsMerged, double3 as PRsClosed FROM github_stats WHERE blob2 = 'test_pr_data' ORDER BY timestamp DESC LIMIT 5"
+     "sql": "SELECT blob2 as EventType, blob3 as Date, double1 as PRsCreated, double2 as PRsMerged, double3 as PRsClosed FROM github_stats ORDER BY blob3 DESC LIMIT 5"
    }
    ```
 
@@ -362,7 +362,7 @@ wrangler deploy
 3. **Query the data** (`query_analytics` tool):
    
    **Fill in MCP Inspector field:**
-   - **sql**: `SELECT blob2 as EventType, blob3, double1 as PRsCreated, double2 as PRsMerged, double3 as PRsClosed FROM github_stats WHERE blob2 = 'test_pr_data' ORDER BY timestamp DESC LIMIT 5`
+   - **sql**: `SELECT blob2 as EventType, blob3 as Date, double1 as PRsCreated, double2 as PRsMerged, double3 as PRsClosed FROM github_stats ORDER BY blob3 DESC LIMIT 5`
 
 **Expected Response (With Credentials Configured):**
 ```json
