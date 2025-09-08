@@ -67,7 +67,6 @@ describe("Analytics MCP Client Integration Tests", () => {
       expect(toolNames).toContain('get_metrics_summary');
       expect(toolNames).toContain('get_time_series');
       expect(toolNames).toContain('analyze_trends');
-      expect(toolNames).toContain('monitor_system_health');
     });
 
     it("should track a single metric", async () => {
@@ -189,29 +188,6 @@ describe("Analytics MCP Client Integration Tests", () => {
     });
 
 
-    it("should monitor system health", async () => {
-      const transport = createTransport(ctx);
-      await client.connect(transport);
-      
-      const result = await client.callTool({
-        name: 'monitor_system_health',
-        arguments: {
-          timeWindow: '1h',
-          includeDetails: true
-        }
-      }) as ToolResponse;
-
-      expect(result.content).toBeInstanceOf(Array);
-      const responseData = JSON.parse(result.content[0].text);
-      // In test environment, tools may return mock data or errors
-      expect(responseData).toBeDefined();
-      if (responseData.success) {
-        expect(responseData.data).toBeDefined();
-      } else {
-        // Tool may fail in test environment due to missing real data
-        expect(responseData.error).toBeDefined();
-      }
-    });
 
     it("should handle validation errors", async () => {
       const transport = createTransport(ctx);

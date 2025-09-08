@@ -366,56 +366,6 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
     }
   );
 
-  // Monitor system health tool
-  server.tool(
-    'monitor_system_health',
-    'Monitor overall system health and performance',
-    {
-      timeWindow: z.enum(['1h', '24h', '7d']).optional().describe('Time window for health monitoring'),
-      includeDetails: z.boolean().optional().describe('Include detailed health metrics')
-    },
-    async ({ timeWindow, includeDetails }: {
-      timeWindow?: '1h' | '24h' | '7d';
-      includeDetails?: boolean;
-    }) => {
-      try {
-        // Note: timeWindow and includeDetails are currently not used by the repository method
-        // This is a simple health check that queries recent agent metrics
-        const result = await repository.monitorSystemHealth();
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: true,
-                data: result
-              })
-            }
-          ]
-        };
-      } catch (error) {
-        console.error('monitorSystemHealth error:', error);
-        
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: false,
-                error: error instanceof ValidationError 
-                  ? `Validation error: ${error.message}`
-                  : error instanceof AnalyticsError
-                  ? `Analytics error: ${error.message}`
-                  : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
-              })
-            }
-          ]
-        };
-      }
-    }
-  );
-
   // List datasets tool
   server.tool(
     'list_datasets',

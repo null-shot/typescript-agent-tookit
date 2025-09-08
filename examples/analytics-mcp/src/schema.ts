@@ -128,18 +128,6 @@ export const AnalyzeTrendsSchema = z.object({
   timeRange: z.enum(['1h', '24h', '7d', '30d']),
 });
 
-export const MonitorSystemHealthSchema = z.object({
-  systemId: z.string().min(1, "System ID is required"),
-  metrics: z.object({
-    cpu: z.number().min(0).max(100).optional(),
-    memory: z.number().min(0).max(100).optional(),
-    connections: z.number().min(0).optional(),
-    queueDepth: z.number().min(0).optional(),
-    errorRate: z.number().min(0).max(1).optional(),
-    responseTime: z.number().min(0).optional()
-  })
-});
-
 
 // Environment interface
 export interface Env {

@@ -561,42 +561,6 @@ export class AnalyticsRepository {
 
   // Simple anomaly detection using SQL
 
-  // System health monitoring
-  async monitorSystemHealth(): Promise<any> {
-    // Simple system health check - return basic Analytics Engine status
-    // Note: This is a simplified implementation since agent_metrics may not exist
-    const sql = `
-      SELECT 
-        'system' as component,
-        count() as total_queries,
-        'healthy' as status
-      FROM github_stats
-      WHERE timestamp > NOW() - INTERVAL 1 DAY
-      LIMIT 1
-    `;
-
-    try {
-      const result = await this.query(sql);
-      return {
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        metrics: {
-          queries_24h: result.length > 0 ? result[0].total_queries : 0,
-          analytics_engine: 'operational'
-        }
-      };
-    } catch (error) {
-      return {
-        status: 'degraded',
-        timestamp: new Date().toISOString(),
-        metrics: {
-          queries_24h: 0,
-          analytics_engine: 'error'
-        },
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  }
 
   // Get recent data for debugging
   async getRecentData(dataset: string, limit: number = 100): Promise<any> {
