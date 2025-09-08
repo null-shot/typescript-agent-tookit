@@ -237,6 +237,15 @@ export class AnalyticsRepository {
       }
       
       // Use SQL API to get metrics summary
+      // Build WHERE clause with optional dimensions filter
+      let whereClause = `blob3 >= '${options.timeRange.start.split('T')[0]}' AND blob3 <= '${options.timeRange.end.split('T')[0]}'`;
+      
+      // If dimensions are specified, filter by them (assuming they represent event types in blob2)
+      if (options.dimensions && options.dimensions.length > 0) {
+        const dimensionFilter = options.dimensions.map(d => `'${d}'`).join(', ');
+        whereClause += ` AND blob2 IN (${dimensionFilter})`;
+      }
+
       const sql = `
         SELECT 
           COUNT() as total_records,
@@ -247,9 +256,7 @@ export class AnalyticsRepository {
           MAX(double2) as max_prs_merged,
           MAX(double3) as max_prs_closed
         FROM ${dataset}
-        WHERE blob2 = 'daily_pr_stats'
-          AND blob3 >= '${options.timeRange.start.split('T')[0]}'
-          AND blob3 <= '${options.timeRange.end.split('T')[0]}'
+        WHERE ${whereClause}
       `;
       
       const queryResult = await this.query(sql);
