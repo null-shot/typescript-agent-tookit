@@ -323,17 +323,22 @@ export class AnalyticsRepository {
       
       const column = metricColumnMap[metric] || 'double1';
       
-      // Use SQL API to get time series data with proper date filtering
+      // Build WHERE clause with optional dimensions filter
+      let whereClause = `${column} > 0 AND blob3 >= '${options.timeRange.start.split('T')[0]}' AND blob3 <= '${options.timeRange.end.split('T')[0]}'`;
+      
+      // Add dimensions filter if provided (filters by event type in blob2)
+      if (options.dimensions && options.dimensions.length > 0) {
+        const dimensionFilter = options.dimensions.map(d => `'${d}'`).join(', ');
+        whereClause += ` AND blob2 IN (${dimensionFilter})`;
+      }
+
       const sql = `
         SELECT 
           timestamp,
           blob3 as date,
           ${column} as value
         FROM ${dataset}
-        WHERE blob2 = 'daily_pr_stats' 
-          AND ${column} > 0
-          AND blob3 >= '${options.timeRange.start.split('T')[0]}'
-          AND blob3 <= '${options.timeRange.end.split('T')[0]}'
+        WHERE ${whereClause}
         ORDER BY timestamp
       `;
       

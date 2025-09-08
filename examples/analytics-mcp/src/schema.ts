@@ -40,7 +40,7 @@ export interface MetricsResult {
 export interface TimeSeriesOptions {
   timeRange: { start: string; end: string };
   interval?: string;           // 1m, 5m, 1h, 1d
-  filters?: Record<string, any>;
+  dimensions?: string[];       // Event types to filter by
 }
 
 export interface TimeSeriesResult {
@@ -119,7 +119,7 @@ export const GetTimeSeriesSchema = z.object({
     start: z.string().describe('Start time (ISO string)'),
     end: z.string().describe('End time (ISO string)')
   }).describe('Time range for the query'),
-  filters: z.record(z.string()).optional().describe('Dimension filters')
+  dimensions: z.array(z.string()).optional().describe('Dimensions to filter by (event types)')
 });
 
 export const AnalyzeTrendsSchema = z.object({

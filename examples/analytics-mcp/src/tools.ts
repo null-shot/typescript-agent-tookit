@@ -262,22 +262,22 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
         start: z.string().describe('Start time (ISO string)'),
         end: z.string().describe('End time (ISO string)')
       }).describe('Time range for the query'),
-      filters: z.record(z.string()).optional().describe('Dimension filters')
+      dimensions: z.array(z.string()).optional().describe('Dimensions to filter by (event types)')
     },
-    async ({ dataset, metric, interval, timeRange, filters }: {
+    async ({ dataset, metric, interval, timeRange, dimensions }: {
       dataset: string;
       metric: string;
       interval: '1m' | '5m' | '15m' | '1h' | '1d';
       timeRange: { start: string; end: string };
-      filters?: Record<string, string>;
+      dimensions?: string[];
     }) => {
       try {
-        const validated = GetTimeSeriesSchema.parse({ dataset, metric, interval, timeRange, filters });
+        const validated = GetTimeSeriesSchema.parse({ dataset, metric, interval, timeRange, dimensions });
         
         const result = await repository.getTimeSeries(validated.dataset, validated.metric, {
           interval: validated.interval,
           timeRange: validated.timeRange,
-          filters: validated.filters
+          dimensions: validated.dimensions
         });
 
         return {

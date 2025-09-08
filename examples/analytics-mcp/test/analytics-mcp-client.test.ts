@@ -155,7 +155,7 @@ describe("Analytics MCP Client Integration Tests", () => {
             start: '2025-08-01T00:00:00Z',
             end: '2025-09-05T00:00:00Z'
           },
-          filters: {}
+          dimensions: []
         }
       }) as ToolResponse;
 
