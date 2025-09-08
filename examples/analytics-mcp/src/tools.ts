@@ -391,13 +391,11 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
       dataset: z.string().describe('Dataset name to analyze'),
       metric: z.string().describe('Metric to analyze for trends'),
       timeRange: z.enum(['1h', '24h', '7d', '30d']).describe('Time range'),
-      algorithm: z.enum(['linear', 'exponential', 'seasonal']).optional().describe('Trend analysis algorithm')
     },
     async ({ dataset, metric, timeRange, algorithm }: {
       dataset: string;
       metric: string;
       timeRange: '1h' | '24h' | '7d' | '30d';
-      algorithm?: 'linear' | 'exponential' | 'seasonal';
     }) => {
       try {
         const validated = AnalyzeTrendsSchema.parse({ dataset, metric, timeRange, algorithm });
