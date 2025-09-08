@@ -873,22 +873,42 @@ Get predefined metric summaries with time ranges and grouping.
 ```
 
 #### `get_time_series`
-Get time-series data with automatic interval bucketing.
+Get time-series data for a specific metric with optional dimension filtering.
 
 **Parameters:**
 - `dataset` (required): Dataset name
-- `metric` (required): Metric to analyze
-- `timeRange` (required): Analysis period (1h, 24h, 7d, 30d)
-- `interval` (optional): Time bucket size (1m, 5m, 15m, 1h, 1d)
+- `metric` (required): Metric to analyze (prs_created, prs_merged, prs_closed)
+- `interval` (required): Time interval for aggregation (1m, 5m, 15m, 1h, 1d)
+- `timeRange` (required): Time range with start/end ISO strings
+- `dimensions` (optional): Array of event types to filter by
 
-**Example:**
+**Examples:**
+
+**Get time series for Claude rich data:**
 ```json
 {
-  "tool": "get_time_series",
-  "dataset": "agent_metrics",
-  "metric": "processingTime",
-  "timeRange": "24h",
-  "interval": "1h"
+  "dataset": "github_stats",
+  "metric": "prs_created",
+  "interval": "1d",
+  "timeRange": {
+    "start": "2025-08-01T00:00:00Z",
+    "end": "2025-08-31T23:59:59Z"
+  },
+  "dimensions": ["claude_rich_data"]
+}
+```
+
+**Get time series for all event types:**
+```json
+{
+  "dataset": "github_stats", 
+  "metric": "prs_merged",
+  "interval": "1d",
+  "timeRange": {
+    "start": "2025-08-01T00:00:00Z",
+    "end": "2025-08-31T23:59:59Z"
+  },
+  "dimensions": []
 }
 ```
 
@@ -1295,35 +1315,47 @@ timestamp: Analytics Engine write time (auto-generated)
 }
 ```
 
-### **Modifying Advanced Tools for Your Data**
+### **Using Advanced Tools with Your Data**
 
-To adapt the GitHub-specific tools (`get_time_series`, `analyze_trends`, `get_metrics_summary`):
+The analytics tools are now flexible and work with any data structure:
 
-#### **1. Update Event Type Filters**
-In `src/repository.ts`, change the hardcoded event type:
-```typescript
-// Current (GitHub-specific)
-WHERE blob2 = 'daily_pr_stats'
+#### **✅ `get_metrics_summary` & `get_time_series` - No Code Changes Needed!**
+These tools now use the `dimensions` parameter to filter data dynamically:
 
-// Change to your event type
-WHERE blob2 = 'your_event_type'
+```json
+// Filter by specific event type
+{
+  "dataset": "your_dataset",
+  "dimensions": ["your_event_type"]
+}
+
+// Get all data (no filtering)
+{
+  "dataset": "your_dataset", 
+  "dimensions": []
+}
 ```
 
-#### **2. Update Metric Column Mappings**
-Update the metric-to-column mappings:
-```typescript
-// Current (GitHub-specific)
-const metricColumnMap = {
-  'prs_created': 'double1',
-  'prs_merged': 'double2', 
-  'prs_closed': 'double3'
-};
+#### **❌ `analyze_trends` - May Need Code Changes**
+The `analyze_trends` tool may still have hardcoded filters. To adapt it for your data:
 
-// Adapt to your metrics
+**Option 1: Use existing metric names**
+```json
+{
+  "dataset": "your_dataset",
+  "metric": "prs_created",  // Maps to double1
+  "timeRange": "30d",
+  "dimensions": ["your_event_type"]  // Will be added in future update
+}
+```
+
+**Option 2: Update metric mappings in code**
+In `src/repository.ts`, update the metric column mapping:
+```typescript
 const metricColumnMap = {
   'your_metric_1': 'double1',
-  'your_metric_2': 'double2',
-  'your_metric_3': 'double3'  
+  'your_metric_2': 'double2', 
+  'your_metric_3': 'double3'
 };
 ```
 
