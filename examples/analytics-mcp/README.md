@@ -64,24 +64,30 @@ wrangler whoami
 wrangler auth login
 # This will open browser and create/save a token automatically
 
-# Method 2: Create token manually from Cloudflare Dashboard
+# Method 2: Create API token manually from Cloudflare Dashboard
 # 1. Go to https://dash.cloudflare.com/profile/api-tokens
 # 2. Click "Create Token" 
-# 3. Use "Edit Cloudflare Workers" template
-# 4. Select your account and zones
-# 5. Copy the generated token
+# 3. Use "Edit Cloudflare Workers" template OR "Custom token"
+# 4. Required permissions: Account -> Cloudflare Workers:Edit, Account -> Analytics Engine:Read
+# 5. Select your account in "Account Resources"
+# 6. Click "Continue to summary" then "Create Token"
+# 7. Copy the generated token (save it securely - you won't see it again!)
 
-# Method 3: Use existing token if you have one
-# Check if you already have a token:
-cat ~/.config/@cloudflarerc 2>/dev/null | grep api_token
+# Method 3: Check existing setup and get Account ID
+# Verify your current Cloudflare setup:
+wrangler whoami
+
+# This shows your Account ID and confirms you're authenticated
+# Copy the Account ID from the output table
+# Note: This doesn't show the API token value - you need Method 1 or 2 for that
 
 # Set your credentials (replace with your actual values)
-export CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami
-export CLOUDFLARE_API_TOKEN=your_api_token_from_above
+export CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami  # Copy from wrangler whoami output
+export CLOUDFLARE_API_TOKEN=your_api_token  # See token creation steps below
 
 # Or add to your .env file for persistence
 echo "CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami" >> .env
-echo "CLOUDFLARE_API_TOKEN=your_api_token_from_above" >> .env
+echo "CLOUDFLARE_API_TOKEN=your_api_token" >> .env
 ```
 
 **Note**: Your deployed worker already has these credentials configured (that's why the GitHub collector worked).
@@ -159,7 +165,7 @@ This opens:
 
 ### **Step 5: Collect and Add Batch Data**
 
-**🎯 Goal**: Add 30 days of GitHub metrics using batch processing (Analytics Engine has ~10 record batch limits)
+**🎯 Goal**: Add 30 days of GitHub metrics using batch processing (Analytics Engine allows up to 25 data points per Worker invocation)
 
 #### **5.1: Generate Test Data**
 
@@ -239,7 +245,7 @@ wrangler deploy
 **Use `query_analytics` tool:**
 ```json
 {
-  "sql": "SELECT count() as total_records FROM github_stats WHERE blob2 = 'batch_test_30days'"
+  "sql": "SELECT count() as total_records FROM github_stats WHERE blob2 = 'github_real_30days'"
 }
 ```
 
@@ -261,14 +267,14 @@ wrangler deploy
 **View recent data:**
 ```json
 {
-  "sql": "SELECT blob1 as repo, blob3, double1 as stars, double5 as prs_created FROM github_stats WHERE blob2 = 'batch_test_30days' ORDER BY timestamp DESC LIMIT 10"
+  "sql": "SELECT blob1 as repo, blob3, double1 as stars_total, double4 as prs_created FROM github_stats WHERE blob2 = 'github_real_30days' ORDER BY blob3 DESC LIMIT 10"
 }
 ```
 
 **Repository breakdown:**
 ```json  
 {
-  "sql": "SELECT blob1 as repo, count() as records FROM github_stats WHERE blob2 = 'batch_test_30days' GROUP BY blob1"
+  "sql": "SELECT blob1 as repo, count() as records FROM github_stats WHERE blob2 = 'github_real_30days' GROUP BY blob1"
 }
 ```
 
@@ -301,140 +307,20 @@ wrangler deploy
      ```sql
      SELECT blob3, double1 as Stars, double5 as PRsCreated 
      FROM github_stats 
-     WHERE blob2 = 'batch_test_30days' AND blob1 = 'anthropics/claude-code'
+     WHERE blob2 = 'github_real_30days' AND blob1 = 'anthropics/claude-code'
      ORDER BY blob3
      ```
    - **Panel 2 (NullShot)**: 
      ```sql
      SELECT blob3, double1 as Stars, double5 as PRsCreated 
      FROM github_stats 
-     WHERE blob2 = 'batch_test_30days' AND blob1 = 'null-shot/typescript-agent-framework'
+     WHERE blob2 = 'github_real_30days' AND blob1 = 'null-shot/typescript-agent-framework'
      ORDER BY blob3
      ```
 
 **💡 Pro Tip**: The `blob1` field stores the repository name, allowing you to filter data by repository in Grafana!
 
-### **Step 6: Add Data to MCP Inspector (Individual Testing)**
-
-**Add test data to your LOCAL dev server for MCP Inspector testing:**
-
-**Use MCP Inspector to manually add data:**
-
-**Copy-Paste Ready Examples:**
-
-1. **Add a test PR data point** (`track_metric` tool):
-
-   **Fill in MCP Inspector fields:**
-   - **dataset**: `github_stats`
-   - **dimensions** (JSON): 
-     ```json
-     {
-       "repo": "null-shot/typescript-agent-framework",
-       "event_type": "test_pr_data", 
-       "date": "2025-09-05"
-     }
-     ```
-   - **metrics** (JSON):
-     ```json
-     {
-       "prs_created": 3,
-       "prs_merged": 2,
-       "prs_closed": 0
-     }
-     ```
-   - **timestamp**: Leave empty (uses current time)
-
-2. **Add multiple data points** (`track_batch_metrics` tool):
-   ```json
-   {
-     "dataset": "github_stats",
-     "dataPoints": [
-       {
-         "dimensions": {"repo": "null-shot/typescript-agent-framework", "event_type": "test_pr", "date": "2025-09-04"},
-         "metrics": {"prs_created": 2, "prs_merged": 1, "prs_closed": 0}
-       },
-       {
-         "dimensions": {"repo": "null-shot/typescript-agent-framework", "event_type": "test_pr", "date": "2025-09-03"},
-         "metrics": {"prs_created": 4, "prs_merged": 3, "prs_closed": 1}
-       }
-     ]
-   }
-   ```
-
-3. **Query the data** (`query_analytics` tool):
-   
-   **Fill in MCP Inspector field:**
-   - **sql**: `SELECT blob2 as EventType, blob3 as Date, double1 as PRsCreated, double2 as PRsMerged, double3 as PRsClosed FROM github_stats ORDER BY blob3 DESC LIMIT 5`
-
-**Expected Response (With Credentials Configured):**
-```json
-{
-  "success": true,
-  "data": {
-    "data": [
-      {"EventType": "test_pr_data", "blob3": "2025-09-05", "PRsCreated": 3, "PRsMerged": 2, "PRsClosed": 0}
-    ],
-    "meta": {
-      "rows": 1,
-      "duration": 423,
-      "timestamp": 1757051642773
-    }
-  }
-}
-```
-
-**✅ Key Points**:
-- **Aliases work in SELECT**: `blob2 as EventType`, `double1 as PRsCreated` ✅
-- **No alias for dates**: `blob3` (not `as Date`) to avoid column type errors
-- **Event type must match**: `WHERE blob2 = 'test_pr_data'` matches what you added
-- **⏳ Analytics Engine Delay**: Data may take 10-60 seconds to appear in queries (normal behavior)
-
-**✅ Real Data!** With credentials configured, you'll see actual Analytics Engine data in MCP Inspector.
-
-**💡 Tips for MCP Inspector:**
-- **Empty data = Success**: Shows tools work correctly  
-- **Use JSON mode**: Click "Format JSON" for complex objects
-- **Test tool execution**: Focus on successful responses, not data content
-- **Real data**: Comes from the deployed server (Step 5)
-
-### **Step 6: Add Real GitHub Data to Production (30 Days)**
-
-**For your production dashboard, collect full dataset:**
-
-```bash
-# This adds data to your DEPLOYED server (for Grafana)
-node generate-batch-data.js anthropics claude-code
-```
-
-**⚠️ Important**: 
-- **MCP Inspector** connects to `localhost:8787` (local dev server)
-- **Batch Data Generator** sends data to deployed server (`analytics-mcp.raydp102.workers.dev`)
-- **Grafana** queries the deployed server (where the collector data goes)
-
-**These are SEPARATE data stores!**
-
-**What this script does:**
-- **🐙 GitHub API Integration**: Fetches real data from `https://api.github.com/repos/{owner}/{repo}`
-- **📊 30 Days Coverage**: Full month of data for comprehensive trends
-- **🏢 Multi-Repository**: Both null-shot and anthropics repositories  
-- **📈 Real Metrics**: Actual PR counts, star counts, issue activity from live repos
-- **⭐ Star Growth**: Historical star growth trends based on current counts
-- **🔄 Activity Patterns**: Real PR/issue creation and closure dates
-
-**Data Sources:**
-- **GitHub API**: `https://api.github.com/repos/{owner}/{repo}` (public data, no auth required)
-- **Real metrics**: Actual PR counts, star counts, issue activity from live repositories
-- **Live data**: Current repository statistics fetched in real-time
-
-**Optional: GitHub Authentication**
-```bash
-# For higher rate limits (optional)
-export GITHUB_TOKEN=your_personal_access_token
-```
-**Without token**: 60 requests/hour (sufficient for demo)
-**With token**: 5,000 requests/hour
-
-### **Step 7: Setup Local Grafana Dashboard**
+### **Step 6: Setup Local Grafana Dashboard**
 
 **Install and Start Grafana (Proven Working Method):**
 ```bash
@@ -466,7 +352,7 @@ Based on the successful implementation, configure:
 - **Query parameter**: `sql` = (your SQL query)
 - **Note**: This endpoint was added for easier integration but not yet tested
 
-### **Step 8: Configure Analytics Engine Access**
+### **Step 7: Configure Analytics Engine Access**
 
 Set up your Cloudflare API token for Analytics Engine access:
 
@@ -476,7 +362,7 @@ wrangler secret put CF_API_TOKEN
 # Use token with "Account Analytics Read" permission
 ```
 
-### **Step 9: Verify Setup**
+### **Step 8: Verify Setup**
 
 Test that everything works:
 
@@ -958,7 +844,7 @@ Get the most recent data entries for debugging and inspection. Shows raw data st
 ```
 
 **What it does:**
-Executes: `SELECT * FROM github_stats ORDER BY blob3 DESC LIMIT 2`
+Executes: `SELECT * FROM github_stats ORDER BY timestamp DESC LIMIT 2`
 
 **Use cases:**
 - **Debug data structure**: See exactly how your data is stored
@@ -1088,39 +974,6 @@ interface Env {
 - Wrangler CLI
 - Cloudflare account with Analytics Engine access
 
-### Installation
-
-1. **Install dependencies:**
-   ```bash
-   pnpm install
-   ```
-
-2. **Navigate to the analytics-mcp directory:**
-   ```bash
-   cd examples/analytics-mcp
-   ```
-
-3. **Set up Cloudflare resources:**
-   ```bash
-   # Create D1 database
-   npx wrangler d1 create analytics-mcp-db
-   
-   # Create Analytics Engine dataset (if needed)
-   # This is typically created automatically when first used
-   ```
-
-4. **Update wrangler.jsonc with your database ID:**
-   ```jsonc
-   {
-     "d1_databases": [
-       {
-         "binding": "DB",
-         "database_name": "analytics-mcp-db",
-         "database_id": "your-database-id-here"
-       }
-     ]
-   }
-   ```
 
 ### Development
 
@@ -1155,23 +1008,21 @@ interface Env {
 
 ## Using the MCP Inspector
 
-1. **Start your Worker:**
+1. **Start development server (includes Inspector):**
    ```bash
    pnpm dev
    ```
+   This automatically starts both:
+   - Wrangler dev server on `localhost:8787`
+   - MCP Inspector on `localhost:6274`
 
-2. **In a new terminal, run the MCP Inspector:**
-   ```bash
-   npx @modelcontextprotocol/inspector
-   ```
-
-3. **Open the Inspector:**
-   - Navigate to http://localhost:6274
+2. **Open the Inspector:**
+   - Navigate to http://localhost:6274 (opens automatically)
    - Use the session token if prompted
 
-4. **Configure the connection:**
-   - Set transport to "Streamable HTTP"
-   - Enter your Worker URL: http://127.0.0.1:8787
+3. **Configure the connection:**
+   - Set transport to "SSE" (Server-Sent Events)
+   - Enter your Worker URL: `http://localhost:8787/sse`
 
 5. **Explore the available tools:**
    - `track_metric`: Record individual data points
@@ -1184,153 +1035,6 @@ interface Env {
    - `get_dataset_info`: Get dataset details
    - `get_recent_data`: Access recent data points
 
-## Usage Examples
-
-### Example 1: Track User Events
-
-```json
-{
-  "tool": "track_metric",
-  "dataset": "github_stats",
-  "dimensions": {
-    "event_type": "purchase",
-    "product_category": "electronics",
-    "user_segment": "premium",
-    "region": "us-west"
-  },
-  "metrics": {
-    "order_value": 299.99,
-    "items_count": 3,
-    "processing_time": 850
-  }
-}
-```
-
-### Example 2: Monitor Agent Performance
-
-```json
-{
-  "tool": "track_agent_metrics",
-  "agentId": "customer-support-bot",
-  "eventType": "response_generated",
-  "userId": "customer_12345",
-  "processingTime": 1200,
-  "metadata": {
-    "intent": "product_inquiry",
-    "confidence": 0.95,
-    "escalated": false
-  }
-}
-```
-
-### Example 3: Analyze Performance Trends
-
-```json
-{
-  "tool": "query_analytics",
-  "sql": "SELECT blob3 as hour, AVG(double1) as avg_time, count() as requests FROM agent_metrics WHERE timestamp > 1704067200000 AND blob2 = 'response_generated' GROUP BY blob3 ORDER BY blob3"
-}
-```
-
-### Example 4: Get Real-time Dashboard Data
-
-Access the overview dashboard via MCP resource:
-```
-analytics://dashboards/overview
-```
-
-This returns live dashboard data with current metrics and visualizations.
-
-### Example 5: Detect Performance Anomalies
-
-```json
-{
-  "tool": "detect_anomalies",
-  "dataset": "github_stats",
-  "metric": "processingTime",
-  "threshold": 0.95,
-  "timeWindow": "24h"
-}
-```
-
-## 🔧 **Adapting for Your Use Case**
-
-While this example demonstrates GitHub PR analytics, you can adapt it for any analytics use case by understanding the data structure and modifying the tools.
-
-### **Understanding the Current Data Structure**
-
-The GitHub implementation uses this Analytics Engine schema:
-```sql
--- Current GitHub PR data structure
-blob1: repository name ("null-shot/typescript-agent-framework")  
-blob2: event type ("daily_pr_stats", "repository_snapshot")
-blob3: date ("2025-08-06", "2025-08-07")
-double1: PRs created count
-double2: PRs merged count  
-double3: PRs closed count
-timestamp: Analytics Engine write time (auto-generated)
-```
-
-### **Adapting for Other Use Cases**
-
-#### **Example: E-commerce Analytics**
-```json
-// track_metric for e-commerce
-{
-  "dataset": "github_stats",
-  "dimensions": {
-    "event_type": "purchase_completed",    // blob2
-    "product_category": "electronics",     // blob3  
-    "payment_method": "credit_card",       // blob4
-    "date": "2025-09-04"                   // blob5
-  },
-  "metrics": {
-    "order_value": 299.99,                 // double1
-    "quantity": 2,                         // double2
-    "shipping_cost": 15.99                 // double3
-  }
-}
-```
-
-#### **Example: API Analytics**  
-```json
-// track_metric for API monitoring
-{
-  "dataset": "github_stats",
-  "dimensions": {
-    "event_type": "api_request",           // blob2
-    "endpoint": "/api/users",              // blob3
-    "method": "GET",                       // blob4
-    "status_class": "2xx"                  // blob5
-  },
-  "metrics": {
-    "response_time": 145,                  // double1
-    "request_count": 1,                    // double2  
-    "error_count": 0                       // double3
-  }
-}
-```
-
-### **Using Advanced Tools with Your Data**
-
-The analytics tools are now flexible and work with any data structure:
-
-#### **✅ `get_metrics_summary` & `get_time_series` - No Code Changes Needed!**
-These tools now use the `dimensions` parameter to filter data dynamically:
-
-```json
-// Filter by specific event type
-{
-  "dataset": "github_stats",
-  "dimensions": ["your_event_type"]
-}
-
-// Get all data (no filtering)
-{
-  "dataset": "github_stats", 
-  "dimensions": []
-}
-```
 
 ### **📋 Important: Dataset Binding Configuration**
 
