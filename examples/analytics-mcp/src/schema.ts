@@ -133,6 +133,7 @@ export const AnalyzeTrendsSchema = z.object({
   dataset: z.string().min(1, "Dataset name is required"),
   metric: z.string().min(1, "Metric name is required"),
   timeRange: z.enum(['1h', '24h', '7d', '30d']),
+  column: z.string().optional(),
   algorithm: z.enum(['linear', 'exponential', 'seasonal']).optional()
 });
 
@@ -162,7 +163,7 @@ export interface Env {
   
   // Cloudflare Analytics Engine SQL API
   CLOUDFLARE_ACCOUNT_ID?: string;
-  CF_API_TOKEN?: string;
+  CLOUDFLARE_API_TOKEN?: string;
 }
 
 // Error types

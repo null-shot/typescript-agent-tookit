@@ -391,19 +391,21 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
       dataset: z.string().describe('Dataset name to analyze'),
       metric: z.string().describe('Metric to analyze for trends'),
       timeRange: z.enum(['1h', '24h', '7d', '30d']).describe('Time range'),
+      column: z.string().optional().describe('Column to analyze (e.g., double1, double2, double3). Defaults to double1'),
       algorithm: z.enum(['linear', 'exponential', 'seasonal']).optional().describe('Trend analysis algorithm')
     },
-    async ({ dataset, metric, timeRange, algorithm }: {
+    async ({ dataset, metric, timeRange, column, algorithm }: {
       dataset: string;
       metric: string;
       timeRange: '1h' | '24h' | '7d' | '30d';
       algorithm?: 'linear' | 'exponential' | 'seasonal';
+      column?: string;
     }) => {
       try {
         const validated = AnalyzeTrendsSchema.parse({ dataset, metric, timeRange, algorithm });
         
         // Simple trend analysis using basic SQL that Analytics Engine supports
-        const result = await repository.analyzeTrends(validated.dataset, metric, validated.timeRange);
+        const result = await repository.analyzeTrends(validated.dataset, metric, validated.timeRange, column);
 
         return {
           content: [

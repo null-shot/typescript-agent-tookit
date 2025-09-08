@@ -22,7 +22,7 @@ This example is **intentionally specific to GitHub PR analytics** to provide a c
 - Repository health monitoring
 - PR velocity analysis
 
-**For other use cases**, you'll need to adapt the data structure and tool configurations (see [Adaptation Guide](#adapting-for-your-use-case) below).
+**For other use cases**, you'll need to adapt the data structure and tool configurations (see [Adaptation Guide](#-adapting-for-your-use-case) below).
 
 ## 🚀 **Quick Start Guide**
 
@@ -52,17 +52,34 @@ Your Analytics MCP server will be deployed to: `https://analytics-mcp.{your-subd
 
 **Set up Analytics Engine credentials for local testing:**
 ```bash
-# Use the same credentials as your deployed worker
-export CLOUDFLARE_ACCOUNT_ID=59084df56e21d828dcbd5811f81c7754
+# Find your Cloudflare Account ID
+wrangler whoami
+# This shows your account ID - copy it
 
-# Get your API token from Wrangler secrets
-wrangler secret list
-# Copy the CF_API_TOKEN value and set locally:
-export CF_API_TOKEN=your_existing_token
+# Get your API token (choose one method):
+
+# Method 1: Create new token via Wrangler
+wrangler auth login
+# This will open browser and create/save a token automatically
+
+# Method 2: Create token manually from Cloudflare Dashboard
+# 1. Go to https://dash.cloudflare.com/profile/api-tokens
+# 2. Click "Create Token" 
+# 3. Use "Edit Cloudflare Workers" template
+# 4. Select your account and zones
+# 5. Copy the generated token
+
+# Method 3: Use existing token if you have one
+# Check if you already have a token:
+cat ~/.config/@cloudflarerc 2>/dev/null | grep api_token
+
+# Set your credentials (replace with your actual values)
+export CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami
+export CLOUDFLARE_API_TOKEN=your_api_token_from_above
 
 # Or add to your .env file for persistence
-echo "CLOUDFLARE_ACCOUNT_ID=59084df56e21d828dcbd5811f81c7754" >> .env
-echo "CF_API_TOKEN=your_existing_token" >> .env
+echo "CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami" >> .env
+echo "CLOUDFLARE_API_TOKEN=your_api_token_from_above" >> .env
 ```
 
 **Note**: Your deployed worker already has these credentials configured (that's why the GitHub collector worked).
@@ -71,9 +88,9 @@ echo "CF_API_TOKEN=your_existing_token" >> .env
 - If `track_metric` succeeds but `query_analytics` returns no data, verify **both** credentials are set:
   ```bash
   echo "CLOUDFLARE_ACCOUNT_ID: $CLOUDFLARE_ACCOUNT_ID"
-  echo "CF_API_TOKEN: ${CF_API_TOKEN:0:10}..."
+  echo "CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:0:10}..."
   ```
-- **⚠️ CRITICAL**: If using `localhost:8787/sse`, writes may claim "success" but not persist. Switch to production SSE for reliable testing.
+- **⚠️ IMPORTANT**: Cloudflare Workers local development has Analytics Engine write limitations. Use production SSE for reliable testing.
 
 ### **Step 3: Test with MCP Inspector**
 
@@ -89,15 +106,23 @@ This opens:
 
 **Connect MCP Inspector:**
 1. **In MCP Inspector popup**:
-   - **Server URL**: `https://analytics-mcp.raydp102.workers.dev/sse` (⭐ **RECOMMENDED** - reliable read/write)
-   - **Alternative**: `http://localhost:8787/sse` (⚠️ **DEVELOPMENT ONLY** - writes don't persist to Analytics Engine)
-   - **Click**: "Connect" 
+   - **Server URL**: `https://your-worker-name.your-subdomain.workers.dev/sse` (⭐ **RECOMMENDED** - reliable read/write)
+   - **Alternative**: `http://localhost:8787/sse` (⚠️ **LOCAL DEV** - has Analytics Engine write limitations)
+   - **Click**: "Connect"
+   
+   **💡 Find your worker URL:**
+   ```bash
+   # Deploy first, then get the URL
+   wrangler deploy
+   # Output shows: Published analytics-mcp (1.23s)
+   #               https://analytics-mcp.your-subdomain.workers.dev
+   ``` 
 2. **Expected**: 11 available tools (track_metric, query_analytics, etc.)
 
 **🔍 Important Architecture Note:**
 - **Both localhost and production SSE connect to the SAME Analytics Engine** (via `.env` credentials)
 - **`list_datasets` shows identical results** (same record counts, timestamps)  
-- **BUT: localhost has a write processing bug** - data doesn't persist despite "success" responses
+- **Cloudflare Workers local development limitation**: Analytics Engine writes in local mode don't persist consistently
 - **For reliable data testing, always use the production SSE URL** ✅
 
 ### **Step 4: Test Tools in MCP Inspector**
@@ -164,8 +189,6 @@ node generate-batch-data.js anthropics claude-code
 💡 To generate data for other repositories:
    node generate-batch-data.js anthropics claude-code
    node generate-batch-data.js null-shot typescript-agent-framework
-   node generate-batch-data.js facebook react
-   node generate-batch-data.js microsoft vscode
 
 📋 Next steps:
 1. Open each batch file and copy the JSON array
@@ -176,7 +199,13 @@ node generate-batch-data.js anthropics claude-code
 
 #### **5.2: Process Batches in MCP Inspector**
 
-**⚠️ Important**: Use **production SSE** for reliable writes: `https://analytics-mcp.raydp102.workers.dev/sse`
+**⚠️ Important**: Use **production SSE** for reliable writes: `https://your-worker-name.your-subdomain.workers.dev/sse`
+
+**💡 Get your production URL:**
+```bash
+wrangler deploy
+# Copy the URL from the output: https://analytics-mcp.your-subdomain.workers.dev
+```
 
 **For each batch file (1-3):**
 
@@ -208,7 +237,7 @@ node generate-batch-data.js anthropics claude-code
 **Use `query_analytics` tool:**
 ```json
 {
-  "sql": "SELECT COUNT(*) as total_records FROM github_stats WHERE blob2 = 'batch_test_30days'"
+  "sql": "SELECT count() as total_records FROM github_stats WHERE blob2 = 'batch_test_30days'"
 }
 ```
 
@@ -230,14 +259,14 @@ node generate-batch-data.js anthropics claude-code
 **View recent data:**
 ```json
 {
-  "sql": "SELECT blob1 as repo, blob3 as date, double1 as stars, double5 as prs_created FROM github_stats WHERE blob2 = 'batch_test_30days' ORDER BY timestamp DESC LIMIT 10"
+  "sql": "SELECT blob1 as repo, blob3, double1 as stars, double5 as prs_created FROM github_stats WHERE blob2 = 'batch_test_30days' ORDER BY timestamp DESC LIMIT 10"
 }
 ```
 
 **Repository breakdown:**
 ```json  
 {
-  "sql": "SELECT blob1 as repo, COUNT(*) as records FROM github_stats WHERE blob2 = 'batch_test_30days' GROUP BY blob1"
+  "sql": "SELECT blob1 as repo, count() as records FROM github_stats WHERE blob2 = 'batch_test_30days' GROUP BY blob1"
 }
 ```
 
@@ -268,14 +297,14 @@ node generate-batch-data.js anthropics claude-code
 3. **Create separate Grafana panels**:
    - **Panel 1 (Claude Code)**: 
      ```sql
-     SELECT blob3 as Date, double1 as Stars, double5 as PRsCreated 
+     SELECT blob3, double1 as Stars, double5 as PRsCreated 
      FROM github_stats 
      WHERE blob2 = 'batch_test_30days' AND blob1 = 'anthropics/claude-code'
      ORDER BY blob3
      ```
    - **Panel 2 (NullShot)**: 
      ```sql
-     SELECT blob3 as Date, double1 as Stars, double5 as PRsCreated 
+     SELECT blob3, double1 as Stars, double5 as PRsCreated 
      FROM github_stats 
      WHERE blob2 = 'batch_test_30days' AND blob1 = 'null-shot/typescript-agent-framework'
      ORDER BY blob3
@@ -580,33 +609,6 @@ Following this guide, you'll create a complete analytics platform featuring:
 - **Real development patterns**: Actual PR creation and merge rates from GitHub API
 - **Historical trends**: Based on actual GitHub repository activity data
 
-## 🧪 **Testing & Verification**
-
-### **Run All Tests**
-```bash
-# Test the complete setup
-node complete-setup-verification.js
-
-# Expected output:
-# ✅ PASS MCP Connection  
-# ✅ PASS Grafana Endpoint
-# ✅ PASS Data Availability
-```
-
-### **Add Sample Data**
-```bash
-# Add 30 days of GitHub PR data
-node add-30-days-fixed.js
-
-# Add star growth data
-node fix-star-trends.js
-```
-
-### **Test Individual Tools**
-```bash
-# Test MCP tools work correctly
-pnpm test
-```
 
 ## 🔧 **Troubleshooting**
 
@@ -872,7 +874,7 @@ Execute SQL queries against analytics data with full SQL support.
 ```json
 {
   "tool": "query_analytics",
-  "sql": "SELECT dimensions.agentId, AVG(metrics.processingTime) as avg_time, COUNT(*) as total FROM agent_metrics WHERE timestamp > 1704067200000 AND dimensions.eventType = 'response_generated' GROUP BY dimensions.agentId ORDER BY avg_time DESC"
+  "sql": "SELECT blob1 as agentId, AVG(double1) as avg_time, count() as total FROM agent_metrics WHERE timestamp > 1704067200000 AND blob2 = 'response_generated' GROUP BY blob1 ORDER BY avg_time DESC"
 }
 ```
 
@@ -1254,7 +1256,7 @@ interface Env {
 ```json
 {
   "tool": "query_analytics",
-  "sql": "SELECT DATE_TRUNC('hour', timestamp) as hour, AVG(metrics.processingTime) as avg_time, COUNT(*) as requests FROM agent_metrics WHERE timestamp > 1704067200000 AND dimensions.eventType = 'response_generated' GROUP BY hour ORDER BY hour"
+  "sql": "SELECT blob3 as hour, AVG(double1) as avg_time, count() as requests FROM agent_metrics WHERE timestamp > 1704067200000 AND blob2 = 'response_generated' GROUP BY blob3 ORDER BY blob3"
 }
 ```
 
@@ -1441,39 +1443,6 @@ row.blob4  // or wherever your dates are stored
 - Design dimensions for common query patterns
 - Use numeric metrics for aggregation
 - Consider data aggregation for high-frequency events
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Query Errors**
-   - Check SQL syntax and column names
-   - Ensure proper data types (strings for dimensions, numbers for metrics)
-   - Add time range filters to improve performance
-
-2. **Data Ingestion Issues**
-   - Validate data format before submission
-   - Check dimension and metric types
-   - Use batch operations for better performance
-
-3. **Performance Problems**
-   - Add time filters to queries
-   - Limit result set sizes
-   - Use appropriate indexes and aggregations
-
-### Getting Help
-
-Use the interactive prompts for specific guidance:
-- `troubleshooting_guide` - General troubleshooting help
-- `performance_optimization` - Performance tuning tips
-- `query_builder_help` - SQL query assistance
-
-### Debug Information
-
-Check the health endpoint for system status:
-```bash
-curl https://your-worker-url.workers.dev/health
-```
 
 ## License
 

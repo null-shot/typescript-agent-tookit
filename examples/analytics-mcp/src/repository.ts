@@ -154,10 +154,10 @@ export class AnalyticsRepository {
       
       // Use Cloudflare Analytics Engine SQL API
       const accountId = this.env.CLOUDFLARE_ACCOUNT_ID;
-      const apiToken = this.env.CF_API_TOKEN;
+      const apiToken = this.env.CLOUDFLARE_API_TOKEN;
       
       if (!accountId || !apiToken) {
-        console.warn('Missing CLOUDFLARE_ACCOUNT_ID or CF_API_TOKEN - using mock data');
+        console.warn('Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN - using mock data');
         return {
           data: [],
           meta: {
@@ -165,7 +165,7 @@ export class AnalyticsRepository {
             duration: 0,
             query: sql,
             timestamp: Date.now(),
-            note: "Missing Cloudflare API credentials. Set CLOUDFLARE_ACCOUNT_ID and CF_API_TOKEN environment variables."
+            note: "Missing Cloudflare API credentials. Set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN environment variables."
           }
         };
       }
@@ -457,19 +457,10 @@ export class AnalyticsRepository {
     };
   }
 
-  // Simple trend analysis using SQL queries
-  async analyzeTrends(dataset: string, metric: string, timeRange: string): Promise<any> {
-    // Map metric names to Analytics Engine columns
-    const metricColumnMap: Record<string, string> = {
-      'prs_created': 'double1',
-      'prs_merged': 'double2', 
-      'prs_closed': 'double3'
-    };
-    
-    const column = metricColumnMap[metric] || 'double1';
-    
-    // Use the exact same query pattern that works in get_time_series
-    const sql = `SELECT * FROM ${dataset} WHERE blob2 = 'daily_pr_stats' ORDER BY timestamp`;
+  // Generic trend analysis using SQL queries
+  async analyzeTrends(dataset: string, metric: string, timeRange: string, preferredColumn?: string): Promise<any> {
+    // Query all data for the dataset to find the metric
+    const sql = `SELECT * FROM ${dataset} ORDER BY timestamp DESC LIMIT 10000`;
 
     const queryResult = await this.query(sql);
     
@@ -494,17 +485,65 @@ export class AnalyticsRepository {
         cutoffDate = new Date(0); // Include all data
     }
     
+    // Auto-detect which column contains the metric by looking for non-zero values
+    // Check all double columns (double1-double20) and blob columns for the metric name
+    let metricColumn = null;
+    let eventTypeFilter = null;
+    
+    // First, try to find rows that might contain our metric
+    for (const row of queryResult.data.slice(0, 100)) { // Check first 100 rows
+      // Look for metric name in blob fields (event types, metric names, etc.)
+      for (let i = 1; i <= 20; i++) {
+        if (row[`blob${i}`] && row[`blob${i}`].toLowerCase().includes(metric.toLowerCase())) {
+          eventTypeFilter = row[`blob${i}`];
+          break;
+        }
+      }
+      if (eventTypeFilter) break;
+    }
+    
+    // If no specific event type found, try to find the metric in double columns
+    if (!eventTypeFilter) {
+      // Look for the metric name as an event_type in blob2
+      const possibleEventTypes = [...new Set(queryResult.data.map((row: any) => row.blob2).filter(Boolean))];
+      eventTypeFilter = possibleEventTypes.find(et => et.toLowerCase().includes(metric.toLowerCase())) || possibleEventTypes[0];
+    }
+    
+    // Auto-detect which double column has the most non-zero values for this event type
+    const eventData = queryResult.data.filter((row: any) => !eventTypeFilter || row.blob2 === eventTypeFilter);
+    
+    let bestColumn = preferredColumn || 'double1';
+    
+    // Only run auto-detection if no preferred column specified
+    if (!preferredColumn) {
+    let maxNonZeroCount = 0;
+    
+    for (let i = 1; i <= 20; i++) {
+      const columnName = `double${i}`;
+      const nonZeroCount = eventData.filter((row: any) => (row[columnName] || 0) > 0).length;
+      if (nonZeroCount > maxNonZeroCount) {
+        maxNonZeroCount = nonZeroCount;
+        bestColumn = columnName;
+      }
+    }
+    
+    metricColumn = bestColumn;
+    } else {
+      metricColumn = bestColumn;
+    }
+    
     // Filter data to respect the timeRange parameter and only include values > 0
-    const filteredData = queryResult.data
+    const filteredData = eventData
       .filter((row: any) => {
         const rowDate = new Date(row.blob3 || row.timestamp);
-        const hasValue = (row[column] || 0) > 0;
+        const hasValue = (row[metricColumn] || 0) > 0;
         const inTimeRange = rowDate >= cutoffDate;
         return hasValue && inTimeRange;
       })
       .map((row: any) => ({
-        value: row[column] || 0,
-        date: row.blob3 || row.timestamp
+        value: row[metricColumn] || 0,
+        date: row.blob3 || row.timestamp,
+        eventType: row.blob2
       }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
@@ -538,7 +577,7 @@ export class AnalyticsRepository {
           dateRange: `${dates[0]} to ${dates[dates.length - 1]}`
         }
       ],
-      summary: `${metric} trend: ${change > 0 ? '+' : ''}${change} (${percentChange > 0 ? '+' : ''}${percentChange}%) over ${values.length} data points`
+      summary: `${metric} trend: ${change > 0 ? '+' : ''}${change} (${percentChange > 0 ? '+' : ''}${percentChange}%) over ${values.length} data points (using ${metricColumn} from ${eventTypeFilter || 'all events'})`
     };
   }
 
