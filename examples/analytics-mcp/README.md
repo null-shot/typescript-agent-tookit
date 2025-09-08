@@ -33,6 +33,8 @@ Follow this complete guide to set up Analytics MCP and create a working dashboar
 - Cloudflare account with Workers access
 - Analytics Engine enabled (free tier available)
 
+> **📋 Important**: All examples use `github_stats` as the dataset name because it's the only dataset bound in `wrangler.jsonc`. To use different dataset names, see [Dataset Binding Configuration](#📋-important-dataset-binding-configuration).
+
 ### **Step 1: Deploy the Analytics MCP Server**
 
 ```bash
@@ -401,12 +403,12 @@ wrangler deploy
 
 ```bash
 # This adds data to your DEPLOYED server (for Grafana)
-node github-30day-real-collector.js
+node generate-batch-data.js anthropics claude-code
 ```
 
 **⚠️ Important**: 
 - **MCP Inspector** connects to `localhost:8787` (local dev server)
-- **GitHub Collector** sends data to deployed server (`analytics-mcp.raydp102.workers.dev`)
+- **Batch Data Generator** sends data to deployed server (`analytics-mcp.raydp102.workers.dev`)
 - **Grafana** queries the deployed server (where the collector data goes)
 
 **These are SEPARATE data stores!**
@@ -797,7 +799,7 @@ Record individual events or metrics with dimensions and numerical values.
 ```json
 {
   "tool": "track_metric",
-  "dataset": "user_events",
+  "dataset": "github_stats",
   "dimensions": {
     "event_type": "user_login",
     "source": "web",
@@ -821,7 +823,7 @@ Submit multiple metrics efficiently in a single batch operation.
 ```json
 {
   "tool": "track_batch_metrics",
-  "dataset": "page_views",
+  "dataset": "github_stats",
   "dataPoints": [
     {
       "dimensions": {"page": "home", "user_type": "new"},
@@ -866,7 +868,7 @@ Get predefined metric summaries with time ranges and grouping.
 ```json
 {
   "tool": "get_metrics_summary",
-  "dataset": "agent_metrics",
+  "dataset": "github_stats",
   "timeRange": "24h",
   "dimensions": ["agentId", "eventType"]
 }
@@ -932,33 +934,6 @@ Analyze trends in a single metric over time with flexible column selection.
 }
 ```
 
-### System Monitoring Tools
-
-#### `monitor_system_health`
-Track system health metrics like CPU, memory, and connections.
-
-**Parameters:**
-- `systemId` (required): System identifier
-- `metrics` (required): Health metrics object
-
-**Example:**
-```json
-{
-  "tool": "monitor_system_health",
-  "systemId": "web-server-01",
-  "metrics": {
-    "cpu": 45.2,
-    "memory": 78.1,
-    "connections": 150,
-    "queueDepth": 5,
-    "errorRate": 0.02,
-    "responseTime": 125
-  }
-}
-```
-
-```
-
 ### Utility Tools
 
 #### `list_datasets`
@@ -968,7 +943,29 @@ List available datasets and their metadata.
 Get detailed information about a specific dataset.
 
 #### `get_recent_data`
-Get recent data points from a dataset with optional filtering.
+Get the most recent data entries for debugging and inspection. Shows raw data structure with all dimensions and metrics.
+
+**Parameters:**
+- `dataset` (required): Dataset name to query
+- `limit` (optional): Maximum number of records to return (default: 100, max: 1000)
+
+**Example:**
+```json
+{
+  "dataset": "github_stats",
+  "limit": 2
+}
+```
+
+**What it does:**
+Executes: `SELECT * FROM github_stats ORDER BY blob3 DESC LIMIT 2`
+
+**Use cases:**
+- **Debug data structure**: See exactly how your data is stored
+- **Verify recent writes**: Check if your data was written correctly  
+- **Inspect dimensions**: See what values are in blob1, blob2, blob3, etc.
+- **Check metrics**: View actual values in double1, double2, double3, etc.
+- **Troubleshoot issues**: Examine raw data when other tools aren't working
 
 ## MCP Resources
 
@@ -1057,7 +1054,7 @@ Tips for optimizing analytics performance and query efficiency.
   "analytics_engine_datasets": [
     {
       "binding": "ANALYTICS",
-      "dataset": "mcp_metrics"
+      "dataset": "github_stats"
     }
   ],
   "d1_databases": [
@@ -1183,7 +1180,6 @@ interface Env {
    - `get_metrics_summary`: Get predefined summaries
    - `get_time_series`: Analyze metrics over time
    - `analyze_trends`: Identify patterns and changes
-   - `monitor_system_health`: Track system resources
    - `list_datasets`: See available datasets
    - `get_dataset_info`: Get dataset details
    - `get_recent_data`: Access recent data points
@@ -1195,7 +1191,7 @@ interface Env {
 ```json
 {
   "tool": "track_metric",
-  "dataset": "user_events",
+  "dataset": "github_stats",
   "dimensions": {
     "event_type": "purchase",
     "product_category": "electronics",
@@ -1250,7 +1246,7 @@ This returns live dashboard data with current metrics and visualizations.
 ```json
 {
   "tool": "detect_anomalies",
-  "dataset": "agent_metrics",
+  "dataset": "github_stats",
   "metric": "processingTime",
   "threshold": 0.95,
   "timeWindow": "24h"
@@ -1281,7 +1277,7 @@ timestamp: Analytics Engine write time (auto-generated)
 ```json
 // track_metric for e-commerce
 {
-  "dataset": "ecommerce_events",
+  "dataset": "github_stats",
   "dimensions": {
     "event_type": "purchase_completed",    // blob2
     "product_category": "electronics",     // blob3  
@@ -1300,7 +1296,7 @@ timestamp: Analytics Engine write time (auto-generated)
 ```json
 // track_metric for API monitoring
 {
-  "dataset": "api_metrics",
+  "dataset": "github_stats",
   "dimensions": {
     "event_type": "api_request",           // blob2
     "endpoint": "/api/users",              // blob3
@@ -1325,39 +1321,90 @@ These tools now use the `dimensions` parameter to filter data dynamically:
 ```json
 // Filter by specific event type
 {
-  "dataset": "your_dataset",
+  "dataset": "github_stats",
   "dimensions": ["your_event_type"]
 }
 
 // Get all data (no filtering)
 {
-  "dataset": "your_dataset", 
+  "dataset": "github_stats", 
   "dimensions": []
 }
 ```
 
-#### **❌ `analyze_trends` - May Need Code Changes**
-The `analyze_trends` tool may still have hardcoded filters. To adapt it for your data:
+### **📋 Important: Dataset Binding Configuration**
 
-**Option 1: Use existing metric names**
-```json
-{
-  "dataset": "your_dataset",
-  "metric": "prs_created",  // Maps to double1
-  "timeRange": "30d",
-  "dimensions": ["your_event_type"]  // Will be added in future update
+**Why All Examples Use `github_stats`:**
+
+The Worker can only access Analytics Engine datasets that are **bound in wrangler.jsonc**. Currently only `github_stats` is configured:
+
+```jsonc
+"analytics_engine_datasets": [
+  {
+    "binding": "ANALYTICS",
+    "dataset": "github_stats"  // Only this dataset is accessible
+  }
+]
+```
+
+#### **To Add New Datasets:**
+
+1. **Create the dataset in Cloudflare Dashboard** (Analytics Engine section)
+
+2. **Add binding to wrangler.jsonc**:
+```jsonc
+"analytics_engine_datasets": [
+  {
+    "binding": "ANALYTICS", 
+    "dataset": "github_stats"
+  },
+  {
+    "binding": "USER_EVENTS",
+    "dataset": "user_events"  // Your new dataset
+  }
+]
+```
+
+3. **Update the Worker code** to use multiple bindings:
+```typescript
+interface Env {
+  ANALYTICS: AnalyticsEngineDataset;     // github_stats
+  USER_EVENTS: AnalyticsEngineDataset;   // user_events
 }
 ```
 
-**Option 2: Update metric mappings in code**
-In `src/repository.ts`, update the metric column mapping:
-```typescript
-const metricColumnMap = {
-  'your_metric_1': 'double1',
-  'your_metric_2': 'double2', 
-  'your_metric_3': 'double3'
-};
+4. **Redeploy** with `wrangler deploy`
+
+#### **Alternative: Use Event Types Within One Dataset**
+
+Instead of multiple datasets, use **event types** (`blob2`) within `github_stats`:
+```json
+{
+  "dataset": "github_stats",
+  "dimensions": {
+    "event_type": "user_login",    // blob2 - separates data types
+    "source": "web"               // blob3 - additional categorization
+  }
+}
 ```
+
+#### **✅ `analyze_trends`**
+The `analyze_trends` tool uses smart auto-detection and works with any data:
+
+```json
+{
+  "dataset": "github_stats",
+  "metric": "prs_created", 
+  "timeRange": "30d",
+  "column": "double2"  // Optional: specify exact column
+}
+```
+
+**Features:**
+- **Auto-detection**: Finds the best column for your metric automatically
+- **No hardcoded filters**: Queries all data and filters in-memory
+- **Column override**: Use `column` parameter to specify exact column (double1, double2, etc.)
+- **Flexible metrics**: Works with any metric name or event type
 
 #### **3. Update Date Column References**
 Change date column assumptions:
@@ -1394,7 +1441,7 @@ row.blob4  // or wherever your dates are stored
 # 1. Add page view data
 # MCP Inspector -> track_metric:
 {
-  "dataset": "web_analytics",
+  "dataset": "github_stats",
   "dimensions": {
     "event_type": "page_view",
     "page": "/home",

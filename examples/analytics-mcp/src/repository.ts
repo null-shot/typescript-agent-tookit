@@ -380,59 +380,78 @@ export class AnalyticsRepository {
   // Utility methods - simplified without D1 database operations
   async listDatasets(): Promise<DatasetInfo[]> {
     try {
-      // Use SHOW TABLES to get actual datasets from Analytics Engine
+      // Get logical datasets by grouping by event types (blob2) within Analytics Engine tables
       const result = await this.query('SHOW TABLES');
+      const datasets = [];
       
       if (result.data && result.data.length > 0) {
-        // Convert table results to DatasetInfo format and get actual record counts
-        const datasets = [];
         for (const table of result.data) {
           const tableName = table.dataset || table.name || table.table_name || table.Tables_in_database || 'unknown';
           
-          // Get actual record count for each table
-          let recordCount = 0;
           try {
-            const countResult = await this.query(`SELECT SUM(_sample_interval) as count FROM ${tableName}`);
-            if (countResult.data && countResult.data.length > 0) {
-              recordCount = countResult.data[0].count || 0;
+            // Get event types (logical datasets) within this table
+            const eventTypesQuery = `
+              SELECT 
+                blob2 as event_type,
+                count() as record_count
+              FROM ${tableName} 
+              WHERE blob2 IS NOT NULL AND blob2 != ''
+              GROUP BY blob2 
+              ORDER BY record_count DESC
+            `;
+            
+            const eventTypesResult = await this.query(eventTypesQuery);
+            
+            if (eventTypesResult.data && eventTypesResult.data.length > 0) {
+              // Create a dataset entry for each event type
+              for (const eventType of eventTypesResult.data) {
+                datasets.push({
+                  name: `${tableName}:${eventType.event_type}`,
+                  description: `Event type '${eventType.event_type}' in ${tableName}`,
+                  created_at: new Date().toISOString(),
+                  last_updated: new Date().toISOString(),
+                  record_count: eventType.record_count.toString(),
+                  dimensions: ['repo', 'event_type', 'date', 'batch_id'],
+                  metrics: ['stars_total', 'forks_total', 'prs_created', 'prs_merged']
+                });
+              }
+            } else {
+              // Fallback: show table without event type breakdown
+              const countResult = await this.query(`SELECT count() as count FROM ${tableName}`);
+              const recordCount = countResult.data[0]?.count || 0;
+              
+              datasets.push({
+                name: tableName,
+                description: `Analytics Engine table: ${tableName} (no event types found)`,
+                created_at: new Date().toISOString(),
+                last_updated: new Date().toISOString(),
+                record_count: recordCount.toString(),
+                dimensions: [],
+                metrics: []
+              });
             }
-          } catch (error) {
-            console.warn(`Failed to get record count for ${tableName}:`, error);
+          } catch (tableError) {
+            console.warn(`Could not analyze table ${tableName}:`, tableError.message);
           }
-          
-          datasets.push({
-            name: tableName,
-            description: `Analytics Engine dataset: ${tableName}`,
-            created_at: new Date(),
-            last_updated: new Date(),
-            record_count: recordCount
-          });
         }
-        return datasets;
       }
       
-      // Fallback: Return the configured dataset if no tables found
-      return [
-        {
-          name: 'github_stats',
-          description: 'GitHub repository statistics and metrics',
-          created_at: new Date(),
-          last_updated: new Date(),
-          record_count: 0
-        }
-      ];
+      return datasets.length > 0 ? datasets : [{
+        name: 'github_stats',
+        description: 'Default Analytics Engine dataset',
+        created_at: new Date().toISOString(),
+        last_updated: new Date().toISOString(),
+        record_count: '0',
+        dimensions: [],
+        metrics: []
+      }];
     } catch (error) {
-      console.error('Failed to list datasets:', error);
-      // Return configured dataset as fallback
-      return [
-        {
-          name: 'github_stats',
-          description: 'GitHub repository statistics and metrics (fallback)',
-          created_at: new Date(),
-          last_updated: new Date(),
-          record_count: 0
-        }
-      ];
+      console.error('listDatasets error:', error);
+      throw new AnalyticsError(
+        'Failed to list datasets',
+        'LIST_ERROR',
+        error
+      );
     }
   }
 
