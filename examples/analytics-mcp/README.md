@@ -835,30 +835,6 @@ Submit multiple metrics efficiently in a single batch operation.
 }
 ```
 
-#### `track_agent_metrics`
-Specialized tool for AI agent performance tracking.
-
-**Parameters:**
-- `agentId` (required): Agent identifier
-- `eventType` (required): Event type (message_received, response_generated, error_occurred, session_started, session_ended)
-- `userId` (optional): User identifier
-- `processingTime` (optional): Processing time in milliseconds
-- `metadata` (optional): Additional context data
-
-**Example:**
-```json
-{
-  "tool": "track_agent_metrics",
-  "agentId": "analytics-assistant-v1",
-  "eventType": "response_generated",
-  "userId": "user123",
-  "processingTime": 1250,
-  "metadata": {
-    "model": "gpt-4",
-    "tokens": 500,
-    "query_complexity": "high"
-  }
-}
 ```
 
 ### Query & Analysis Tools
@@ -917,22 +893,22 @@ Get time-series data with automatic interval bucketing.
 ```
 
 #### `analyze_trends`
-Perform trend analysis on metrics with optional period comparison.
+Analyze trends in a single metric over time with flexible column selection.
 
 **Parameters:**
 - `dataset` (required): Dataset to analyze
-- `metrics` (required): Array of metric names to analyze
+- `metric` (required): Metric name to analyze for trends
 - `timeRange` (required): Analysis period (1h, 24h, 7d, 30d)
-- `comparison` (optional): Compare with previous period
+- `column` (optional): Column to analyze (double1, double2, double3, etc.). Auto-detects best column if not specified
 
 **Example:**
 ```json
 {
   "tool": "analyze_trends",
-  "dataset": "system_health",
-  "metrics": ["cpu_utilization", "memory_usage", "response_time"],
-  "timeRange": "7d",
-  "comparison": true
+  "dataset": "github_stats",
+  "metric": "github_real_30days",
+  "timeRange": "30d",
+  "column": "double1"
 }
 ```
 
@@ -961,24 +937,6 @@ Track system health metrics like CPU, memory, and connections.
 }
 ```
 
-#### `detect_anomalies`
-Detect anomalies in metric patterns using statistical analysis.
-
-**Parameters:**
-- `dataset` (required): Dataset to monitor
-- `metric` (required): Metric to analyze for anomalies
-- `threshold` (optional): Anomaly detection threshold (0-1, default: 0.95)
-- `timeWindow` (optional): Analysis window (1h, 24h, 7d, default: 24h)
-
-**Example:**
-```json
-{
-  "tool": "detect_anomalies",
-  "dataset": "agent_metrics",
-  "metric": "processingTime",
-  "threshold": 0.95,
-  "timeWindow": "24h"
-}
 ```
 
 ### Utility Tools
@@ -1201,13 +1159,11 @@ interface Env {
 5. **Explore the available tools:**
    - `track_metric`: Record individual data points
    - `track_batch_metrics`: Submit multiple metrics efficiently
-   - `track_agent_metrics`: Monitor AI agent performance
    - `query_analytics`: Execute SQL queries
    - `get_metrics_summary`: Get predefined summaries
    - `get_time_series`: Analyze metrics over time
    - `analyze_trends`: Identify patterns and changes
    - `monitor_system_health`: Track system resources
-   - `detect_anomalies`: Find unusual patterns
    - `list_datasets`: See available datasets
    - `get_dataset_info`: Get dataset details
    - `get_recent_data`: Access recent data points
