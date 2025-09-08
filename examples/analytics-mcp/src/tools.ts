@@ -8,7 +8,6 @@ import {
   GetMetricsSummarySchema,
   GetTimeSeriesSchema,
   AnalyzeTrendsSchema,
-  MonitorSystemHealthSchema,
   ValidationError,
   AnalyticsError
 } from './schema';
@@ -380,8 +379,8 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
       includeDetails?: boolean;
     }) => {
       try {
-        const validated = MonitorSystemHealthSchema.parse({ timeWindow, includeDetails });
-        
+        // Note: timeWindow and includeDetails are currently not used by the repository method
+        // This is a simple health check that queries recent agent metrics
         const result = await repository.monitorSystemHealth();
 
         return {

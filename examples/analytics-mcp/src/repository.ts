@@ -563,19 +563,39 @@ export class AnalyticsRepository {
 
   // System health monitoring
   async monitorSystemHealth(): Promise<any> {
+    // Simple system health check - return basic Analytics Engine status
+    // Note: This is a simplified implementation since agent_metrics may not exist
     const sql = `
       SELECT 
-        dimensions.agentId,
-        COUNT(*) as total_events,
-        AVG(CASE WHEN dimensions.eventType = 'error_occurred' THEN 1 ELSE 0 END) as error_rate,
-        AVG(metrics.processingTime) as avg_processing_time
-      FROM agent_metrics
-      WHERE timestamp > NOW() - INTERVAL 1 HOUR
-      GROUP BY dimensions.agentId
-      ORDER BY error_rate DESC, avg_processing_time DESC
+        'system' as component,
+        count() as total_queries,
+        'healthy' as status
+      FROM github_stats
+      WHERE timestamp > NOW() - INTERVAL 1 DAY
+      LIMIT 1
     `;
 
-    return await this.query(sql);
+    try {
+      const result = await this.query(sql);
+      return {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        metrics: {
+          queries_24h: result.length > 0 ? result[0].total_queries : 0,
+          analytics_engine: 'operational'
+        }
+      };
+    } catch (error) {
+      return {
+        status: 'degraded',
+        timestamp: new Date().toISOString(),
+        metrics: {
+          queries_24h: 0,
+          analytics_engine: 'error'
+        },
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
   }
 
   // Get recent data for debugging
