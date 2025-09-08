@@ -63,12 +63,10 @@ describe("Analytics MCP Client Integration Tests", () => {
       const toolNames = tools.tools.map(tool => tool.name);
       expect(toolNames).toContain('track_metric');
       expect(toolNames).toContain('track_batch_metrics');
-      expect(toolNames).toContain('track_agent_metrics');
       expect(toolNames).toContain('query_analytics');
       expect(toolNames).toContain('get_metrics_summary');
       expect(toolNames).toContain('get_time_series');
       expect(toolNames).toContain('analyze_trends');
-      expect(toolNames).toContain('detect_anomalies');
       expect(toolNames).toContain('monitor_system_health');
     });
 
@@ -126,25 +124,6 @@ describe("Analytics MCP Client Integration Tests", () => {
       expect(responseData.data.count).toBe(2);
     });
 
-    it("should track agent metrics", async () => {
-      const transport = createTransport(ctx);
-      await client.connect(transport);
-      
-      const result = await client.callTool({
-        name: 'track_agent_metrics',
-        arguments: {
-          agentId: 'test-agent',
-          eventType: 'message_received',
-          userId: 'user123',
-          processingTime: 250
-        }
-      }) as ToolResponse;
-
-      expect(result.content).toBeInstanceOf(Array);
-      const responseData = JSON.parse(result.content[0].text);
-      expect(responseData.success).toBe(true);
-      expect(responseData.data.agentId).toBe('test-agent');
-    });
 
     it("should execute analytics queries", async () => {
       const transport = createTransport(ctx);
@@ -209,29 +188,6 @@ describe("Analytics MCP Client Integration Tests", () => {
       expect(responseData.data.trends).toBeInstanceOf(Array);
     });
 
-    it("should detect anomalies", async () => {
-      const transport = createTransport(ctx);
-      await client.connect(transport);
-      
-      const result = await client.callTool({
-        name: 'detect_anomalies',
-        arguments: {
-          dataset: 'github_stats',
-          metric: 'prs_created',
-          threshold: 0.8,
-          timeWindow: '7d'
-        }
-      }) as ToolResponse;
-
-      expect(result.content).toBeInstanceOf(Array);
-      const responseData = JSON.parse(result.content[0].text);
-      expect(responseData.success).toBe(true);
-      expect(responseData.data).toBeDefined();
-      // In test environment, data structure may be different
-      if (responseData.data.anomalies) {
-        expect(responseData.data.anomalies).toBeInstanceOf(Array);
-      }
-    });
 
     it("should monitor system health", async () => {
       const transport = createTransport(ctx);

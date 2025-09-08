@@ -4,13 +4,11 @@ import { z } from 'zod';
 import {
   TrackMetricSchema,
   TrackBatchMetricsSchema,
-  TrackAgentMetricsSchema,
   QueryAnalyticsSchema,
   GetMetricsSummarySchema,
   GetTimeSeriesSchema,
   AnalyzeTrendsSchema,
   MonitorSystemHealthSchema,
-  DetectAnomaliesSchema,
   ValidationError,
   AnalyticsError
 } from './schema';
@@ -125,73 +123,6 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
         };
       } catch (error) {
         console.error('trackBatchMetrics error:', error);
-        
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: false,
-                error: error instanceof ValidationError 
-                  ? `Validation error: ${error.message}`
-                  : error instanceof AnalyticsError
-                  ? `Analytics error: ${error.message}`
-                  : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
-              })
-            }
-          ]
-        };
-      }
-    }
-  );
-
-  // Track agent metrics tool
-  server.tool(
-    'track_agent_metrics',
-    'Track agent performance and interaction metrics',
-    {
-      agentId: z.string().describe('Unique identifier for the agent'),
-      eventType: z.string().describe('Type of event (e.g., message_processed, error_occurred)'),
-      userId: z.string().optional().describe('User ID associated with the event'),
-      processingTime: z.number().optional().describe('Processing time in milliseconds'),
-      metadata: z.record(z.any()).optional().describe('Additional event metadata')
-    },
-    async ({ agentId, eventType, userId, processingTime, metadata }: {
-      agentId: string;
-      eventType: string;
-      userId?: string;
-      processingTime?: number;
-      metadata?: Record<string, any>;
-    }) => {
-      try {
-        const validated = TrackAgentMetricsSchema.parse({ agentId, eventType, userId, processingTime, metadata });
-        
-        await repository.trackAgentMetrics(
-          validated.agentId,
-          validated.eventType,
-          validated.userId,
-          validated.processingTime,
-          validated.metadata
-        );
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: true,
-                data: {
-                  message: `Successfully tracked agent metrics for '${validated.agentId}'`,
-                  agentId: validated.agentId,
-                  eventType: validated.eventType,
-                  timestamp: Date.now()
-                }
-              })
-            }
-          ]
-        };
-      } catch (error) {
-        console.error('trackAgentMetrics error:', error);
         
         return {
           content: [
@@ -466,60 +397,6 @@ export function setupServerTools(server: McpServer, repository: AnalyticsReposit
         };
       } catch (error) {
         console.error('monitorSystemHealth error:', error);
-        
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: false,
-                error: error instanceof ValidationError 
-                  ? `Validation error: ${error.message}`
-                  : error instanceof AnalyticsError
-                  ? `Analytics error: ${error.message}`
-                  : `Unexpected error: ${error instanceof Error ? error.message : String(error)}`
-              })
-            }
-          ]
-        };
-      }
-    }
-  );
-
-  // Detect anomalies tool
-  server.tool(
-    'detect_anomalies',
-    'Detect anomalies in analytics data using statistical methods',
-    {
-      dataset: z.string().describe('Dataset name to analyze'),
-      metric: z.string().describe('Metric to analyze for anomalies'),
-      threshold: z.number().min(0).max(1).optional().describe('Anomaly detection threshold (0-1)'),
-      timeWindow: z.enum(['1h', '24h', '7d']).optional().describe('Time window for anomaly detection')
-    },
-    async ({ dataset, metric, threshold, timeWindow }: {
-      dataset: string;
-      metric: string;
-      threshold?: number;
-      timeWindow?: '1h' | '24h' | '7d';
-    }) => {
-      try {
-        const validated = DetectAnomaliesSchema.parse({ dataset, metric, threshold, timeWindow });
-        
-        const result = await repository.detectAnomalies(validated.dataset, validated.metric, validated.threshold);
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                success: true,
-                data: result
-              })
-            }
-          ]
-        };
-      } catch (error) {
-        console.error('detectAnomalies error:', error);
         
         return {
           content: [

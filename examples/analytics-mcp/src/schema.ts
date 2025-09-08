@@ -96,13 +96,6 @@ export const TrackBatchMetricsSchema = z.object({
   dataPoints: z.array(AnalyticsDataPointSchema).min(1, "At least one data point required")
 });
 
-export const TrackAgentMetricsSchema = z.object({
-  agentId: z.string().min(1, "Agent ID is required"),
-  userId: z.string().optional(),
-  eventType: z.enum(['message_received', 'response_generated', 'error_occurred', 'session_started', 'session_ended']),
-  processingTime: z.number().optional(),
-  metadata: z.record(z.any()).optional()
-});
 
 export const QueryAnalyticsSchema = z.object({
   sql: z.string().min(1, "SQL query is required"),
@@ -147,12 +140,6 @@ export const MonitorSystemHealthSchema = z.object({
   })
 });
 
-export const DetectAnomaliesSchema = z.object({
-  dataset: z.string().min(1, "Dataset name is required"),
-  metric: z.string().min(1, "Metric name is required"),
-  threshold: z.number().min(0).max(1).optional().default(0.95),
-  timeWindow: z.enum(['1h', '24h', '7d']).optional().default('24h')
-});
 
 // Environment interface
 export interface Env {
