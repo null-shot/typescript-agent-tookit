@@ -364,28 +364,6 @@ export class AnalyticsRepository {
   }
 
   // Helper method for agent metrics - simplified
-  async trackAgentMetrics(
-    agentId: string,
-    eventType: string,
-    userId?: string,
-    processingTime?: number,
-    metadata?: Record<string, any>
-  ): Promise<void> {
-    const dataPoint: AnalyticsDataPoint = {
-      timestamp: Date.now(),
-      dimensions: {
-        agentId,
-        eventType,
-        ...(userId && { userId })
-      },
-      metrics: {
-        ...(processingTime && { processingTime })
-      },
-      ...(metadata && { metadata })
-    };
-
-    await this.writeDataPoint('agent_metrics', dataPoint);
-  }
 
   // Utility methods - simplified without D1 database operations
   async listDatasets(): Promise<DatasetInfo[]> {
@@ -582,22 +560,6 @@ export class AnalyticsRepository {
   }
 
   // Simple anomaly detection using SQL
-  async detectAnomalies(dataset: string, metric: string, threshold: number = 2): Promise<any> {
-    // Analytics Engine doesn't support STDDEV, use simpler anomaly detection
-    const sql = `
-      SELECT 
-        timestamp,
-        double1 as value,
-        blob1 as dimension1,
-        blob2 as dimension2
-      FROM ${dataset}
-      WHERE double1 > ${threshold * 100}
-      ORDER BY timestamp DESC
-      LIMIT 50
-    `;
-
-    return await this.query(sql);
-  }
 
   // System health monitoring
   async monitorSystemHealth(): Promise<any> {
