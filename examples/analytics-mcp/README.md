@@ -352,31 +352,7 @@ Based on the successful implementation, configure:
 - **Query parameter**: `sql` = (your SQL query)
 - **Note**: This endpoint was added for easier integration but not yet tested
 
-### **Step 7: Configure Analytics Engine Access**
-
-Set up your Cloudflare API token for Analytics Engine access:
-
-```bash
-# Set your API token (get from Cloudflare dashboard)
-wrangler secret put CF_API_TOKEN
-# Use token with "Account Analytics Read" permission
-```
-
-### **Step 8: Verify Setup**
-
-Test that everything works:
-
-```bash
-# Run the verification script
-node complete-setup-verification.js
-```
-
-Expected output:
-- ✅ MCP Connection working (11 tools available)
-- ✅ Grafana Endpoint working (data returned)
-- ✅ Ready for dashboard creation
-
-### **Step 10: Create Dashboard Panels**
+### **Step 7: Create Dashboard Panels**
 
 **In your local Grafana (localhost:3000), create 2 panels with these proven working queries:**
 
@@ -413,7 +389,7 @@ ORDER BY blob3
 - **Visualization**: Time series
 - **Legend**: Uses aliases (PRsCreated, StarCount, etc.)
 
-### **Step 11: View Your Analytics Dashboard**
+### **Step 8: View Your Analytics Dashboard**
 
 Your dashboard will show:
 - **📈 PR Activity**: Real-time Claude Code PR and issue activity
