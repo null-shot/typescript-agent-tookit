@@ -356,24 +356,6 @@ Record individual analytics events with dimensions and metrics.
 }
 ```
 
-**Complete Request:**
-```json
-{
-  "dataset": "github_stats",
-  "dimensions": {
-    "repo": "anthropics/claude-code",
-    "event_type": "pr_created",
-    "date": "2025-09-05"
-  },
-  "metrics": {
-    "prs_created": 1,
-    "prs_merged": 0,
-    "prs_closed": 0
-  },
-  "timestamp": 1725494400000
-}
-```
-
 **Response:**
 ```json
 {
@@ -391,36 +373,39 @@ Record individual analytics events with dimensions and metrics.
 #### **`track_batch_metrics`** - Multiple Data Points
 Efficiently submit multiple analytics events in a single request.
 
+**Dataset:**
 ```json
-{
-  "dataset": "github_stats",
-  "dataPoints": [
-    {
-      "dimensions": {
-        "repo": "anthropics/claude-code",
-        "event_type": "pr_stats",
-        "date": "2025-09-01"
-      },
-      "metrics": {
-        "prs_created": 5,
-        "prs_merged": 3,
-        "prs_closed": 1
-      }
+"github_stats"
+```
+
+**Data Points Array:**
+```json
+[
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "pr_stats",
+      "date": "2025-09-01"
     },
-    {
-      "dimensions": {
-        "repo": "anthropics/claude-code",
-        "event_type": "pr_stats",
-        "date": "2025-09-02"
-      },
-      "metrics": {
-        "prs_created": 7,
-        "prs_merged": 4,
-        "prs_closed": 2
-      }
+    "metrics": {
+      "prs_created": 5,
+      "prs_merged": 3,
+      "prs_closed": 1
     }
-  ]
-}
+  },
+  {
+    "dimensions": {
+      "repo": "anthropics/claude-code",
+      "event_type": "pr_stats",
+      "date": "2025-09-02"
+    },
+    "metrics": {
+      "prs_created": 7,
+      "prs_merged": 4,
+      "prs_closed": 2
+    }
+  }
+]
 ```
 
 **Response:**
@@ -441,10 +426,13 @@ Efficiently submit multiple analytics events in a single request.
 #### **`query_analytics`** - Raw SQL Queries
 Execute custom SQL queries against your analytics data with full SQL support.
 
-```json
-{
-  "sql": "SELECT blob1 as repo, blob2 as event_type, blob3 as date, double1 as prs_created, double2 as prs_merged FROM github_stats WHERE blob2 = 'pr_stats' ORDER BY blob3 DESC LIMIT 10"
-}
+**SQL Query:**
+```sql
+SELECT blob1 as repo, blob2 as event_type, blob3, double1 as prs_created, double2 as prs_merged
+FROM github_stats
+WHERE blob2 = 'pr_stats'
+ORDER BY blob3 DESC
+LIMIT 10
 ```
 
 **Response:**
@@ -474,15 +462,22 @@ Execute custom SQL queries against your analytics data with full SQL support.
 #### **`get_metrics_summary`** - Aggregated Statistics
 Get summarized metrics with time ranges and dimension grouping.
 
+**Dataset:**
+```json
+"github_stats"
+```
+
+**Time Range:**
 ```json
 {
-  "dataset": "github_stats",
-  "timeRange": {
-    "start": "2025-09-01T00:00:00Z",
-    "end": "2025-09-07T23:59:59Z"
-  },
-  "dimensions": ["event_type"]
+  "start": "2025-09-01T00:00:00Z",
+  "end": "2025-09-07T23:59:59Z"
 }
+```
+
+**Dimensions:**
+```json
+["event_type"]
 ```
 
 **Response:**
@@ -515,17 +510,32 @@ Get summarized metrics with time ranges and dimension grouping.
 #### **`get_time_series`** - Time Series Data
 Retrieve time-series data for trend analysis and visualization.
 
+**Dataset:**
+```json
+"github_stats"
+```
+
+**Metric:**
+```json
+"prs_created"
+```
+
+**Interval:**
+```json
+"1d"
+```
+
+**Time Range:**
 ```json
 {
-  "dataset": "github_stats",
-  "metric": "prs_created",
-  "interval": "1d",
-  "timeRange": {
-    "start": "2025-09-01T00:00:00Z",
-    "end": "2025-09-07T23:59:59Z"
-  },
-  "dimensions": ["pr_stats"]
+  "start": "2025-09-01T00:00:00Z",
+  "end": "2025-09-07T23:59:59Z"
 }
+```
+
+**Dimensions:**
+```json
+["pr_stats"]
 ```
 
 **Response:**
@@ -568,13 +578,24 @@ Retrieve time-series data for trend analysis and visualization.
 #### **`analyze_trends`** - Trend Analysis
 Analyze trends in metrics over time with automatic pattern detection.
 
+**Dataset:**
 ```json
-{
-  "dataset": "github_stats",
-  "metric": "pr_stats",
-  "timeRange": "30d",
-  "column": "double1"
-}
+"github_stats"
+```
+
+**Metric:**
+```json
+"pr_stats"
+```
+
+**Time Range:**
+```json
+"30d"
+```
+
+**Column (Optional):**
+```json
+"double1"
 ```
 
 **Response:**
