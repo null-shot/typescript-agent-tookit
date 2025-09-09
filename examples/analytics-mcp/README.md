@@ -333,6 +333,30 @@ This section provides complete, tested examples for all available MCP tools. Use
 #### **`track_metric`** - Single Data Point
 Record individual analytics events with dimensions and metrics.
 
+**Dataset:**
+```json
+"github_stats"
+```
+
+**Dimensions:**
+```json
+{
+  "repo": "anthropics/claude-code",
+  "event_type": "pr_created",
+  "date": "2025-09-05"
+}
+```
+
+**Metrics:**
+```json
+{
+  "prs_created": 1,
+  "prs_merged": 0,
+  "prs_closed": 0
+}
+```
+
+**Complete Request:**
 ```json
 {
   "dataset": "github_stats",
