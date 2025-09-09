@@ -34,6 +34,17 @@ cd examples/analytics-mcp
 # Install dependencies
 pnpm install
 
+# Set up production credentials (required for deployment)
+# Get your Account ID first:
+wrangler whoami
+
+# Set credentials as secrets (secure for production):
+wrangler secret put CLOUDFLARE_ACCOUNT_ID
+# Enter your account ID when prompted (from whoami output)
+
+wrangler secret put CLOUDFLARE_API_TOKEN  
+# Enter your API token when prompted (see token creation steps below)
+
 # Deploy to Cloudflare Workers
 wrangler deploy
 ```
@@ -44,50 +55,23 @@ Your Analytics MCP server will be deployed to: `https://analytics-mcp.{your-subd
 
 **Set up Analytics Engine credentials for local testing:**
 ```bash
-# Find your Cloudflare Account ID
-wrangler whoami
-# This shows your account ID - copy it
+# Create API token for Analytics Engine access
+# Go to: https://dash.cloudflare.com/profile/api-tokens
+# 1. Click "Create Token" 
+# 2. Use "Edit Cloudflare Workers" template OR "Custom token"
+# 3. Required permissions: Account -> Cloudflare Workers:Edit, Account -> Analytics Engine:Read, User -> User 
+Details:Read
+# 4. Select your account in "Account Resources"
+# 5. Click "Continue to summary" then "Create Token"
+# 6. Copy the generated token (save it securely!)
 
-# Get your API token (choose one method):
-
-# Method 1: Create new token via Wrangler
-wrangler auth login
-# This will open browser and create/save a token automatically
-
-# Method 2: Create API token manually from Cloudflare Dashboard
-# 1. Go to https://dash.cloudflare.com/profile/api-tokens
-# 2. Click "Create Token" 
-# 3. Use "Edit Cloudflare Workers" template OR "Custom token"
-# 4. Required permissions: Account -> Cloudflare Workers:Edit, Account -> Analytics Engine:Read, User -> User Details:Read
-# 5. Select your account in "Account Resources"
-# 6. Click "Continue to summary" then "Create Token"
-# 7. Copy the generated token (save it securely - you won't see it again!)
-
-# Method 3: Check existing setup and get Account ID
-# Verify your current Cloudflare setup:
-wrangler whoami
-
-# This shows your Account ID and confirms you're authenticated
-# Copy the Account ID from the output table
-# Note: This doesn't show the API token value - you need Method 1 or 2 for that
-
-# Set your credentials (replace with your actual values)
-export CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami  # Copy from wrangler whoami output
-export CLOUDFLARE_API_TOKEN=your_api_token  # See token creation steps below
-
-# Or add to your .env file for persistence
+# Set credentials in .env file for local development
 echo "CLOUDFLARE_ACCOUNT_ID=your_account_id_from_whoami" >> .env
 echo "CLOUDFLARE_API_TOKEN=your_api_token" >> .env
 ```
 
-**Note**: Your deployed worker already has these credentials configured (that's why the GitHub collector worked).
+**Note**: Production uses wrangler secrets (set in Step 1), local development uses `.env` file.
 
-**🔍 Debug Tips**: 
-- If `track_metric` succeeds but `query_analytics` returns no data, verify **both** credentials are set:
-  ```bash
-  echo "CLOUDFLARE_ACCOUNT_ID: $CLOUDFLARE_ACCOUNT_ID"
-  echo "CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:0:10}..."
-  ```
 - **⚠️ IMPORTANT**: Cloudflare Workers local development has Analytics Engine write limitations. Use production SSE for reliable testing.
 
 ### **Step 3: Test with MCP Inspector**
@@ -115,10 +99,10 @@ This opens:
    # Output shows: Published analytics-mcp (1.23s)
    #               https://analytics-mcp.your-subdomain.workers.dev
    ``` 
-2. **Expected**: 11 available tools (track_metric, query_analytics, etc.)
+2. **Expected**: 8 available tools (track_metric, query_analytics, etc.)
 
 **🔍 Important Architecture Note:**
-- **Both localhost and production SSE connect to the SAME Analytics Engine** (via `.env` credentials)
+- **Both localhost and production SSE connect to the SAME Analytics Engine** (localhost via `.env` credentials, production via wrangler secrets)
 - **`list_datasets` shows identical results** (same record counts, timestamps)  
 - **Cloudflare Workers local development limitation**: Analytics Engine writes in local mode don't persist consistently
 - **For reliable data testing, always use the production SSE URL** ✅
@@ -633,17 +617,22 @@ List all available datasets and their metadata.
 ```json
 {
   "success": true,
-  "data": {
-    "datasets": [
-      {
-        "name": "github_stats",
-        "record_count": 30,
-        "event_types": ["pr_stats", "github_stars"]
-      }
-    ],
-    "total_datasets": 1,
-    "timestamp": 1725494400000
-  }
+  "data": [
+    {
+      "name": "github_stats:github_star_cumulative",
+      "description": "Event type 'github_star_cumulative' in github_stats", 
+      "record_count": "36",
+      "dimensions": ["repo", "event_type", "date", "batch_id"],
+      "metrics": ["stars_total", "forks_total", "prs_created", "prs_merged"]
+    },
+    {
+      "name": "github_stats:pr_stats",
+      "description": "Event type 'pr_stats' in github_stats",
+      "record_count": "2",
+      "dimensions": ["repo", "event_type", "date", "batch_id"],
+      "metrics": ["stars_total", "forks_total", "prs_created", "prs_merged"]
+    }
+  ]
 }
 ```
 

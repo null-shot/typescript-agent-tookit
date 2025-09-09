@@ -23,9 +23,6 @@
       "dataset": "github_stats"
     }
   ],
-  "vars": {
-    "CLOUDFLARE_ACCOUNT_ID": "59084df56e21d828dcbd5811f81c7754"
-  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
