@@ -1,7 +1,7 @@
 {
-	"name": "browser-mcp-server-v2",
+	"name": "browser-mcp-server-raycoderhk",
 	"main": "src/index.ts",
-	"account_id": "59084df56e21d828dcbd5811f81c7754",
+	"account_id": "3981ec4631dcbcd63d4e339e7da3bdd2",
 	"compatibility_date": "2025-02-11",
 	"compatibility_flags": [
 		"nodejs_compat"
@@ -17,7 +17,7 @@
 		"bindings": [
 			{
 				"name": "BROWSER_MCP_SERVER",
-				"class_name": "BrowserMcpServer"
+				"class_name": "BrowserMcpServerSqlV2"
 			}
 		]
 	},
@@ -25,15 +25,8 @@
 		{
 			"tag": "v1",
 			"new_sqlite_classes": [
-				"BrowserMcpServer"
+				"BrowserMcpServerSqlV2"
 			]
-		}
-	],
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "browser-mcp-db-raydp102",
-			"database_id": "00d13a52-a4b2-478b-835a-3d71c22e9bcb"
 		}
 	],
 	"vars": {

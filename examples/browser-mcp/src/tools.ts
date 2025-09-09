@@ -123,6 +123,7 @@ export function setupBrowserTools(
             page = await browserManager.createSession(sessionId, {
               url: args.url,
               viewport: args.width && args.height ? { width: args.width, height: args.height } : undefined,
+              timeout: 90000,
             });
           } else if (sessionId) {
             page = await browserManager.getSession(sessionId);
@@ -279,7 +280,7 @@ export function setupBrowserTools(
 
         if (args.url && !sessionId) {
           sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          page = await browserManager.createSession(sessionId, { url: args.url });
+          page = await browserManager.createSession(sessionId, { url: args.url, timeout: 90000 });
         } else if (sessionId) {
           page = await browserManager.getSession(sessionId);
           if (!page) {
@@ -498,7 +499,7 @@ export function setupBrowserTools(
       filter: z.string().optional().describe("Filter links by text content or href pattern"),
       internal: z.boolean().optional().describe("Only extract internal links (same domain)"),
       external: z.boolean().optional().describe("Only extract external links (different domain)"),
-      timeout: z.number().default(60000).describe("Timeout in milliseconds for page operations"),
+      timeout: z.number().default(90000).describe("Timeout in milliseconds for page operations"),
     },
     async (args: ExtractionOptions) => {
       try {
@@ -507,7 +508,7 @@ export function setupBrowserTools(
 
         if (args.url && !sessionId) {
           sessionId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          page = await browserManager.createSession(sessionId, { url: args.url });
+          page = await browserManager.createSession(sessionId, { url: args.url, timeout: 90000 });
         } else if (sessionId) {
           page = await browserManager.getSession(sessionId);
           if (!page) {

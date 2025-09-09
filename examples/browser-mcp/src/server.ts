@@ -144,9 +144,22 @@ export class BrowserMcpServer extends McpHonoServerDO<Env> {
       if (mode === 'cloudflare_puppeteer' && this.env.MYBROWSER) {
         // Use Cloudflare Puppeteer with Browser Rendering binding for unlimited testing
         console.log('🔍 Using Cloudflare Puppeteer with Browser Rendering binding...');
-        browserManager = new CloudflarePuppeteerManager(this.env);
-        browserType = 'Cloudflare Puppeteer (unlimited testing)';
-        console.log('🚀 Using Cloudflare Puppeteer for unlimited browser automation');
+        try {
+          browserManager = new CloudflarePuppeteerManager(this.env);
+          browserType = 'Cloudflare Puppeteer (unlimited testing)';
+          console.log('🚀 Using Cloudflare Puppeteer for unlimited browser automation');
+        } catch (error) {
+          console.error('❌ Failed to initialize Cloudflare Puppeteer:', error);
+          console.log('⚠️ Falling back to mock browser manager due to Cloudflare Puppeteer initialization error');
+          browserManager = new MockBrowserManager(this.env) as any;
+          browserType = 'Mock Browser (Cloudflare Puppeteer failed)';
+        }
+      } else if (mode === 'mock') {
+        // Use mock browser manager for testing without Browser Rendering
+        console.log('🔍 Using Mock Browser Manager for testing...');
+        browserManager = new MockBrowserManager(this.env) as any;
+        browserType = 'Mock Browser (testing mode)';
+        console.log('🧪 Using Mock Browser Manager for MCP testing');
       } else if (mode === 'local_puppeteer') {
         // Try to use local Puppeteer for unlimited testing (Node.js only)
         console.log('🔍 Checking LocalPuppeteerManager availability...');
@@ -178,7 +191,7 @@ export class BrowserMcpServer extends McpHonoServerDO<Env> {
       browserType = 'Mock Browser (fallback)';
     }
     
-    const repository = new BrowserRepository(this.env.DB, this.env.CACHE_BUCKET);
+    const repository = new BrowserRepository(this.ctx.storage.sql, this.env.CACHE_BUCKET);
     
     // Initialize the database on startup
     this.ctx.blockConcurrencyWhile(async () => {
@@ -193,3 +206,6 @@ export class BrowserMcpServer extends McpHonoServerDO<Env> {
     console.log(`✅ Browser MCP server configured successfully with ${browserType}`);
   }
 }
+
+// Create alias for SQLite-enabled version
+export class BrowserMcpServerSqlV2 extends BrowserMcpServer {}

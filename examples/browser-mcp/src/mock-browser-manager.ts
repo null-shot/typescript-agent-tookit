@@ -21,12 +21,27 @@ export class MockBrowserManager {
       }),
       $$eval: () => Promise.resolve(["Mock text 1", "Mock text 2"]),
       $eval: () => Promise.resolve("Mock extracted text"),
-      evaluate: (code: string) => {
-        if (code.includes('document.title')) return Promise.resolve('Mock Page Title');
-        if (code.includes('links')) return Promise.resolve([
-          { url: 'https://example.com/link1', text: 'Link 1', internal: true, domain: 'example.com' },
-          { url: 'https://example.com/link2', text: 'Link 2', internal: true, domain: 'example.com' }
-        ]);
+      evaluate: (code: any, ...args: any[]) => {
+        // Handle string code (for simple evaluations)
+        if (typeof code === 'string') {
+          if (code.includes && code.includes('document.title')) return Promise.resolve('Mock Page Title');
+          if (code.includes && code.includes('links')) return Promise.resolve([
+            { url: 'https://example.com/link1', text: 'Link 1', internal: true, domain: 'example.com' },
+            { url: 'https://example.com/link2', text: 'Link 2', internal: true, domain: 'example.com' }
+          ]);
+          return Promise.resolve({ mockResult: true });
+        }
+
+        // Handle function evaluation (what the real browser expects)
+        // For link extraction, return mock links
+        if (args && args.length >= 4) {
+          const [filter, internal, external, currentDomain] = args;
+          return Promise.resolve([
+            { url: 'https://example.com/link1', text: 'Link 1', internal: true, domain: 'example.com' },
+            { url: 'https://example.com/link2', text: 'Link 2', internal: true, domain: 'example.com' }
+          ]);
+        }
+
         return Promise.resolve({ mockResult: true });
       },
       waitForSelector: () => Promise.resolve(),

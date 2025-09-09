@@ -15,41 +15,54 @@ export class CloudflarePuppeteerManager {
   async getBrowser(): Promise<any> {
     if (!this.browser) {
       if (!this.env.MYBROWSER) {
-        throw new Error('Browser Rendering binding (MYBROWSER) not available');
+        throw new Error('Browser Rendering binding (MYBROWSER) not available. Please check your wrangler.jsonc configuration.');
       }
-      
+
       try {
         console.log('🚀 Launching Cloudflare Puppeteer browser with Browser Rendering...');
         console.log('🔍 MYBROWSER binding available:', !!this.env.MYBROWSER);
         console.log('🔍 MYBROWSER binding type:', typeof this.env.MYBROWSER);
-        
+
         // Add more detailed logging to catch the raw response
         console.log('🔍 Attempting puppeteer.launch...');
         const response = await puppeteer.launch(this.env.MYBROWSER);
         console.log('🔍 Browser launch response type:', typeof response);
         console.log('🔍 Browser launch successful');
-        
+
         this.browser = response;
         console.log('✅ Cloudflare Puppeteer browser launched successfully');
       } catch (error) {
         console.error('❌ Cloudflare Puppeteer browser launch failed:', error);
-        
+
         // Enhanced error logging to capture the actual response
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('❌ Full error message:', errorMessage);
         console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-        
+
         // Check for specific error patterns
         if (errorMessage.includes('Unexpected token')) {
           console.error('🚨 JSON parsing error detected - likely receiving HTML error page instead of JSON');
           console.error('💡 This suggests Cloudflare protection or API configuration issue');
+          console.error('🔧 TROUBLESHOOTING STEPS:');
+          console.error('   1. Check if Browser Rendering is enabled in your Cloudflare account');
+          console.error('   2. Verify your account has the necessary permissions');
+          console.error('   3. Check your wrangler configuration for correct binding setup');
+          console.error('   4. Ensure you have sufficient Browser Rendering usage quota');
           throw new Error(`Browser Rendering API returned invalid response (HTML instead of JSON). This may be due to Cloudflare protection or misconfiguration. Error: ${errorMessage}`);
         } else if (errorMessage.includes('quota') || errorMessage.includes('limit') || errorMessage.includes('429')) {
+          console.error('🚨 Browser Rendering quota exceeded');
+          console.error('💡 Check your Cloudflare account limits and usage');
           throw new Error(`Browser Rendering quota exceeded. Please check your Cloudflare account limits.`);
-        } else if (errorMessage.includes('Access Denied') || errorMessage.includes('Forbidden')) {
+        } else if (errorMessage.includes('Access Denied') || errorMessage.includes('Forbidden') || errorMessage.includes('403')) {
+          console.error('🚨 Browser Rendering access denied');
+          console.error('💡 Check your Cloudflare account permissions and Browser Rendering enablement');
           throw new Error(`Browser Rendering access denied. Check your Cloudflare account permissions and Browser Rendering enablement.`);
+        } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+          console.error('🚨 Browser Rendering API endpoint not found');
+          console.error('💡 Verify your wrangler.jsonc has the correct browser binding configuration');
+          throw new Error(`Browser Rendering API endpoint not found. Check your wrangler.jsonc configuration.`);
         }
-        
+
         throw new Error(`Failed to launch Cloudflare Puppeteer browser: ${errorMessage}`);
       }
     }
@@ -177,10 +190,10 @@ export class CloudflarePuppeteerManager {
     try {
       const startTime = Date.now();
       
-      // Cloudflare Puppeteer navigation options
+      // Cloudflare Puppeteer navigation options - try different wait conditions
       const navigationOptions: any = {
-        waitUntil: options.waitUntil || 'domcontentloaded',
-        timeout: options.timeout || 60000,
+        waitUntil: options.waitUntil || 'load', // Changed from 'domcontentloaded' to 'load'
+        timeout: options.timeout || 90000, // Increased to 90 seconds
       };
 
       await page.goto(options.url, navigationOptions);
@@ -197,8 +210,26 @@ export class CloudflarePuppeteerManager {
 
       console.log(`✅ Cloudflare Puppeteer navigation completed for session ${sessionId} in ${loadTime}ms`);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check for quota-related error patterns
+      if (errorMessage.includes('quota') || errorMessage.includes('limit') || errorMessage.includes('billing')) {
+        throw new NavigationError(
+          `Browser Rendering quota exceeded or billing issue detected. Please check your Cloudflare account billing and Browser Rendering usage limits. Error: ${errorMessage}`,
+          options.url
+        );
+      }
+
+      // Check for timeout vs other network errors
+      if (errorMessage.includes('ERR_TIMED_OUT') || errorMessage.includes('timeout')) {
+        throw new NavigationError(
+          `Navigation timeout occurred. The website may be slow to load or unresponsive. This is likely NOT a quota issue. Error: ${errorMessage}`,
+          options.url
+        );
+      }
+
       throw new NavigationError(
-        `Failed to navigate to ${options.url} with Cloudflare Puppeteer: ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to navigate to ${options.url} with Cloudflare Puppeteer: ${errorMessage}`,
         options.url
       );
     }

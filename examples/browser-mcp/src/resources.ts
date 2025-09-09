@@ -222,14 +222,20 @@ export function setupBrowserResources(
     },
     async (uri: URL) => {
       try {
-        // Get all patterns from database
-        const allPatterns = await repository.db.prepare(`
+        // Get all patterns using repository SQL method
+        const queryResult = await repository.sql.exec(`
           SELECT * FROM extraction_patterns 
           ORDER BY success_rate DESC, last_used DESC 
           LIMIT 50
-        `).all();
+        `);
 
-        const patterns = allPatterns.results.map((row: any) => ({
+        // Convert cursor to array
+        const rows = [];
+        for (const row of queryResult) {
+          rows.push(row);
+        }
+
+        const patterns = rows.map((row: any) => ({
           id: row.id,
           name: row.name,
           description: row.description,
@@ -242,7 +248,7 @@ export function setupBrowserResources(
         }));
 
         // Group by domain
-        const patternsByDomain = patterns.reduce((acc, pattern) => {
+        const patternsByDomain = patterns.reduce((acc: any, pattern: any) => {
           if (!acc[pattern.domain]) {
             acc[pattern.domain] = [];
           }
@@ -261,7 +267,7 @@ export function setupBrowserResources(
                 totalPatterns: patterns.length,
                 uniqueDomains: Object.keys(patternsByDomain).length,
                 avgSuccessRate: patterns.length > 0 
-                  ? Math.round(patterns.reduce((sum, p) => sum + p.successRate, 0) / patterns.length)
+                  ? Math.round(patterns.reduce((sum: number, p: any) => sum + p.successRate, 0) / patterns.length)
                   : 0,
               },
             }, null, 2),

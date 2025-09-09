@@ -1,10 +1,9 @@
-import { BrowserMcpServer } from './server.js';
+import { BrowserMcpServer, BrowserMcpServerSqlV2 } from './server.js';
 
 interface Env {
   MYBROWSER: Fetcher; // Browser Rendering binding
-  DB: D1Database;
   CACHE_BUCKET?: R2Bucket; // Optional for testing
-  BROWSER_MCP_SERVER: DurableObjectNamespace<BrowserMcpServer>;
+  BROWSER_MCP_SERVER: DurableObjectNamespace<BrowserMcpServerSqlV2>;
   
   // Environment variables
   MAX_CONCURRENT_SESSIONS: string;
@@ -13,8 +12,8 @@ interface Env {
   MAX_PAGE_SIZE_MB: string;
 }
 
-// Export the BrowserMcpServer class for Durable Object binding
-export { BrowserMcpServer };
+// Export both classes for Durable Object binding
+export { BrowserMcpServer, BrowserMcpServerSqlV2 };
 
 // Worker entrypoint for handling incoming requests
 export default {
