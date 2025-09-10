@@ -14,7 +14,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["VectorizeMcpServer"]
+      "new_sqlite_classes": ["VectorizeMcpServer"]
     }
   ],
   "vectorize": [
