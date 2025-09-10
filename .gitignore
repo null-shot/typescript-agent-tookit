@@ -64,3 +64,27 @@ tmp/
 
 data/
 *.db
+
+# Documentation files (to avoid accidental commits)
+**/Vectorize\ _\ NullShot*
+examples/Vectorize\ _\ NullShot*
+
+# Temporary/work files from other projects (to avoid accidental commits)
+chat.html
+simple-chat.html
+remove_tools.js
+examples/analytics-mcp.OLD/
+examples/analytics-mcp/
+examples/browser-mcp/src/*.js
+examples/playground-showcase/src/app/simple-chat/
+
+# Modified files from other projects (to avoid accidental commits during vectorize-mcp work)
+examples/crud-mcp/src/index.ts
+examples/expense-mcp/package.json
+examples/simple-prompt-agent/src/index.ts
+packages/playground/src/data/ai-models.ts
+
+# Design documents (working files, not for commit)
+design.md
+examples/vectorize-mcp/design.md
+examples/vectorize-mcp/.dev.vars
