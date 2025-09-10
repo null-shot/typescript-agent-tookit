@@ -1,0 +1,46 @@
+{
+  "name": "vectorize-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Cloudflare Vectorize - semantic search and vector operations",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev --experimental-vectorize-bind-to-prod\" --kill-others",
+    "start": "wrangler dev --experimental-vectorize-bind-to-prod",
+    "inspector": "npx @modelcontextprotocol/inspector",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "vectorize",
+    "cloudflare",
+    "semantic-search",
+    "embeddings",
+    "ai",
+    "rag"
+  ],
+  "author": "TypeScript Agent Framework",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
+    "@nullshot/mcp": "workspace:*",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@nullshot/test-utils": "workspace:*",
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "vitest-environment-miniflare": "^2.14.4",
+    "wrangler": "^3.94.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
