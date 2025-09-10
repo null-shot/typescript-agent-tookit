@@ -110,11 +110,20 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
               (validatedArgs.include_content ? `   📄 Content: ${doc.content.substring(0, 200)}...\n` : '') +
               `   🆔 ID: ${doc.id}\n`
             ).join('\n')
-          : `❌ No similar documents found for query: "${validatedArgs.query}"\n\n` +
-            `💡 Try:\n` +
-            `• Lowering the similarity threshold (current: ${validatedArgs.threshold})\n` +
+          : `❌ No similar documents found with the following criteria:\n\n` +
+            `🔍 **Search Query**: "${validatedArgs.query}"\n` +
+            `📊 **Similarity Threshold**: ${validatedArgs.threshold} (${(validatedArgs.threshold * 100).toFixed(0)}%)\n` +
+            `📂 **Category Filter**: ${validatedArgs.category || 'None (all categories)'}\n` +
+            `👤 **Author Filter**: ${validatedArgs.author || 'None (all authors)'}\n` +
+            `🏷️ **Tag Filters**: ${validatedArgs.tags?.length ? validatedArgs.tags.join(', ') : 'None (all tags)'}\n` +
+            `📄 **Result Limit**: ${validatedArgs.limit}\n\n` +
+            `💡 **Try:**\n` +
+            `• Lowering the similarity threshold (try 0.5 or 0.6)\n` +
             `• Using different search terms\n` +
-            `• Checking if documents exist in the specified category`;
+            `• Removing category filter: ${validatedArgs.category ? `"${validatedArgs.category}"` : '(none to remove)'}\n` +
+            `• Removing author filter: ${validatedArgs.author ? `"${validatedArgs.author}"` : '(none to remove)'}\n` +
+            `• Removing tag filters: ${validatedArgs.tags?.length ? validatedArgs.tags.join(', ') : '(none to remove)'}\n` +
+            `• Using get_index_stats to see available categories and document count`;
 
         return {
           content: [

@@ -146,10 +146,11 @@ export class VectorizeRepository {
       );
     }
 
-    // Apply author filter
+    // Apply author filter (supports partial matching)
     if (author) {
       filteredMatches = filteredMatches.filter(match => 
-        match.metadata?.author === author
+        match.metadata?.author && 
+        (match.metadata.author as string).toLowerCase().includes(author.toLowerCase())
       );
     }
 
@@ -216,10 +217,18 @@ export class VectorizeRepository {
       updatedDoc.embedding = embedding;
     }
 
+    // Ensure we have a valid embedding
+    let finalEmbedding = embedding || existing.embedding;
+    if (!finalEmbedding || !Array.isArray(finalEmbedding) || finalEmbedding.length === 0) {
+      // Generate new embedding if none exists
+      finalEmbedding = await this.generateEmbedding(updatedDoc.content);
+      updatedDoc.embedding = finalEmbedding;
+    }
+
     // Update in Vectorize
     await this.vectorizeIndex.upsert([{
       id,
-      values: embedding || existing.embedding!,
+      values: finalEmbedding,
       metadata: {
         title: updatedDoc.title,
         content: updatedDoc.content,
