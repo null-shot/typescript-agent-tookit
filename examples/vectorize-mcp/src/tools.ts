@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { VectorizeRepository } from './repository';
+import { z } from 'zod';
 import {
   AddDocumentSchema,
   UpdateDocumentSchema,
@@ -474,8 +475,15 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
     'batch_add_documents',
     'Add multiple documents to the vector database in batches',
     {
-      documents: BatchAddDocumentsSchema.shape.documents,
-      batch_size: BatchAddDocumentsSchema.shape.batch_size,
+      documents: z.array(z.object({
+        title: z.string().describe('Document title'),
+        content: z.string().describe('Document content'),
+        category: z.string().optional().describe('Document category'),
+        source: z.string().optional().describe('Document source'),
+        tags: z.array(z.string()).optional().describe('Document tags'),
+        author: z.string().optional().describe('Document author'),
+      })).min(1).max(50).describe('Array of documents to add (1-50 documents)'),
+      batch_size: z.number().min(1).max(10).default(5).describe('Process in batches of this size (1-10, default: 5)'),
     },
     async (args) => {
       try {

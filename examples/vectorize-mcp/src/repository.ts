@@ -129,25 +129,39 @@ export class VectorizeRepository {
     // Generate embedding for search query
     const queryEmbedding = await this.generateEmbedding(query);
 
-    // Build filter object
-    const filter: Record<string, any> = {};
-    if (category) filter.category = category;
-    if (author) filter.author = author;
-    if (tags && tags.length > 0) {
-      // For simplicity, we'll filter by tag inclusion in the application layer
-      // since Vectorize metadata filtering might not support complex JSON queries
-    }
-
-    // Perform vector search
+    // Perform vector search (get more results for filtering)
     const results = await this.vectorizeIndex.query(queryEmbedding, {
-      topK: limit * 2, // Get more results to filter by threshold
+      topK: limit * 3, // Get more results to filter by threshold and criteria
       returnMetadata: true,
-      filter: Object.keys(filter).length > 0 ? filter : undefined,
     });
 
-    // Filter by threshold and convert to VectorDocument format
-    return results.matches
-      .filter(match => match.score >= threshold)
+    // Filter by threshold and criteria in application layer
+    let filteredMatches = results.matches
+      .filter(match => match.score >= threshold);
+
+    // Apply category filter
+    if (category) {
+      filteredMatches = filteredMatches.filter(match => 
+        match.metadata?.category === category
+      );
+    }
+
+    // Apply author filter
+    if (author) {
+      filteredMatches = filteredMatches.filter(match => 
+        match.metadata?.author === author
+      );
+    }
+
+    // Apply tags filter
+    if (tags && tags.length > 0) {
+      filteredMatches = filteredMatches.filter(match => {
+        const docTags = match.metadata?.tags ? JSON.parse(match.metadata.tags as string) : [];
+        return tags.every(tag => docTags.includes(tag));
+      });
+    }
+
+    return filteredMatches
       .slice(0, limit)
       .map(match => this.vectorMatchToDocument(match, includeContent));
   }
@@ -244,62 +258,74 @@ export class VectorizeRepository {
     total: number;
     hasMore: boolean;
   }> {
-    // Note: This is a simplified implementation
-    // In a real scenario, we might need to implement pagination differently
-    // since Vectorize doesn't have native pagination for listing all vectors
-    
-    // For now, we'll use a dummy query to get documents
-    // This is not ideal but demonstrates the pattern
-    const dummyEmbedding = new Array(EMBEDDING_CONFIG.DIMENSIONS).fill(0);
-    
-    const results = await this.vectorizeIndex.query(dummyEmbedding, {
-      topK: filter.limit + filter.offset + 10, // Get extra to account for filtering
-      returnMetadata: true,
-    });
-
-    // Filter results based on criteria
-    let filteredResults = results.matches;
-    
-    if (filter.category) {
-      filteredResults = filteredResults.filter(match => 
-        match.metadata?.category === filter.category
-      );
-    }
-    
-    if (filter.author) {
-      filteredResults = filteredResults.filter(match => 
-        match.metadata?.author === filter.author
-      );
-    }
-    
-    if (filter.tags && filter.tags.length > 0) {
-      filteredResults = filteredResults.filter(match => {
-        const docTags = match.metadata?.tags ? JSON.parse(match.metadata.tags as string) : [];
-        return filter.tags!.every(tag => docTags.includes(tag));
-      });
-    }
-
-    // Sort results
-    filteredResults.sort((a, b) => {
-      const aValue = a.metadata?.[filter.sort_by] || '';
-      const bValue = b.metadata?.[filter.sort_by] || '';
+    try {
+      // Note: This is a simplified implementation
+      // In a real scenario, we might need to implement pagination differently
+      // since Vectorize doesn't have native pagination for listing all vectors
       
-      if (filter.sort_order === 'asc') {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      // For now, we'll use a broad search approach to get documents
+      // Generate a generic embedding for broad search
+      const genericQuery = "document content information knowledge text data";
+      const searchEmbedding = await this.generateEmbedding(genericQuery);
+      
+      const results = await this.vectorizeIndex.query(searchEmbedding, {
+        topK: Math.min(filter.limit + filter.offset + 20, 100), // Get extra to account for filtering
+        returnMetadata: true,
+      });
+
+      // Filter results based on criteria
+      let filteredResults = results.matches;
+      
+      if (filter.category) {
+        filteredResults = filteredResults.filter(match => 
+          match.metadata?.category === filter.category
+        );
       }
-    });
+      
+      if (filter.author) {
+        filteredResults = filteredResults.filter(match => 
+          match.metadata?.author === filter.author
+        );
+      }
+      
+      if (filter.tags && filter.tags.length > 0) {
+        filteredResults = filteredResults.filter(match => {
+          const docTags = match.metadata?.tags ? JSON.parse(match.metadata.tags as string) : [];
+          return filter.tags!.every(tag => docTags.includes(tag));
+        });
+      }
 
-    // Apply pagination
-    const paginatedResults = filteredResults.slice(filter.offset, filter.offset + filter.limit);
-    const documents = paginatedResults.map(match => this.vectorMatchToDocument(match, true));
+      // Sort results
+      filteredResults.sort((a, b) => {
+        const aValue = a.metadata?.[filter.sort_by] || '';
+        const bValue = b.metadata?.[filter.sort_by] || '';
+        
+        if (filter.sort_order === 'asc') {
+          return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+        } else {
+          return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+        }
+      });
 
-    return {
-      documents,
-      total: filteredResults.length,
-      hasMore: filteredResults.length > filter.offset + filter.limit,
-    };
+      // Apply pagination
+      const paginatedResults = filteredResults.slice(filter.offset, filter.offset + filter.limit);
+      const documents = paginatedResults.map(match => this.vectorMatchToDocument(match, true));
+
+      return {
+        documents,
+        total: filteredResults.length,
+        hasMore: filteredResults.length > filter.offset + filter.limit,
+      };
+    } catch (error) {
+      console.error('Error listing documents:', error);
+      
+      // Return empty result if Vectorize is not available
+      return {
+        documents: [],
+        total: 0,
+        hasMore: false,
+      };
+    }
   }
 
   /**
