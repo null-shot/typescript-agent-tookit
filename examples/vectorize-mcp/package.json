@@ -10,8 +10,9 @@
     "build": "tsc",
     "dev": "wrangler dev --experimental-vectorize-bind-to-prod",
     "deploy": "wrangler deploy",
-    "test": "vitest",
-    "test:coverage": "vitest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit"
   },
   "keywords": [

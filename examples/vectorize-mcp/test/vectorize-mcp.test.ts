@@ -85,9 +85,9 @@ describe("Vectorize MCP Schema Validation Tests", () => {
   });
 
   it("should validate embedding configuration", () => {
-    expect(EMBEDDING_CONFIG.MODEL).toBe('text-embedding-ada-002');
-    expect(EMBEDDING_CONFIG.DIMENSIONS).toBe(1536);
-    expect(EMBEDDING_CONFIG.MAX_TOKENS).toBe(8192);
+    expect(EMBEDDING_CONFIG.MODEL).toBe('@cf/baai/bge-base-en-v1.5');
+    expect(EMBEDDING_CONFIG.DIMENSIONS).toBe(768);
+    expect(EMBEDDING_CONFIG.MAX_TOKENS).toBe(512);
     expect(EMBEDDING_CONFIG.BATCH_SIZE).toBe(100);
   });
 
