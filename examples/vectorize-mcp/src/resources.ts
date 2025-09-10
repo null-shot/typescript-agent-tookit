@@ -1,5 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { VectorizeRepository } from './repository';
+import { SEARCH_CONFIG } from './schema';
 
 export function setupServerResources(server: McpServer, repository: VectorizeRepository) {
   
@@ -163,7 +164,7 @@ export function setupServerResources(server: McpServer, repository: VectorizeRep
         
         const relatedDocs = await repository.findRelatedDocuments(documentId, {
           limit: 5,
-          threshold: 0.7,
+          threshold: SEARCH_CONFIG.DEFAULT_THRESHOLD,
         });
 
         const resourceData = {
@@ -178,7 +179,7 @@ export function setupServerResources(server: McpServer, repository: VectorizeRep
             content_preview: doc.content.substring(0, 200) + '...',
           })),
           count: relatedDocs.length,
-          threshold_used: 0.7,
+          threshold_used: SEARCH_CONFIG.DEFAULT_THRESHOLD,
           generated_at: new Date().toISOString(),
         };
 

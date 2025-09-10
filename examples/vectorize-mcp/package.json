@@ -1,6 +1,3 @@
-
-
-
 {
   "name": "vectorize-mcp",
   "version": "1.0.0",
@@ -8,11 +5,12 @@
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "wrangler dev --experimental-vectorize-bind-to-prod",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev --experimental-vectorize-bind-to-prod\" --kill-others",
+    "start": "wrangler dev --experimental-vectorize-bind-to-prod",
+    "inspector": "npx @modelcontextprotocol/inspector",
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
     "type-check": "tsc --noEmit"
   },
   "keywords": [
@@ -34,8 +32,9 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",
     "@cloudflare/workers-types": "^4.20241218.0",
-    "@types/node": "^22.10.2",
     "@nullshot/test-utils": "workspace:*",
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
     "vitest-environment-miniflare": "^2.14.4",

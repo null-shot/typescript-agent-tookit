@@ -88,3 +88,8 @@ packages/playground/src/data/ai-models.ts
 design.md
 examples/vectorize-mcp/design.md
 examples/vectorize-mcp/.dev.vars
+
+# Vectorize MCP development files (not for commit)
+examples/vectorize-mcp/scripts/
+examples/vectorize-mcp/test/test-data.json
+examples/vectorize-mcp/.dev.vars

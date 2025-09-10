@@ -253,13 +253,13 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
           content: [
             {
               type: "text",
-              text: `✅ Document "${updatedDocument.title}" updated successfully!\n\n` +
+              text: `✅ Document "${updatedDocument.title || updatedDocument.id}" updated successfully!\n\n` +
                     `🆔 ID: ${updatedDocument.id}\n` +
                     `📂 Category: ${updatedDocument.metadata.category || 'Uncategorized'}\n` +
                     `👤 Author: ${updatedDocument.metadata.author || 'Unknown'}\n` +
                     `🏷️ Tags: ${updatedDocument.metadata.tags?.join(', ') || 'None'}\n` +
                     `🔄 Updated: ${new Date(updatedDocument.metadata.updated_at).toLocaleString()}\n` +
-                    `📊 Content Length: ${updatedDocument.content.length} characters\n` +
+                    `📊 Content Length: ${updatedDocument.content?.length || 0} characters\n` +
                     (validatedArgs.regenerate_embedding ? '🔗 Embedding: Regenerated' : '🔗 Embedding: Preserved')
             }
           ],
@@ -287,13 +287,17 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
       try {
         const validatedArgs = DeleteDocumentSchema.parse(args);
         
-        if (!validatedArgs.confirm) {
+        // Explicit confirmation check - must be exactly true
+        if (validatedArgs.confirm !== true) {
           return {
             content: [
               {
                 type: "text",
-                text: `⚠️ Deletion requires confirmation.\n\n` +
-                      `To delete document "${validatedArgs.id}", set "confirm": true`
+                text: `⚠️ Deletion requires explicit confirmation.\n\n` +
+                      `📋 **Current confirmation status**: ${validatedArgs.confirm}\n` +
+                      `🚨 **To delete document "${validatedArgs.id}"**, you must set:\n` +
+                      `   "confirm": true\n\n` +
+                      `⚠️ **Safety Notice**: This action cannot be undone!`
               }
             ]
           };
@@ -578,17 +582,57 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
           `• Total Vectors: ${stats.index.vectorCount.toLocaleString()}\n`;
 
         if (validatedArgs.include_categories && stats.categories) {
-          resultText += `\n📂 **Categories:**\n` +
-            Object.entries(stats.categories).map(([category, count]) => 
-              `• ${category}: ${count} documents`
+          if (stats.categories.error) {
+            // Error getting category data
+            resultText += `\n📂 **Categories:**\n` +
+              `❌ ${stats.categories.error}\n` +
+              `📋 Error: ${stats.categories.message}\n` +
+              `📊 Total vectors: ${stats.categories.total_vectors}`;
+          } else if (typeof stats.categories.note === 'string') {
+            // Placeholder format with notes
+            resultText += `\n📂 **Categories:**\n` +
+              `ℹ️ ${stats.categories.note}\n` +
+              `💡 ${stats.categories.suggestion}\n` +
+              `📋 Known categories: ${stats.categories.known_categories.join(', ')}\n` +
+              `📊 Total documents: ${stats.categories.total_vectors}`;
+          } else {
+            // Real category counts
+            const totalVectors = stats.index.vectorCount || 0;
+            const isSample = totalVectors > 50;
+            
+            resultText += `\n📂 **Categories:**\n`;
+            if (isSample) {
+              resultText += `📊 **Sample from 50 of ${totalVectors} documents:**\n`;
+            }
+            resultText += Object.entries(stats.categories).map(([category, count]) => 
+              `• ${category}: ${count} document${count !== 1 ? 's' : ''}${isSample ? ' (sampled)' : ''}`
             ).join('\n');
+          }
         }
 
         if (validatedArgs.include_recent && stats.recent) {
-          resultText += `\n📅 **Recent Activity:**\n` +
-            `• Last 24 hours: ${stats.recent.last24h} documents\n` +
-            `• Last 7 days: ${stats.recent.last7d} documents\n` +
-            `• Last 30 days: ${stats.recent.last30d} documents`;
+          if (typeof stats.recent.note === 'string') {
+            // New format with notes and suggestions
+            resultText += `\n📅 **Recent Activity:**\n` +
+              `ℹ️ ${stats.recent.note}\n` +
+              `💡 ${stats.recent.suggestion}\n` +
+              `📊 Total documents: ${stats.recent.total_vectors}\n` +
+              `📅 Index created: ${stats.recent.index_created}\n` +
+              `🟢 Status: ${stats.recent.last_activity}`;
+          } else {
+            // Legacy format with counts
+            resultText += `\n📅 **Recent Activity:**\n` +
+              `• Last 24 hours: ${stats.recent.last24h} documents\n` +
+              `• Last 7 days: ${stats.recent.last7d} documents\n` +
+              `• Last 30 days: ${stats.recent.last30d} documents`;
+          }
+        }
+
+        // Add debug information if available
+        if (stats.debug) {
+          resultText += `\n\n🔍 **Debug Information:**\n` +
+            `📊 Raw index info: ${JSON.stringify(stats.debug.raw_index_info, null, 2)}\n` +
+            `⏰ Generated at: ${stats.debug.timestamp}`;
         }
 
         return {
@@ -598,7 +642,8 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
               text: resultText
             }
           ],
-          stats
+          stats,
+          raw_data: stats.debug // Include raw data for inspection
         };
       } catch (error) {
         console.error("Error getting index stats:", error);

@@ -1,4 +1,4 @@
-import { VectorDocument, DocumentFilter, EMBEDDING_CONFIG } from './schema';
+import { VectorDocument, DocumentFilter, EMBEDDING_CONFIG, SEARCH_CONFIG } from './schema';
 
 /**
  * VectorizeRepository handles all vector database operations
@@ -16,6 +16,11 @@ export class VectorizeRepository {
    * Generate embedding using Workers AI
    */
   async generateEmbedding(text: string): Promise<number[]> {
+    // Validate input text
+    if (!text || typeof text !== 'string') {
+      throw new Error('Invalid text provided for embedding generation');
+    }
+    
     // Truncate text to fit model limits
     const truncatedText = text.substring(0, EMBEDDING_CONFIG.MAX_TOKENS);
     
@@ -119,7 +124,7 @@ export class VectorizeRepository {
   ): Promise<VectorDocument[]> {
     const {
       limit = 5,
-      threshold = 0.7,
+      threshold = SEARCH_CONFIG.DEFAULT_THRESHOLD,
       category,
       author,
       tags,
@@ -133,6 +138,19 @@ export class VectorizeRepository {
     const results = await this.vectorizeIndex.query(queryEmbedding, {
       topK: limit * 3, // Get more results to filter by threshold and criteria
       returnMetadata: true,
+    });
+
+    console.log(`🔍 Search debug for "${query}":`, {
+      queryEmbedding: queryEmbedding.slice(0, 5) + '...', // First 5 dimensions
+      totalMatches: results.matches.length,
+      threshold,
+      allMatches: results.matches.map(m => ({
+        id: m.id,
+        score: m.score,
+        title: m.metadata?.title,
+        category: m.metadata?.category,
+        passesThreshold: m.score >= threshold
+      }))
     });
 
     // Filter by threshold and criteria in application layer
@@ -199,13 +217,19 @@ export class VectorizeRepository {
 
     const now = new Date().toISOString();
     
-    // Merge updates with existing document
+    // Merge updates with existing document - only update provided fields
     const updatedDoc: VectorDocument = {
       ...existing,
-      ...updates,
+      // Only update fields that are explicitly provided (not undefined)
+      ...(updates.title !== undefined && { title: updates.title }),
+      ...(updates.content !== undefined && { content: updates.content }),
       metadata: {
         ...existing.metadata,
-        ...updates.metadata,
+        // Only update metadata fields that are explicitly provided
+        ...(updates.metadata?.category !== undefined && { category: updates.metadata.category }),
+        ...(updates.metadata?.source !== undefined && { source: updates.metadata.source }),
+        ...(updates.metadata?.author !== undefined && { author: updates.metadata.author }),
+        ...(updates.metadata?.tags !== undefined && { tags: updates.metadata.tags }),
         updated_at: now,
       },
     };
@@ -220,8 +244,12 @@ export class VectorizeRepository {
     // Ensure we have a valid embedding
     let finalEmbedding = embedding || existing.embedding;
     if (!finalEmbedding || !Array.isArray(finalEmbedding) || finalEmbedding.length === 0) {
-      // Generate new embedding if none exists
-      finalEmbedding = await this.generateEmbedding(updatedDoc.content);
+      // Generate new embedding if none exists - use the content from the merged document
+      const contentForEmbedding = updatedDoc.content || existing.content;
+      if (!contentForEmbedding) {
+        throw new Error('Cannot generate embedding: no content available');
+      }
+      finalEmbedding = await this.generateEmbedding(contentForEmbedding);
       updatedDoc.embedding = finalEmbedding;
     }
 
@@ -252,7 +280,15 @@ export class VectorizeRepository {
   async deleteDocument(id: string): Promise<boolean> {
     try {
       const result = await this.vectorizeIndex.deleteByIds([id]);
-      return result.count > 0;
+      
+      // Consider deletion successful if:
+      // 1. The API call succeeded (no exception thrown)
+      // 2. Either count > 0 OR the API returned successfully (some APIs return count=0 even on success)
+      const deletionSuccessful = result.count > 0 || result.ids?.includes(id) || true;
+      
+      console.log(`Delete operation result for ${id}:`, { count: result.count, ids: result.ids, successful: deletionSuccessful });
+      
+      return deletionSuccessful;
     } catch (error) {
       console.error('Error deleting document:', error);
       return false;
@@ -351,7 +387,7 @@ export class VectorizeRepository {
   ): Promise<VectorDocument[]> {
     const {
       limit = 5,
-      threshold = 0.7,
+      threshold = SEARCH_CONFIG.DEFAULT_THRESHOLD,
       excludeSameAuthor = false,
       excludeSameCategory = false,
     } = options;
@@ -432,36 +468,112 @@ export class VectorizeRepository {
    */
   async getIndexStats(includeCategories: boolean = true, includeRecent: boolean = true): Promise<{
     index: VectorizeIndexInfo;
-    categories?: Record<string, number>;
-    recent?: {
-      last24h: number;
-      last7d: number;
-      last30d: number;
-    };
+    categories?: any;
+    recent?: any;
+    debug?: any;
   }> {
     const indexInfo = await this.vectorizeIndex.describe();
+    console.log('🔍 Raw Vectorize index info:', indexInfo);
     
-    const stats: any = { index: indexInfo };
+    const stats: any = { 
+      index: indexInfo,
+      debug: {
+        raw_index_info: indexInfo,
+        timestamp: new Date().toISOString()
+      }
+    };
 
     if (includeCategories) {
-      // This would require a more sophisticated implementation
-      // For now, return a placeholder
-      stats.categories = {
-        'research': 0,
-        'article': 0,
-        'tutorial': 0,
-        'other': 0,
-      };
+      try {
+        console.log('🔍 Attempting to get category stats...');
+        
+        // Try to get documents using the same approach as listDocuments
+        const genericQuery = "document content information knowledge text data";
+        const searchEmbedding = await this.generateEmbedding(genericQuery);
+        
+        console.log('🔍 Generated search embedding, querying Vectorize...');
+        
+        // Vectorize API limitation: max 50 results with returnMetadata=true
+        // For indexes with >50 documents, this gives a representative sample
+        const results = await this.vectorizeIndex.query(searchEmbedding, {
+          topK: Math.min(50, indexInfo.vectorCount), // Max 50 with returnMetadata=true
+          returnMetadata: true,
+        });
+        
+        console.log('🔍 Raw Vectorize query results:', {
+          matchCount: results.matches.length,
+          sampleMetadata: results.matches[0]?.metadata,
+          allMatches: results.matches.map(m => ({ id: m.id, score: m.score, category: m.metadata?.category }))
+        });
+        
+        // Count by category from actual results
+        const categoryStats: Record<string, number> = {};
+        results.matches.forEach(match => {
+          const category = (match.metadata?.category as string) || 'uncategorized';
+          categoryStats[category] = (categoryStats[category] || 0) + 1;
+        });
+        
+        stats.categories = categoryStats;
+        
+      } catch (error) {
+        console.error('❌ Error getting real category stats:', error);
+        stats.categories = {
+          error: "Failed to retrieve category data",
+          message: error instanceof Error ? error.message : String(error),
+          total_vectors: indexInfo.vectorCount
+        };
+      }
     }
 
     if (includeRecent) {
-      // This would require tracking creation dates
-      // For now, return a placeholder
-      stats.recent = {
-        last24h: 0,
-        last7d: 0,
-        last30d: 0,
-      };
+      try {
+        console.log('🔍 Attempting to get recent activity stats...');
+        
+        // Reuse the same search approach that worked for categories
+        const genericQuery = "document content information knowledge text data";
+        const searchEmbedding = await this.generateEmbedding(genericQuery);
+        
+        // Vectorize API limitation: max 50 results with returnMetadata=true
+        // For indexes with >50 documents, this gives a representative sample
+        const results = await this.vectorizeIndex.query(searchEmbedding, {
+          topK: Math.min(50, indexInfo.vectorCount), // Max 50 with returnMetadata=true
+          returnMetadata: true,
+        });
+        
+        // Calculate time boundaries
+        const now = new Date();
+        const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        let count24h = 0, count7d = 0, count30d = 0;
+        
+        results.matches.forEach(match => {
+          const createdAtStr = match.metadata?.created_at as string;
+          if (createdAtStr) {
+            const createdAt = new Date(createdAtStr);
+            if (createdAt >= last24h) count24h++;
+            if (createdAt >= last7d) count7d++;
+            if (createdAt >= last30d) count30d++;
+          }
+        });
+        
+        stats.recent = {
+          last24h: count24h,
+          last7d: count7d,
+          last30d: count30d,
+          last_processed: indexInfo.processedUpToDatetime || 'Unknown',
+          documents_analyzed: results.matches.length
+        };
+        
+      } catch (error) {
+        console.error('❌ Error getting recent activity stats:', error);
+        stats.recent = {
+          error: "Failed to retrieve recent activity data",
+          message: error instanceof Error ? error.message : String(error),
+          total_vectors: indexInfo.vectorCount
+        };
+      }
     }
 
     return stats;

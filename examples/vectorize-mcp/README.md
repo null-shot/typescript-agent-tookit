@@ -11,13 +11,18 @@ A Model Context Protocol (MCP) server for **Cloudflare Vectorize** that enables 
 pnpm install
 
 # Set your Anthropic API key
-echo "ANTHROPIC_API_KEY=sk-your-key-here" > .dev.vars
+cp .dev.vars.example .dev.vars
+# Edit .dev.vars and add your actual Anthropic API key
 
 # Create Vectorize index (using Workers AI embedding dimensions)
 npx wrangler vectorize create semantic-search --dimensions=768 --metric=cosine
 
-# Start development server
+# Start development server with MCP inspector (recommended)
 pnpm dev
+
+# OR run separately:
+pnpm start      # Just the worker
+pnpm inspector  # Just the inspector
 ```
 
 ### 2. Test the API
@@ -77,7 +82,7 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 
 **Optional Fields**:
 - `limit`: Max results (1-20, default: 5)
-- `threshold`: Similarity threshold (0-1, default: 0.7)
+- `threshold`: Similarity threshold (0-1, default: 0.6)
 - `category`: Filter by category
 - `author`: Filter by author
 - `tags`: Filter by tags
@@ -98,7 +103,7 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 {
   "query": "machine learning algorithms",
   "limit": 5,
-  "threshold": 0.75,
+  "threshold": 0.65,
   "category": "research",
   "include_content": true
 }
@@ -273,7 +278,7 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 
 **Optional Fields**:
 - `limit`: Max results (1-20, default: 5)
-- `threshold`: Similarity threshold (0-1, default: 0.7)
+- `threshold`: Similarity threshold (0-1, default: 0.6)
 - `exclude_same_author`: Exclude docs by same author (default: false)
 - `exclude_same_category`: Exclude docs in same category (default: false)
 
@@ -376,128 +381,6 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 }
 ```
 
-## 📚 MCP Resources
-
-Access these resources directly from MCP clients:
-
-### `vectorize://documents`
-List of all documents with metadata
-
-### `vectorize://categories`
-Available categories and their document counts
-
-### `vectorize://index-stats`
-Current index statistics and health
-
-### `vectorize://similar/{document_id}`
-Similar documents for a specific document ID
-
-**Example**: `vectorize://similar/doc_abc123`
-
-## 🎭 MCP Prompts
-
-Use these prompts to guide AI workflows:
-
-### `semantic_search`
-**Parameters**:
-- `search_query`: What to search for
-- `search_context`: Additional context
-- `result_format`: How to format results
-
-**Example**:
-```json
-{
-  "search_query": "neural network architectures",
-  "search_context": "focus on deep learning and modern architectures",
-  "result_format": "detailed"
-}
-```
-
-### `knowledge_extraction`
-**Parameters**:
-- `source_text`: Text to extract knowledge from
-- `document_title`: Title for the document
-- `extraction_focus`: What to focus on
-
-### `document_analysis`
-**Parameters**:
-- `document_id`: Document to analyze
-- `analysis_type`: Type of analysis
-
-### `rag_query`
-**Parameters**:
-- `user_question`: Question to answer
-- `domain_filter`: Domain to focus on
-- `answer_style`: Style of answer
-
-## 📝 Common Workflows
-
-### Building a Knowledge Base
-
-1. **Add Documents**:
-```json
-{
-  "title": "Getting Started Guide",
-  "content": "This guide covers the basics...",
-  "category": "tutorial",
-  "tags": ["getting-started", "basics"]
-}
-```
-
-2. **Search for Information**:
-```json
-{
-  "query": "getting started tutorial",
-  "category": "tutorial"
-}
-```
-
-3. **Find Related Content**:
-```json
-{
-  "document_id": "doc_abc123",
-  "limit": 3
-}
-```
-
-### Content Discovery
-
-1. **Browse by Category**:
-```json
-{
-  "category": "research",
-  "limit": 10,
-  "sort_by": "created_at"
-}
-```
-
-2. **Search by Topic**:
-```json
-{
-  "query": "machine learning optimization",
-  "threshold": 0.7
-}
-```
-
-### RAG (Retrieval-Augmented Generation)
-
-1. **Search for Context**:
-```json
-{
-  "query": "How to optimize neural networks?",
-  "limit": 5,
-  "include_content": true
-}
-```
-
-2. **Get Full Documents**:
-```json
-{
-  "id": "doc_result_id",
-  "include_embedding": false
-}
-```
-
 ## ⚠️ Troubleshooting
 
 ### Common Issues
@@ -514,7 +397,7 @@ Use these prompts to guide AI workflows:
 - Document may have been deleted
 
 **"Failed to generate embedding"**
-- Check OpenAI API key is set correctly
+- Check Anthropic API key is set correctly
 - Verify internet connectivity
 - Check if content is too long (max ~8K tokens)
 
@@ -523,48 +406,6 @@ Use these prompts to guide AI workflows:
 - Check wrangler.jsonc binding configuration
 - Ensure index name matches configuration
 
-### Error Examples
-
-**Invalid similarity threshold**:
-```json
-{
-  "error": "Threshold must be between 0 and 1",
-  "received": 1.5,
-  "suggestion": "Use values like 0.7 for good matches, 0.5 for broader search"
-}
-```
-
-**Missing required field**:
-```json
-{
-  "error": "Missing required field: title",
-  "suggestion": "Provide a title for the document"
-}
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# Required
-ANTHROPIC_API_KEY=sk-your-anthropic-api-key
-
-# Optional (with defaults)
-EMBEDDING_MODEL=@cf/baai/bge-base-en-v1.5
-MAX_BATCH_SIZE=10
-DEFAULT_SEARCH_LIMIT=5
-```
-
-### Vectorize Index Setup
-
-```bash
-# Create the index (768 dimensions for Workers AI BGE model)
-npx wrangler vectorize create semantic-search --dimensions=768 --metric=cosine
-
-# Verify index
-npx wrangler vectorize list
-```
 
 ## 📊 Performance Tips
 
@@ -576,8 +417,7 @@ npx wrangler vectorize list
 ### Search Optimization
 - **Threshold tuning**: 
   - 0.8+ for very similar content
-  - 0.7 for good matches (default)
-  - 0.6 for broader search
+  - 0.6 for good matches (default)
   - 0.5 for discovery mode
 - **Limit management**: Start with 5-10 results, increase as needed
 - **Category filtering**: Use categories to narrow search scope
@@ -586,148 +426,6 @@ npx wrangler vectorize list
 - **Regular cleanup**: Remove outdated documents
 - **Monitor stats**: Use `get_index_stats` to track growth
 - **Batch operations**: More efficient than individual operations
-
-## 🎯 Use Cases
-
-### Knowledge Base Management
-```json
-// Add documentation
-{
-  "title": "API Documentation - Authentication",
-  "content": "Our API uses JWT tokens for authentication...",
-  "category": "documentation",
-  "tags": ["api", "auth", "security"]
-}
-
-// Search for auth info
-{
-  "query": "how to authenticate API requests",
-  "category": "documentation"
-}
-```
-
-### Research Paper Organization
-```json
-// Add research paper
-{
-  "title": "Attention Is All You Need",
-  "content": "The dominant sequence transduction models...",
-  "category": "research",
-  "tags": ["transformers", "attention", "nlp"],
-  "author": "Vaswani et al.",
-  "source": "arxiv"
-}
-
-// Find related papers
-{
-  "document_id": "doc_attention_paper",
-  "exclude_same_author": false,
-  "threshold": 0.75
-}
-```
-
-### Content Discovery
-```json
-// Browse by topic
-{
-  "query": "deep learning optimization techniques",
-  "limit": 8,
-  "threshold": 0.6
-}
-
-// Explore categories
-{
-  "category": "tutorial",
-  "tags": ["beginner"],
-  "limit": 10
-}
-```
-
-## 🧪 Testing Examples
-
-### Test Document Addition
-```bash
-curl -X POST http://localhost:8787/sse/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "tools/call",
-    "params": {
-      "name": "add_document",
-      "arguments": {
-        "title": "Test Document",
-        "content": "This is a test document for the vector database.",
-        "category": "test",
-        "tags": ["test", "example"]
-      }
-    }
-  }'
-```
-
-### Test Semantic Search
-```bash
-curl -X POST http://localhost:8787/sse/message \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "tools/call",
-    "params": {
-      "name": "search_similar",
-      "arguments": {
-        "query": "test document",
-        "limit": 3
-      }
-    }
-  }'
-```
-
-## 📈 Monitoring
-
-### Health Check
-```bash
-curl http://localhost:8787/health
-```
-
-**Healthy Response**:
-```json
-{
-  "status": "healthy",
-  "vectorize": true,
-  "openai": true,
-  "timestamp": "2025-01-XX:XX:XX.XXXZ"
-}
-```
-
-### Index Statistics
-Use the `get_index_stats` tool to monitor:
-- Total document count
-- Category distribution
-- Recent activity
-- Index health
-
-## 🔗 Integration Examples
-
-### With Claude Desktop
-
-Add to your `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "vectorize": {
-      "command": "node",
-      "args": ["path/to/vectorize-mcp/dist/index.js"],
-      "env": {
-        "OPENAI_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
-```
-
-### With Cursor/VS Code
-
-Use the MCP extension and configure the server endpoint:
-```
-http://localhost:8787/sse
-```
 
 ## 🚀 Deployment
 
@@ -738,7 +436,7 @@ http://localhost:8787/sse
 pnpm deploy
 
 # Set environment variables
-npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put ANTHROPIC_API_KEY
 
 # Verify deployment
 curl https://your-worker.your-subdomain.workers.dev/health
@@ -747,7 +445,7 @@ curl https://your-worker.your-subdomain.workers.dev/health
 ### Production Considerations
 
 1. **API Key Security**: Use Wrangler secrets, never commit keys
-2. **Rate Limiting**: Monitor OpenAI API usage
+2. **Rate Limiting**: Monitor Anthropic API usage
 3. **Index Limits**: Vectorize supports up to 5M vectors per index
 4. **Metadata Size**: Keep metadata under 1KB per vector
 5. **Batch Operations**: Use batch tools for bulk operations
@@ -765,5 +463,3 @@ curl https://your-worker.your-subdomain.workers.dev/health
 MIT License - see LICENSE file for details.
 
 ---
-
-**Built with ❤️ using Cloudflare Workers, Vectorize, and the Model Context Protocol**

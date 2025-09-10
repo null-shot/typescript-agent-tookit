@@ -29,7 +29,7 @@ export type VectorDocument = z.infer<typeof VectorDocumentSchema>;
 export const SearchQuerySchema = z.object({
   query: z.string().min(1).describe('Search query text'),
   limit: z.number().min(1).max(20).default(5).describe('Maximum number of results (1-20, default: 5)'),
-  threshold: z.number().min(0).max(1).default(0.7).describe('Similarity threshold (0-1, default: 0.7)'),
+  threshold: z.number().min(0).max(1).default(0.6).describe('Similarity threshold (0-1, default: 0.6)'),
   category: z.string().optional().describe('Filter by document category'),
   author: z.string().optional().describe('Filter by document author'),
   tags: z.array(z.string()).optional().describe('Filter by document tags'),
@@ -100,7 +100,7 @@ export type DocumentFilter = z.infer<typeof DocumentFilterSchema>;
 export const FindRelatedSchema = z.object({
   document_id: z.string().describe('Document ID to find related documents for'),
   limit: z.number().min(1).max(20).default(5).describe('Maximum results (1-20, default: 5)'),
-  threshold: z.number().min(0).max(1).default(0.7).describe('Similarity threshold (0-1, default: 0.7)'),
+  threshold: z.number().min(0).max(1).default(0.6).describe('Similarity threshold (0-1, default: 0.6)'),
   exclude_same_author: z.boolean().default(false).describe('Exclude documents by same author'),
   exclude_same_category: z.boolean().default(false).describe('Exclude documents in same category'),
 });
@@ -153,7 +153,7 @@ export const EMBEDDING_CONFIG = {
 export const SEARCH_CONFIG = {
   DEFAULT_LIMIT: 5,
   MAX_LIMIT: 20,
-  DEFAULT_THRESHOLD: 0.7,
+  DEFAULT_THRESHOLD: 0.6, // 60% similarity - better for semantic discovery
   MIN_THRESHOLD: 0.0,
   MAX_THRESHOLD: 1.0,
 } as const;

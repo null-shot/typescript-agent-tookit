@@ -39,7 +39,7 @@ Use these MCP tools in sequence:
 1. **search_similar** - Find documents matching the query
    - Use query: "${searchQuery}"
    - Set appropriate limit (3-10 depending on need)
-   - Use threshold: 0.7 for good matches, 0.5 for broader search
+   - Use threshold: 0.6 for good matches, 0.5 for broader search
    - Consider category filters if context suggests specific domain
 
 2. **get_document** - Get full details for promising results
@@ -50,7 +50,7 @@ Use these MCP tools in sequence:
    - Use IDs of best matches to find more related content
 
 ## Search Strategy
-- Start with a broad search (threshold 0.6-0.7)
+- Start with a broad search (threshold 0.5-0.6)
 - If too many results, increase threshold or add category filter
 - If too few results, decrease threshold or broaden query terms
 - Look for patterns in authors, tags, categories for better filtering
@@ -193,7 +193,7 @@ Start by analyzing the content and then use the add_document tool to store it.`
    {
      "document_id": "${documentId}",
      "limit": 5,
-     "threshold": 0.7
+     "threshold": 0.6
    }
    \`\`\`
 

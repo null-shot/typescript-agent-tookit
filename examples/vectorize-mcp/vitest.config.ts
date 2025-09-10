@@ -1,17 +1,20 @@
-import { defineConfig } from 'vitest/config';
+import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
-export default defineConfig({
+export default defineWorkersConfig({
   test: {
-    environment: 'node',
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'dist/',
-        'test/',
-        '**/*.d.ts',
-      ],
+    poolOptions: {
+      workers: {
+        isolatedStorage: false,
+        singleWorker: true,
+        wrangler: { configPath: "./wrangler.jsonc" },
+      },
+    },
+  },
+  resolve: {
+    alias: {
+      // Mock ajv for MCP compatibility
+      ajv: "@nullshot/test-utils/vitest/ajv-mock",
+      "ajv/dist/ajv": "@nullshot/test-utils/vitest/ajv-mock",
     },
   },
 });
