@@ -19,7 +19,7 @@ interface ToolResponse {
   stats?: any;
 }
 
-describe.skipIf(process.env.CI === 'true')("Vectorize MCP Client Integration Tests", () => {
+describe("Vectorize MCP Client Integration Tests", () => {
   const baseUrl = "http://localhost";
   let client: Client;
   let ctx: ExecutionContext;
