@@ -33,11 +33,11 @@
     "@cloudflare/vitest-pool-workers": "catalog:",
     "@cloudflare/workers-types": "^4.20241218.0",
     "@nullshot/test-utils": "workspace:*",
-    "@types/node": "^22.10.2",
+    "@types/node": "catalog:",
     "concurrently": "^9.1.2",
-    "typescript": "^5.7.2",
+    "typescript": "catalog:",
     "vitest": "catalog:",
-    "wrangler": "^3.94.0"
+    "wrangler": "catalog:"
   },
   "engines": {
     "node": ">=18"
