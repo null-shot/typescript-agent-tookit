@@ -10,11 +10,4 @@ export default defineWorkersConfig({
       },
     },
   },
-  resolve: {
-    alias: {
-      // Mock ajv for MCP compatibility
-      ajv: "@nullshot/test-utils/vitest/ajv-mock",
-      "ajv/dist/ajv": "@nullshot/test-utils/vitest/ajv-mock",
-    },
-  },
 });
