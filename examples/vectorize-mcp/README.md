@@ -324,33 +324,106 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 - `batch_size`: Process in batches (1-10, default: 5)
 
 **Example**:
+- `documents`: Example input
 ```json
-{
-  "documents": [
+[
     {
-      "title": "AI Ethics in Practice",
-      "content": "Ethical considerations when deploying AI systems in production...",
-      "category": "ethics",
-      "tags": ["ai", "ethics", "deployment"],
-      "author": "Dr. Ethics"
+      "title": "Golden Retrievers: The Perfect Family Dog",
+      "content": "Golden Retrievers are beloved family pets known for their friendly temperament, intelligence, and loyalty. These dogs are excellent with children, easy to train, and require regular exercise and grooming. They make wonderful companions for active families and are often used as therapy dogs due to their gentle nature.",
+      "category": "pets",
+      "tags": ["dogs", "family-pets", "golden-retriever", "companionship"],
+      "author": "Pet Expert",
+      "source": "pet-guide"
     },
     {
-      "title": "Machine Learning Pipeline Design",
-      "content": "Best practices for designing robust ML pipelines...",
-      "category": "tutorial",
-      "tags": ["ml", "pipelines", "engineering"],
-      "author": "ML Engineer"
+      "title": "Persian Cats: Elegant and Affectionate Companions",
+      "content": "Persian cats are known for their luxurious long coats, calm demeanor, and affectionate personalities. These feline companions prefer quiet environments and enjoy lounging in comfortable spots. They require daily grooming and make excellent indoor pets for people who appreciate their serene and loving nature.",
+      "category": "pets",
+      "tags": ["cats", "persian-cats", "indoor-pets", "companionship"],
+      "author": "Cat Specialist",
+      "source": "feline-guide"
     },
     {
-      "title": "Vector Search Optimization",
-      "content": "Techniques for optimizing vector search performance...",
-      "category": "technical",
-      "tags": ["vectors", "optimization", "performance"],
-      "author": "Tech Lead"
+      "title": "Commercial Aviation: Boeing 747 Aircraft Systems",
+      "content": "The Boeing 747 is a wide-body commercial airliner known for its distinctive hump and four-engine configuration. This aircraft revolutionized air travel with its high passenger capacity and long-range capabilities. Modern 747s feature advanced avionics, fuel-efficient engines, and sophisticated navigation systems for international flights.",
+      "category": "aviation",
+      "tags": ["aircraft", "boeing-747", "commercial-aviation", "transportation"],
+      "author": "Aviation Engineer",
+      "source": "aircraft-manual"
+    },
+    {
+      "title": "City Bus Transportation Systems",
+      "content": "Urban bus systems provide essential public transportation services in cities worldwide. Modern buses feature low-emission engines, accessibility features, and real-time tracking systems. Bus rapid transit (BRT) systems offer efficient, cost-effective alternatives to rail transport for urban mobility.",
+      "category": "transportation",
+      "tags": ["buses", "public-transport", "urban-mobility", "transit-systems"],
+      "author": "Urban Planner",
+      "source": "transit-authority"
+    },
+    {
+      "title": "Siberian Huskies: Arctic Working Dogs",
+      "content": "Siberian Huskies are energetic working dogs originally bred for sledding in harsh Arctic conditions. These intelligent canines have thick double coats, striking blue or multi-colored eyes, and incredible endurance. They require extensive exercise and mental stimulation, making them ideal for active owners who enjoy outdoor adventures.",
+      "category": "pets",
+      "tags": ["dogs", "working-dogs", "siberian-husky", "active-breeds"],
+      "author": "Dog Trainer",
+      "source": "working-dog-guide"
+    },
+    {
+      "title": "Maine Coon Cats: Gentle Giants of the Feline World",
+      "content": "Maine Coon cats are large, friendly felines known for their impressive size, tufted ears, and bushy tails. These gentle giants have dog-like personalities, often following their owners around and enjoying water play. They're excellent family pets with their sociable nature and minimal grooming requirements despite their long fur.",
+      "category": "pets",
+      "tags": ["cats", "maine-coon", "large-cats", "family-friendly"],
+      "author": "Feline Behaviorist",
+      "source": "cat-breeds-guide"
+    },
+    {
+      "title": "Quantum Computing: Principles and Applications",
+      "content": "Quantum computing leverages quantum mechanical phenomena like superposition and entanglement to process information in fundamentally different ways than classical computers. Quantum bits (qubits) can exist in multiple states simultaneously, enabling exponential computational speedups for specific problems like cryptography, optimization, and molecular simulation.",
+      "category": "technology",
+      "tags": ["quantum-computing", "physics", "computer-science", "innovation"],
+      "author": "Quantum Researcher",
+      "source": "research-journal"
+    },
+    {
+      "title": "Electric Vehicles: Tesla Model S Performance",
+      "content": "The Tesla Model S represents cutting-edge electric vehicle technology with instant torque delivery, advanced autopilot features, and impressive range capabilities. This luxury sedan combines sustainable transportation with high performance, featuring over-the-air updates, minimalist interior design, and industry-leading battery technology.",
+      "category": "automotive",
+      "tags": ["electric-vehicles", "tesla", "sustainable-transport", "automotive-tech"],
+      "author": "Automotive Journalist",
+      "source": "ev-review"
+    },
+    {
+      "title": "Tropical Fish Aquarium Care",
+      "content": "Maintaining a tropical fish aquarium requires careful attention to water quality, temperature control, and proper filtration systems. Popular species like angelfish, tetras, and guppies thrive in well-balanced ecosystems with appropriate pH levels, regular feeding schedules, and compatible tank mates.",
+      "category": "pets",
+      "tags": ["fish", "aquarium", "tropical-fish", "pet-care"],
+      "author": "Aquarium Specialist",
+      "source": "aquatic-guide"
+    },
+    {
+      "title": "Space Exploration: Mars Rover Technology",
+      "content": "Mars rovers like Perseverance and Curiosity represent pinnacles of robotic engineering, designed to withstand extreme Martian conditions while conducting scientific research. These sophisticated machines feature advanced cameras, drilling equipment, sample analysis tools, and autonomous navigation systems for exploring the Red Planet.",
+      "category": "space",
+      "tags": ["mars-rovers", "space-exploration", "robotics", "planetary-science"],
+      "author": "Space Engineer",
+      "source": "nasa-technical"
+    },
+    {
+      "title": "Mediterranean Cooking: Italian Pasta Traditions",
+      "content": "Italian pasta making is an ancient culinary art form passed down through generations. Traditional techniques involve mixing semolina flour with eggs, kneading the dough to perfect texture, and creating various shapes for different sauces. Regional specialties like Bolognese, Carbonara, and Pesto represent centuries of culinary evolution.",
+      "category": "cooking",
+      "tags": ["italian-cuisine", "pasta", "cooking-techniques", "culinary-arts"],
+      "author": "Chef Marco",
+      "source": "culinary-institute"
+    },
+    {
+      "title": "Parrots: Intelligent Feathered Companions",
+      "content": "Parrots are highly intelligent birds capable of learning complex behaviors, mimicking human speech, and forming strong bonds with their owners. These colorful avian companions require mental stimulation, social interaction, and specialized diets. Popular pet species include African Greys, Macaws, and Cockatiels, each with unique care requirements.",
+      "category": "pets",
+      "tags": ["birds", "parrots", "intelligent-pets", "avian-care"],
+      "author": "Avian Veterinarian",
+      "source": "bird-care-guide"
     }
-  ],
-  "batch_size": 2
-}
+  ]
 ```
 
 ---
