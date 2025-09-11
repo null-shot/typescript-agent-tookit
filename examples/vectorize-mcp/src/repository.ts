@@ -254,7 +254,7 @@ export class VectorizeRepository {
             source: 'ci-mock',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            chunk_index: '',
+            chunk_index: 0,
             parent_document_id: '',
           },
         };
@@ -574,7 +574,7 @@ export class VectorizeRepository {
         let results;
         try {
           results = await this.vectorizeIndex.query(searchEmbedding, {
-            topK: Math.min(50, indexInfo.vectorsCount), // Max 50 with returnMetadata=true
+            topK: Math.min(50, indexInfo.vectorsCount || 0), // Max 50 with returnMetadata=true
             returnMetadata: true,
           });
         } catch (error) {
@@ -613,7 +613,7 @@ export class VectorizeRepository {
         stats.categories = {
           error: "Failed to retrieve category data",
           message: error instanceof Error ? error.message : String(error),
-          total_vectors: indexInfo.vectorsCount
+          total_vectors: indexInfo.vectorsCount || 0
         };
       }
     }
@@ -629,7 +629,7 @@ export class VectorizeRepository {
         // Vectorize API limitation: max 50 results with returnMetadata=true
         // For indexes with >50 documents, this gives a representative sample
         const results = await this.vectorizeIndex.query(searchEmbedding, {
-          topK: Math.min(50, indexInfo.vectorsCount), // Max 50 with returnMetadata=true
+          topK: Math.min(50, indexInfo.vectorsCount || 0), // Max 50 with returnMetadata=true
           returnMetadata: true,
         });
         
@@ -664,7 +664,7 @@ export class VectorizeRepository {
         stats.recent = {
           error: "Failed to retrieve recent activity data",
           message: error instanceof Error ? error.message : String(error),
-          total_vectors: indexInfo.vectorsCount
+          total_vectors: indexInfo.vectorsCount || 0
         };
       }
     }
