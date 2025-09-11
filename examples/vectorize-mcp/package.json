@@ -31,7 +31,7 @@
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "catalog:",
-    "@cloudflare/workers-types": "^4.20241218.0",
+    "@cloudflare/workers-types": "catalog:",
     "@nullshot/test-utils": "workspace:*",
     "@types/node": "catalog:",
     "concurrently": "^9.1.2",
