@@ -26,9 +26,6 @@
   "ai": {
     "binding": "AI"
   },
-  "vars": {
-    "ANTHROPIC_API_KEY": ""
-  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

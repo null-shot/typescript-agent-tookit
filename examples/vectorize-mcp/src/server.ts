@@ -13,7 +13,6 @@ import { setupServerPrompts } from "./prompts";
 export class VectorizeMcpServer extends McpHonoServerDO<{
   VECTORIZE_INDEX: VectorizeIndex;
   VECTORIZE_MCP_SERVER: DurableObjectNamespace;
-  ANTHROPIC_API_KEY: string;
   AI?: any;
 }> {
   private repository?: VectorizeRepository;
@@ -21,7 +20,6 @@ export class VectorizeMcpServer extends McpHonoServerDO<{
   constructor(ctx: DurableObjectState, env: {
     VECTORIZE_INDEX: VectorizeIndex;
     VECTORIZE_MCP_SERVER: DurableObjectNamespace;
-    ANTHROPIC_API_KEY: string;
     AI?: any;
   }) {
     super(ctx, env);
@@ -104,7 +102,6 @@ export class VectorizeMcpServer extends McpHonoServerDO<{
   async healthCheck(): Promise<{
     status: string;
     vectorize: boolean;
-    anthropic: boolean;
     workers_ai: boolean;
     timestamp: string;
   }> {
@@ -120,18 +117,14 @@ export class VectorizeMcpServer extends McpHonoServerDO<{
         console.error('Vectorize health check failed:', error);
       }
 
-      // Test Anthropic connection (simple validation)
-      const anthropicHealthy = !!this.env.ANTHROPIC_API_KEY && this.env.ANTHROPIC_API_KEY.startsWith('sk-');
-      
       // Test Workers AI connection
       const workersAiHealthy = !!this.env.AI;
 
-      const overallStatus = vectorizeHealthy && (anthropicHealthy || workersAiHealthy) ? 'healthy' : 'unhealthy';
+      const overallStatus = vectorizeHealthy && workersAiHealthy ? 'healthy' : 'unhealthy';
 
       return {
         status: overallStatus,
         vectorize: vectorizeHealthy,
-        anthropic: anthropicHealthy,
         workers_ai: workersAiHealthy,
         timestamp: new Date().toISOString(),
       };
@@ -140,7 +133,6 @@ export class VectorizeMcpServer extends McpHonoServerDO<{
       return {
         status: 'error',
         vectorize: false,
-        anthropic: false,
         workers_ai: false,
         timestamp: new Date().toISOString(),
       };

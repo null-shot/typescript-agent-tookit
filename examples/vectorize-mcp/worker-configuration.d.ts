@@ -5,6 +5,6 @@ interface Env {
   // Durable Object binding
   VECTORIZE_MCP_SERVER: DurableObjectNamespace;
   
-  // Environment variables
-  ANTHROPIC_API_KEY: string;
+  // Workers AI binding
+  AI?: any;
 }

@@ -7,7 +7,6 @@ export class VectorizeRepository {
   constructor(
     private vectorizeIndex: VectorizeIndex,
     private env: { 
-      ANTHROPIC_API_KEY: string;
       AI?: any; // Workers AI binding
     }
   ) {}
@@ -36,28 +35,8 @@ export class VectorizeRepository {
         }
       }
       
-      // Fallback to OpenAI-compatible API using Anthropic key
-      // Note: Anthropic doesn't have embeddings API, so this is a placeholder
-      // In a real implementation, you'd use a service that provides embeddings
-      const response = await fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.env.ANTHROPIC_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'text-embedding-ada-002', // Fallback to OpenAI model
-          input: truncatedText,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Embedding API error: ${response.status} - ${error}`);
-      }
-
-      const data = await response.json() as any;
-      return data.data[0].embedding;
+      // No fallback API - rely on Workers AI or dummy embeddings
+      throw new Error('Workers AI not available for embedding generation');
       
     } catch (error) {
       console.error('Error generating embedding:', error);
@@ -496,7 +475,7 @@ export class VectorizeRepository {
         // Vectorize API limitation: max 50 results with returnMetadata=true
         // For indexes with >50 documents, this gives a representative sample
         const results = await this.vectorizeIndex.query(searchEmbedding, {
-          topK: Math.min(50, indexInfo.vectorCount), // Max 50 with returnMetadata=true
+          topK: Math.min(50, indexInfo.vectorsCount), // Max 50 with returnMetadata=true
           returnMetadata: true,
         });
         
@@ -520,7 +499,7 @@ export class VectorizeRepository {
         stats.categories = {
           error: "Failed to retrieve category data",
           message: error instanceof Error ? error.message : String(error),
-          total_vectors: indexInfo.vectorCount
+          total_vectors: indexInfo.vectorsCount
         };
       }
     }
@@ -536,7 +515,7 @@ export class VectorizeRepository {
         // Vectorize API limitation: max 50 results with returnMetadata=true
         // For indexes with >50 documents, this gives a representative sample
         const results = await this.vectorizeIndex.query(searchEmbedding, {
-          topK: Math.min(50, indexInfo.vectorCount), // Max 50 with returnMetadata=true
+          topK: Math.min(50, indexInfo.vectorsCount), // Max 50 with returnMetadata=true
           returnMetadata: true,
         });
         
@@ -562,7 +541,7 @@ export class VectorizeRepository {
           last24h: count24h,
           last7d: count7d,
           last30d: count30d,
-          last_processed: indexInfo.processedUpToDatetime || 'Unknown',
+          last_processed: (indexInfo as any).processedUpToDatetime || 'Unknown',
           documents_analyzed: results.matches.length
         };
         
@@ -571,7 +550,7 @@ export class VectorizeRepository {
         stats.recent = {
           error: "Failed to retrieve recent activity data",
           message: error instanceof Error ? error.message : String(error),
-          total_vectors: indexInfo.vectorCount
+          total_vectors: indexInfo.vectorsCount
         };
       }
     }

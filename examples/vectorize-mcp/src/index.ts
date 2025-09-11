@@ -16,7 +16,6 @@ export default {
   async fetch(request: Request, env: {
     VECTORIZE_INDEX: VectorizeIndex;
     VECTORIZE_MCP_SERVER: DurableObjectNamespace;
-    ANTHROPIC_API_KEY: string;
     AI?: any;
   }, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -53,7 +52,7 @@ export default {
         },
         ai: {
           embedding_provider: 'Workers AI',
-          chat_provider: 'Anthropic Claude'
+          chat_provider: 'None - vector search and embeddings only'
         }
       }, null, 2), {
         headers: { 

@@ -10,10 +10,6 @@ A Model Context Protocol (MCP) server for **Cloudflare Vectorize** that enables 
 # Install dependencies
 pnpm install
 
-# Set your Anthropic API key
-cp .dev.vars.example .dev.vars
-# Edit .dev.vars and add your actual Anthropic API key
-
 # Create Vectorize index (using Workers AI embedding dimensions)
 npx wrangler vectorize create semantic-search --dimensions=768 --metric=cosine
 
@@ -470,7 +466,7 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 - Document may have been deleted
 
 **"Failed to generate embedding"**
-- Check Anthropic API key is set correctly
+- Check Workers AI binding is available
 - Verify internet connectivity
 - Check if content is too long (max ~8K tokens)
 
@@ -508,9 +504,6 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 # Deploy the worker
 pnpm deploy
 
-# Set environment variables
-npx wrangler secret put ANTHROPIC_API_KEY
-
 # Verify deployment
 curl https://your-worker.your-subdomain.workers.dev/health
 ```
@@ -518,7 +511,7 @@ curl https://your-worker.your-subdomain.workers.dev/health
 ### Production Considerations
 
 1. **API Key Security**: Use Wrangler secrets, never commit keys
-2. **Rate Limiting**: Monitor Anthropic API usage
+2. **Rate Limiting**: Monitor Workers AI neuron usage (10K free daily)
 3. **Index Limits**: Vectorize supports up to 5M vectors per index
 4. **Metadata Size**: Keep metadata under 1KB per vector
 5. **Batch Operations**: Use batch tools for bulk operations
