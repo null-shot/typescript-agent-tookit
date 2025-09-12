@@ -1,0 +1,47 @@
+{
+  "name": "browser-mcp-example",
+  "version": "1.0.0",
+  "description": "Browser Rendering MCP server for web scraping and automation",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev --remote\" --kill-others",
+    "dev:local": "wrangler dev",
+    "dev:worker-only": "wrangler dev --remote",
+    "dev:inspector-only": "npx @modelcontextprotocol/inspector",
+    "deploy": "wrangler deploy",
+    "test": "pnpm build && vitest run",
+    "test:watch": "pnpm build && vitest --watch",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^1.0.4",
+    "@modelcontextprotocol/sdk": "catalog:",
+    "@nullshot/mcp": "workspace:*",
+    "hono": "^4.6.11",
+    "node-fetch": "^3.3.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.68",
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "@nullshot/test-utils": "workspace:*",
+    "@types/node": "^22.10.2",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wrangler": "^4.33.1"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^23.11.1"
+  },
+  "keywords": [
+    "mcp",
+    "browser-rendering",
+    "web-scraping",
+    "automation",
+    "cloudflare-workers"
+  ]
+}
