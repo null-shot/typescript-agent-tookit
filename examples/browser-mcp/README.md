@@ -37,7 +37,7 @@ A comprehensive Model Context Protocol (MCP) server that demonstrates Cloudflare
 ### 📊 Session & Data Management
 - **Browser Sessions** - Persistent browser sessions with metadata tracking
 - **Page Cache** - R2-based caching of page content with TTL management
-- **Extraction History** - D1 database storage of all scraping results
+- **Extraction History** - Durable Object SQLite storage of all scraping results
 - **Extraction Patterns** - Reusable extraction patterns for different websites
 
 
@@ -65,37 +65,11 @@ Update `wrangler.jsonc` with your account ID:
 
 ```jsonc
 {
-  "account_id": "your-account-id-here",
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "browser-mcp-db",
-      "database_id": "your-database-id-here"
-    }
-  ]
+  "account_id": "your-account-id-here"
 }
 ```
 
-### 3. Database Setup
-
-#### **Step 1: Create D1 Database**
-```bash
-# Create database for your account
-wrangler d1 create browser-mcp-db
-```
-
-#### **Step 2: Update Database ID**
-Wrangler will show you the database ID. Update `wrangler.jsonc`:
-- Copy the `database_id` from the wrangler output
-- Replace `"your-database-id-here"` in your config
-
-#### **Step 3: Database Migration**
-```bash
-# Run migrations (tables will be created automatically on first run)
-wrangler d1 migrations apply browser-mcp-db --local
-```
-
-### 4. Register Workers.dev Subdomain (Required)
+### 3. Register Workers.dev Subdomain (Required)
 
 ⚠️ **Before running `pnpm dev`, you MUST register a workers.dev subdomain:**
 
@@ -112,7 +86,7 @@ wrangler d1 migrations apply browser-mcp-db --local
 
 **`wrangler dev --remote` (Remote Mode)**
 - **Runtime:** Cloudflare's edge runtime (real environment)
-- **Bindings:** ✅ **Real bindings** - D1, Browser Rendering, KV, etc.
+- **Bindings:** ✅ **Real bindings** - Durable Objects, Browser Rendering, R2, etc.
 - **Browser Rendering:** ✅ **Available** - real MYBROWSER binding
 - **Speed:** 🐌 Slower startup, requires workers.dev subdomain
 - **Use Case:** Full testing with real Cloudflare services
@@ -150,9 +124,8 @@ wrangler d1 migrations apply browser-mcp-db --local
 1. ✅ **Cloudflare Account** - Registered and logged in with `wrangler login`
 2. ✅ **Workers.dev Subdomain** - Registered via Compute (Workers) → Get Started → Hello World
 3. ✅ **Account ID** - Added to `wrangler.jsonc` (get with `wrangler whoami`)
-4. ✅ **D1 Database** - Created with `wrangler d1 create browser-mcp-db`
-5. ✅ **Database ID** - Updated in `wrangler.jsonc` from wrangler output
-6. ✅ **Dependencies** - Installed with `pnpm install`
+4. ✅ **Durable Objects** - SQLite storage automatically configured
+5. ✅ **Dependencies** - Installed with `pnpm install`
 
 ⚠️ **If any step is missing, `pnpm dev` will fail with authentication or configuration errors.**
 
@@ -326,10 +299,10 @@ When you hit the quota limit, you'll see:
 │   (Cloudflare Browser Rendering)        │
 ├─────────────────────────────────────────┤
 │          Repository Layer               │
-│     (D1 Database + R2 Cache)            │
+│     (Durable Object SQLite + R2 Cache)  │
 ├─────────────────────────────────────────┤
 │      Cloudflare Workers Runtime         │
-│  (Browser Rendering + D1 + R2)          │
+│  (Browser Rendering + Durable Objects + R2) │
 └─────────────────────────────────────────┘
 ```
 
