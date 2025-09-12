@@ -3,6 +3,7 @@
   "name": "email-mcp",
   "main": "src/index.ts",
   "compatibility_date": "2025-03-10",
+  "account_id": "7541b433fbcea05edcdd0b86dbdd41fc",
 
   "durable_objects": {
     "bindings": [
@@ -10,17 +11,9 @@
     ]
   },
 
-  // Register the Durable Object class. remove "tag" if you rename the class in the future.
+  // Register the Durable Object class with SQLite support
   "migrations": [
-    { "tag": "v1", "new_classes": ["EmailMcpServer"] }
-  ],
-
-  "d1_databases": [
-    {
-      "binding": "EMAILS_DB",
-      "database_name": "email_db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
-    }
+    { "tag": "v1", "new_sqlite_classes": ["EmailMcpServer"] }
   ],
 
   // Cloudflare Email Workers "Send Email" binding
@@ -29,8 +22,8 @@
   ],
 
   "vars": {
-    "MAIL_FROM": "no-reply@example.com",
-    "ALLOWED_RECIPIENTS": "alice@example.com,bob@example.com,@example.com"
+    "MAIL_FROM": "no-reply@nullshot.ai",
+    "ALLOWED_RECIPIENTS": "raymond@xavalabs.com,@nullshot.ai"
   },
 
   // logs/traces 

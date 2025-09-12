@@ -1,5 +1,5 @@
 {
-  "name": "@xava-labs/email-mcp",
+  "name": "email-mcp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,6 +9,7 @@
     "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
     "dev:vite": "vite dev",
     "start": "wrangler dev",
+    "inspector": "npx @modelcontextprotocol/inspector",
     "test": "vitest run",
     "cf-typegen": "wrangler types"
   },

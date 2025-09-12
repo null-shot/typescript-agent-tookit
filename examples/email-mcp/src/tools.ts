@@ -4,6 +4,43 @@ import { EmailRepository } from './repository';
 import { EmailFilter, emailFilterSchema } from './schema';
 
 export function setupServerTools(server: McpServer, repository: EmailRepository, env: Env) {
+  // create_test_email: add a test email to the database for testing/demo purposes
+  server.tool(
+    'create_test_email',
+    'Create a test email record in the database for testing purposes.',
+    {
+      from_addr: z.string().email().describe('Sender email address'),
+      to_addr: z.string().email().describe('Recipient email address'),
+      subject: z.string().min(1).describe('Email subject'),
+      text: z.string().min(1).describe('Email body text'),
+    },
+    async ({ from_addr, to_addr, subject, text }: { from_addr: string; to_addr: string; subject: string; text: string }) => {
+      const now = new Date().toISOString();
+      const testEmail = {
+        id: crypto.randomUUID(),
+        from_addr,
+        to_addr,
+        subject,
+        text,
+        raw_size: text.length + subject.length + 100, // approximate
+        received_at: now,
+        created_at: now,
+        updated_at: now,
+      };
+
+      await repository.createEmail(testEmail);
+
+      // Verify it was created by immediately trying to read it back
+      const verification = await repository.getEmailById(testEmail.id);
+      const verifyText = verification ? "✅ Verified in DB" : "❌ Not found after creation";
+
+      return {
+        content: [{ type: 'text', text: `Test email created with ID: ${testEmail.id}. ${verifyText}` }],
+        email: testEmail,
+      };
+    }
+  );
+
   // send_email: internal, only to verified/allowed recipients
   server.tool(
     'send_email',
@@ -72,8 +109,14 @@ ${text}
           content: [{ type: 'text', text: `Email with ID ${id} not found` }],
         };
       }
+      const preview = email.text ? email.text.split(' ').slice(0, 50).join(' ') : '';
+      const truncated = email.text && email.text.split(' ').length > 50 ? '...' : '';
+      
       return {
-        content: [{ type: 'text', text: `Found email with subject: ${email.subject ?? ''}` }],
+        content: [{ 
+          type: 'text', 
+          text: `Email ID: ${email.id}\nSubject: ${email.subject ?? '(no subject)'}\nFrom: ${email.from_addr}\nTo: ${email.to_addr}\nContent: ${preview}${truncated}` 
+        }],
         email,
       };
     }
@@ -94,8 +137,25 @@ ${text}
       const filters = emailFilterSchema.parse(args);
       const emails = await repository.listEmails(filters);
 
+      if (emails.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'Found 0 email(s)' }],
+          emails,
+        };
+      }
+
+      // Create a summary of emails with full IDs and subjects
+      const emailSummary = emails.map(email => {
+        const preview = email.text ? email.text.split(' ').slice(0, 12).join(' ') : '';
+        const truncated = email.text && email.text.split(' ').length > 12 ? '...' : '';
+        return `• ID: ${email.id}\n  Subject: "${email.subject ?? '(no subject)'}"\n  From: ${email.from_addr} → To: ${email.to_addr}\n  Content: ${preview}${truncated}\n`;
+      }).join('\n');
+
       return {
-        content: [{ type: 'text', text: `Found ${emails.length} email(s)` }],
+        content: [{ 
+          type: 'text', 
+          text: `Found ${emails.length} email(s):\n\n${emailSummary}` 
+        }],
         emails,
       };
     }

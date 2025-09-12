@@ -3,10 +3,10 @@ import { EmailRepository } from './repository';
 import { emailFilterSchema } from './schema';
 
 export function setupServerResources(server: McpServer, repository: EmailRepository) {
-  // Resource: d1://database/emails -> list with filters
+  // Resource: do://database/emails -> list with filters
   server.resource(
     'listEmails',
-    'd1://database/emails',
+    'do://database/emails',
     { description: 'List stored emails with optional search and pagination.' },
     async (uri: URL) => {
       const sp = uri.searchParams;
@@ -26,10 +26,10 @@ export function setupServerResources(server: McpServer, repository: EmailReposit
     }
   );
 
-  // Resource: d1://database/emails/{id} -> get single
+  // Resource: do://database/emails/{id} -> get single
   server.resource(
     'getEmail',
-    'd1://database/emails/{id}',
+    'do://database/emails/{id}',
     async (uri: URL) => {
       const parts = uri.pathname.split('/');
       const id = parts[parts.length - 1];
