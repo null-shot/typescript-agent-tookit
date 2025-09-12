@@ -1,5 +1,5 @@
 export interface MCPConfig {
-  servers: Record<string, MCPServerConfig>;
+  mcpServers: Record<string, MCPServerConfig>;
 }
 
 export interface MCPServerConfig {

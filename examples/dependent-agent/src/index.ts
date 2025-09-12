@@ -1,10 +1,15 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { LanguageModel, Provider, stepCountIs } from "ai";
+
 import {
   AiSdkAgent,
   type AIUISDKMessage,
   ToolboxService,
+  type MCPConfig,
 } from "@nullshot/agent";
+import mcpConfig from "../mcp.json";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -46,17 +51,23 @@ app.all("/agent/chat/:sessionId?", async (c) => {
 export class DependentAgent extends AiSdkAgent<Env> {
   constructor(state: DurableObjectState, env: Env) {
     // Use string model identifier - AI SDK v5 supports this directly
-    let modelId: string;
-    switch (env.AI_PROVIDER) {
-      case "anthropic":
-        modelId = "anthropic:claude-3-haiku-20240307";
-        break;
-      default:
-        // This should never happen due to validation above, but TypeScript requires this
-        throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
-    }
-
-    super(state, env, modelId, [new ToolboxService(env)]);
+		let provider: Provider;
+		let model: LanguageModel;
+		switch (env.AI_PROVIDER) {
+		  case "anthropic":
+			provider = createAnthropic({
+			  apiKey: env.AI_PROVIDER_API_KEY,
+			});
+	
+			// Get the actual model object
+			model = provider.languageModel(env.MODEL_ID);
+			break;
+		  default:
+			// This should never happen due to validation above, but TypeScript requires this
+			throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
+		}
+	
+		super(state, env, model, [new ToolboxService(env, mcpConfig)]);
   }
 
   async processMessage(
@@ -71,12 +82,13 @@ export class DependentAgent extends AiSdkAgent<Env> {
         system:
           "You are a conversational expert, enjoying deep, intellectual conversations.",
         maxSteps: 10,
+        stopWhen: stepCountIs(10),
         // Enable MCP tools from imported mcp.json
         experimental_toolCallStreaming: true,
         onError: (error: unknown) => {
           console.error("Error processing message", error);
         },
-      }
+      },
     );
 
     return result.toTextStreamResponse();
