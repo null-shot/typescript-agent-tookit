@@ -279,32 +279,6 @@ When you hit the quota limit, you'll see:
   - ✅ **Try again** - Often resolves on retry (most effective solution)
   - ⏱️ **Increase timeout** - Add larger `timeout` value (e.g., `10000` for 10 seconds)
 
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│           Browser MCP Server            │
-├─────────────────────────────────────────┤
-│ Tools: navigate, screenshot,            │
-│        extract_text, extract_links,     │
-│        close_session                    │
-├─────────────────────────────────────────┤
-│ Resources: sessions, results, cache,    │
-│           patterns, status              │
-├─────────────────────────────────────────┤
-│ Prompts: web_scraper, automation_flow,  │
-│         data_extractor                  │
-├─────────────────────────────────────────┤
-│        Browser Manager                  │
-│   (Cloudflare Browser Rendering)        │
-├─────────────────────────────────────────┤
-│          Repository Layer               │
-│     (Durable Object SQLite + R2 Cache)  │
-├─────────────────────────────────────────┤
-│      Cloudflare Workers Runtime         │
-│  (Browser Rendering + Durable Objects + R2) │
-└─────────────────────────────────────────┘
-```
 
 ## Contributing
 
