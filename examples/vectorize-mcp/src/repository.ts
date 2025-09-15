@@ -490,89 +490,105 @@ export class VectorizeRepository {
   }
 
   /**
-   * Batch add multiple documents with robust error handling
-   * Implements workflow to guarantee operation reliability:
-   * - Processes in configurable batches to avoid overwhelming the system
-   * - Uses Promise.allSettled for parallel processing with individual error handling
-   * - Returns detailed success/failure tracking for each document
-   * - Continues processing even if individual documents fail
-   * - Provides actionable error messages for failed documents
+   * Atomic batch add multiple documents
+   * Implements atomic workflow to guarantee operation reliability:
+   * - Either ALL documents succeed or ALL fail (atomic operation)
+   * - If any document fails, automatically rollback all successful additions
+   * - Validates all documents before starting any operations
+   * - Returns complete success or complete failure (no partial states)
    */
   async batchAddDocuments(
     documents: Omit<VectorDocument, 'id' | 'embedding'>[],
     batchSize: number = 5
   ): Promise<{
     success: VectorDocument[];
-    failed: Array<{ document: any; error: string; retryable: boolean }>;
+    failed: Array<{ document: any; error: string }>;
+    atomic_result: 'complete_success' | 'complete_failure';
   }> {
-    const success: VectorDocument[] = [];
-    const failed: Array<{ document: any; error: string; retryable: boolean }> = [];
+    console.log(`📦 Starting ATOMIC batch add: ${documents.length} documents`);
+    
+    // Phase 1: Validate all documents first
+    console.log(`🔍 Phase 1: Validating all ${documents.length} documents...`);
+    for (let i = 0; i < documents.length; i++) {
+      const doc = documents[i];
+      if (!doc.title || !doc.content) {
+        console.error(`❌ Validation failed: Document ${i + 1} missing required fields`);
+        return {
+          success: [],
+          failed: [{ document: doc, error: 'Missing required fields (title or content)' }],
+          atomic_result: 'complete_failure'
+        };
+      }
+    }
+    console.log(`✅ Phase 1 complete: All documents validated`);
 
-    console.log(`📦 Starting batch add: ${documents.length} documents in batches of ${batchSize}`);
-
-    // Process in batches to avoid overwhelming the system
-    for (let i = 0; i < documents.length; i += batchSize) {
-      const batch = documents.slice(i, i + batchSize);
-      console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}: documents ${i + 1}-${Math.min(i + batchSize, documents.length)}`);
+    const addedDocuments: VectorDocument[] = [];
+    
+    try {
+      // Phase 2: Add all documents (atomic operation)
+      console.log(`📦 Phase 2: Adding all ${documents.length} documents atomically...`);
       
-      // Process batch in parallel with individual error handling
-      const batchResults = await Promise.allSettled(
-        batch.map(async (doc, batchIndex) => {
-          try {
+      for (let i = 0; i < documents.length; i += batchSize) {
+        const batch = documents.slice(i, i + batchSize);
+        console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}: documents ${i + 1}-${Math.min(i + batchSize, documents.length)}`);
+        
+        // Process batch - if ANY fail, throw immediately
+        const batchResults = await Promise.all(
+          batch.map(async (doc, batchIndex) => {
+            console.log(`📄 Adding document ${i + batchIndex + 1}: ${doc.title}`);
             const result = await this.addDocument(doc);
-            console.log(`✅ Document ${i + batchIndex + 1} added: ${doc.title}`);
+            console.log(`✅ Document ${i + batchIndex + 1} added successfully`);
             return result;
-          } catch (error) {
-            console.error(`❌ Document ${i + batchIndex + 1} failed: ${doc.title}`, error);
-            throw error;
+          })
+        );
+        
+        addedDocuments.push(...batchResults);
+        
+        // Small delay between batches
+        if (i + batchSize < documents.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Phase 3: Complete success
+      console.log(`🎉 Phase 2 complete: ALL ${documents.length} documents added successfully`);
+      return {
+        success: addedDocuments,
+        failed: [],
+        atomic_result: 'complete_success'
+      };
+
+    } catch (error) {
+      // Phase 3: Rollback on any failure
+      console.error(`❌ Batch operation failed, rolling back ${addedDocuments.length} documents...`);
+      
+      const rollbackResults = await Promise.allSettled(
+        addedDocuments.map(async (doc, index) => {
+          try {
+            console.log(`🔄 Rolling back document ${index + 1}: ${doc.title}`);
+            await this.deleteDocument(doc.id);
+            console.log(`✅ Rollback ${index + 1} successful`);
+          } catch (rollbackError) {
+            console.error(`❌ Rollback ${index + 1} failed:`, rollbackError);
+            // Continue rollback even if some deletions fail
           }
         })
       );
 
-      // Categorize results and determine if errors are retryable
-      batchResults.forEach((result, batchIndex) => {
-        if (result.status === 'fulfilled') {
-          success.push(result.value);
-        } else {
-          const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
-          const isRetryable = this.isRetryableError(error);
-          
-          failed.push({
-            document: batch[batchIndex],
-            error: error.message,
-            retryable: isRetryable,
-          });
-        }
-      });
+      const rollbackSuccesses = rollbackResults.filter(r => r.status === 'fulfilled').length;
+      console.log(`🔄 Rollback complete: ${rollbackSuccesses}/${addedDocuments.length} documents removed`);
 
-      // Small delay between batches to avoid rate limiting
-      if (i + batchSize < documents.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+      return {
+        success: [],
+        failed: documents.map(doc => ({
+          document: doc,
+          error: `Atomic batch failed: ${error instanceof Error ? error.message : String(error)}`
+        })),
+        atomic_result: 'complete_failure'
+      };
     }
-
-    console.log(`📦 Batch complete: ${success.length} succeeded, ${failed.length} failed`);
-    return { success, failed };
   }
 
-  /**
-   * Determine if an error is retryable (temporary issue vs permanent failure)
-   */
-  private isRetryableError(error: Error): boolean {
-    const retryablePatterns = [
-      'timeout',
-      'rate limit',
-      'temporary',
-      'service unavailable',
-      'too many requests',
-      '429',
-      '503',
-      '502',
-    ];
-    
-    const errorMessage = error.message.toLowerCase();
-    return retryablePatterns.some(pattern => errorMessage.includes(pattern));
-  }
 
   /**
    * Get index statistics

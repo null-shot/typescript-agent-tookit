@@ -481,12 +481,12 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
   );
 
   /**
-   * Tool 8: Batch Add Documents
-   * Purpose: Efficiently add multiple documents at once
+   * Tool 8: Atomic Batch Add Documents
+   * Purpose: Add multiple documents atomically - all succeed or all fail with rollback
    */
   server.tool(
     'batch_add_documents',
-    'Add multiple documents to the vector database in batches',
+    'Atomically add multiple documents to the vector database - all succeed or all fail with automatic rollback',
     {
       documents: z.array(z.object({
         title: z.string().describe('Document title'),
@@ -517,25 +517,26 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
 
         const result = await repository.batchAddDocuments(documentsToAdd, validatedArgs.batch_size);
 
-        const resultText = `📦 Batch import completed!\n\n` +
-          `✅ Successfully added: ${result.success.length} documents\n` +
-          `❌ Failed: ${result.failed.length} documents\n\n` +
-          (result.success.length > 0 
-            ? `**Successfully Added:**\n` +
-              result.success.map((doc, index) => 
-                `${index + 1}. ${doc.title} (ID: ${doc.id})`
-              ).join('\n') + '\n\n'
-            : '') +
-          (result.failed.length > 0
-            ? `**Failed Documents:**\n` +
-              result.failed.map((failure, index) => 
-                `${index + 1}. ${failure.document.title}: ${failure.error}${failure.retryable ? ' (retryable)' : ' (permanent)'}`
-              ).join('\n') +
-              `\n\n💡 **Retry Strategy:**\n` +
-              `• Retryable failures: ${result.failed.filter(f => f.retryable).length}\n` +
-              `• Permanent failures: ${result.failed.filter(f => !f.retryable).length}\n` +
-              `• You can retry just the retryable documents if needed`
-            : '');
+        let resultText: string;
+        
+        if (result.atomic_result === 'complete_success') {
+          resultText = `🎉 **ATOMIC BATCH SUCCESS!**\n\n` +
+            `✅ **ALL ${result.success.length} documents added successfully**\n\n` +
+            `**Added Documents:**\n` +
+            result.success.map((doc, index) => 
+              `${index + 1}. **${doc.title}**\n   🆔 ID: ${doc.id}\n   📂 Category: ${doc.metadata.category || 'None'}`
+            ).join('\n\n') +
+            `\n\n🔒 **Atomic Guarantee**: All documents were added in a single transaction.`;
+        } else {
+          resultText = `❌ **ATOMIC BATCH FAILED!**\n\n` +
+            `🚫 **NO documents were added** (atomic rollback completed)\n\n` +
+            `**Failure Details:**\n` +
+            result.failed.map((failure, index) => 
+              `${index + 1}. **${failure.document.title}**: ${failure.error}`
+            ).join('\n') +
+            `\n\n🔒 **Atomic Guarantee**: Since one document failed, ALL documents were rolled back.\n` +
+            `💡 **Next Steps**: Fix the errors above and retry the entire batch.`;
+        }
 
         return {
           content: [
@@ -544,13 +545,15 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
               text: resultText
             }
           ],
-          success: result.success,
-          failed: result.failed,
+          atomic_result: result.atomic_result,
           stats: {
             total_attempted: validatedArgs.documents.length,
-            successful: result.success.length,
-            failed: result.failed.length,
-            batch_size: validatedArgs.batch_size
+            atomic_operation: true,
+            batch_size: validatedArgs.batch_size,
+            ...(result.atomic_result === 'complete_success' 
+              ? { documents_added: result.success.length, document_ids: result.success.map(d => d.id) }
+              : { documents_added: 0, rollback_completed: true }
+            )
           }
         };
       } catch (error) {

@@ -161,7 +161,8 @@ describe("Vectorize MCP Client Integration Tests", () => {
     })) as ToolResponse;
 
     expect(response).not.toBeUndefined();
-    expect(response.content[0].text).toContain("Successfully added: 2 documents");
+    expect(response.content[0].text).toContain("ATOMIC BATCH SUCCESS");
+    expect(response.content[0].text).toContain("ALL 2 documents added successfully");
 
     await waitOnExecutionContext(ctx);
     console.log(`Batch add documents test passed!`);
