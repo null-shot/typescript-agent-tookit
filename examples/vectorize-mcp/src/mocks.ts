@@ -137,8 +137,10 @@ export function isCI(error?: any): boolean {
     return errorMessage.includes('Status + 500') ||
            errorMessage.includes('Status 500') ||
            errorMessage.includes('Not logged in') ||
+           errorMessage.includes('Authentication error') ||
            errorMessage.includes('VECTOR_UPSERT_ERROR') ||
            errorMessage.includes('VECTOR_QUERY_ERROR') ||
+           errorMessage.includes('VECTOR_GET_ERROR') ||
            errorMessage.includes('INDEX_GET_ERROR');
   }
   
