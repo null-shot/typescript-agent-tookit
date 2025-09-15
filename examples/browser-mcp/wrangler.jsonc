@@ -1,0 +1,39 @@
+{
+	"name": "browser-mcp-server-raycoderhk",
+	"main": "src/index.ts",
+	"account_id": "3981ec4631dcbcd63d4e339e7da3bdd2",
+	"compatibility_date": "2025-02-11",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	},
+	"browser": {
+		"binding": "MYBROWSER"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "BROWSER_MCP_SERVER",
+				"class_name": "BrowserMcpServerSqlV2"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"BrowserMcpServerSqlV2"
+			]
+		}
+	],
+	"vars": {
+		"MAX_CONCURRENT_SESSIONS": "5",
+		"SESSION_TIMEOUT_MS": "300000",
+		"CACHE_TTL_HOURS": "24",
+		"MAX_PAGE_SIZE_MB": "10",
+		"BROWSER_MODE": "cloudflare_puppeteer"
+	}
+}
