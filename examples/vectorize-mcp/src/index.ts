@@ -64,62 +64,15 @@ export default {
       });
     }
 
-    // Handle SSE endpoint for MCP clients
-    if (url.pathname === '/sse') {
-      const sessionIdStr = url.searchParams.get('sessionId');
-      const id = sessionIdStr
-        ? env.VECTORIZE_MCP_SERVER.idFromString(sessionIdStr)
-        : env.VECTORIZE_MCP_SERVER.newUniqueId();
+    // Forward all requests to the Durable Object server
+    // Let the server handle routing and return appropriate 404s
 
-      console.log(`🔗 SSE connection for sessionId: ${sessionIdStr} with id: ${id}`);
-
-      url.searchParams.set('sessionId', id.toString());
-
-      return env.VECTORIZE_MCP_SERVER.get(id).fetch(new Request(
-        url.toString(),
-        request
-      ));
-    }
-
-    // Handle MCP message endpoint for SSE clients
-    if (url.pathname === '/sse/message') {
-      const sessionIdStr = url.searchParams.get('sessionId');
-      const id = sessionIdStr
-        ? env.VECTORIZE_MCP_SERVER.idFromString(sessionIdStr)
-        : env.VECTORIZE_MCP_SERVER.newUniqueId();
-
-      console.log(`📨 SSE message for sessionId: ${sessionIdStr} with id: ${id}`);
-
-      url.searchParams.set('sessionId', id.toString());
-
-      return env.VECTORIZE_MCP_SERVER.get(id).fetch(new Request(
-        url.toString(),
-        request
-      ));
-    }
-
-    // Handle health check endpoint
-    if (url.pathname === '/health') {
-      const id = env.VECTORIZE_MCP_SERVER.newUniqueId();
-      return env.VECTORIZE_MCP_SERVER.get(id).fetch(new Request(
-        url.toString(),
-        request
-      ));
-    }
-
-    // Default handler for other requests - route to Durable Object
+    // Route to Durable Object - let server handle all endpoints
     const sessionIdStr = url.searchParams.get('sessionId');
     const id = sessionIdStr
       ? env.VECTORIZE_MCP_SERVER.idFromString(sessionIdStr)
       : env.VECTORIZE_MCP_SERVER.newUniqueId();
 
-    console.log(`🌐 Request to ${url.pathname} for sessionId: ${sessionIdStr} with id: ${id}`);
-
-    url.searchParams.set('sessionId', id.toString());
-
-    return env.VECTORIZE_MCP_SERVER.get(id).fetch(new Request(
-      url.toString(),
-      request
-    ));
+    return env.VECTORIZE_MCP_SERVER.get(id).fetch(request);
   }
 };

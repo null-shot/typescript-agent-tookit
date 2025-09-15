@@ -496,40 +496,88 @@ export class VectorizeRepository {
   }
 
   /**
-   * Batch add multiple documents
+   * Batch add multiple documents with robust error handling
+   * Implements workflow to guarantee operation reliability:
+   * - Processes in configurable batches to avoid overwhelming the system
+   * - Uses Promise.allSettled for parallel processing with individual error handling
+   * - Returns detailed success/failure tracking for each document
+   * - Continues processing even if individual documents fail
+   * - Provides actionable error messages for failed documents
    */
   async batchAddDocuments(
     documents: Omit<VectorDocument, 'id' | 'embedding'>[],
     batchSize: number = 5
   ): Promise<{
     success: VectorDocument[];
-    failed: Array<{ document: any; error: string }>;
+    failed: Array<{ document: any; error: string; retryable: boolean }>;
   }> {
     const success: VectorDocument[] = [];
-    const failed: Array<{ document: any; error: string }> = [];
+    const failed: Array<{ document: any; error: string; retryable: boolean }> = [];
 
-    // Process in batches
+    console.log(`📦 Starting batch add: ${documents.length} documents in batches of ${batchSize}`);
+
+    // Process in batches to avoid overwhelming the system
     for (let i = 0; i < documents.length; i += batchSize) {
       const batch = documents.slice(i, i + batchSize);
+      console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1}: documents ${i + 1}-${Math.min(i + batchSize, documents.length)}`);
       
-      // Process batch in parallel
+      // Process batch in parallel with individual error handling
       const batchResults = await Promise.allSettled(
-        batch.map(doc => this.addDocument(doc))
+        batch.map(async (doc, batchIndex) => {
+          try {
+            const result = await this.addDocument(doc);
+            console.log(`✅ Document ${i + batchIndex + 1} added: ${doc.title}`);
+            return result;
+          } catch (error) {
+            console.error(`❌ Document ${i + batchIndex + 1} failed: ${doc.title}`, error);
+            throw error;
+          }
+        })
       );
 
-      batchResults.forEach((result, index) => {
+      // Categorize results and determine if errors are retryable
+      batchResults.forEach((result, batchIndex) => {
         if (result.status === 'fulfilled') {
           success.push(result.value);
         } else {
+          const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason));
+          const isRetryable = this.isRetryableError(error);
+          
           failed.push({
-            document: batch[index],
-            error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+            document: batch[batchIndex],
+            error: error.message,
+            retryable: isRetryable,
           });
         }
       });
+
+      // Small delay between batches to avoid rate limiting
+      if (i + batchSize < documents.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
 
+    console.log(`📦 Batch complete: ${success.length} succeeded, ${failed.length} failed`);
     return { success, failed };
+  }
+
+  /**
+   * Determine if an error is retryable (temporary issue vs permanent failure)
+   */
+  private isRetryableError(error: Error): boolean {
+    const retryablePatterns = [
+      'timeout',
+      'rate limit',
+      'temporary',
+      'service unavailable',
+      'too many requests',
+      '429',
+      '503',
+      '502',
+    ];
+    
+    const errorMessage = error.message.toLowerCase();
+    return retryablePatterns.some(pattern => errorMessage.includes(pattern));
   }
 
   /**

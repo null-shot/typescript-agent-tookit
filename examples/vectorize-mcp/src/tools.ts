@@ -529,8 +529,12 @@ export function setupServerTools(server: McpServer, repository: VectorizeReposit
           (result.failed.length > 0
             ? `**Failed Documents:**\n` +
               result.failed.map((failure, index) => 
-                `${index + 1}. ${failure.document.title}: ${failure.error}`
-              ).join('\n')
+                `${index + 1}. ${failure.document.title}: ${failure.error}${failure.retryable ? ' (retryable)' : ' (permanent)'}`
+              ).join('\n') +
+              `\n\n💡 **Retry Strategy:**\n` +
+              `• Retryable failures: ${result.failed.filter(f => f.retryable).length}\n` +
+              `• Permanent failures: ${result.failed.filter(f => !f.retryable).length}\n` +
+              `• You can retry just the retryable documents if needed`
             : '');
 
         return {

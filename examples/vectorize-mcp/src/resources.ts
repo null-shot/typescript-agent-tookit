@@ -2,6 +2,13 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { VectorizeRepository } from './repository';
 import { SEARCH_CONFIG } from './schema';
 
+// Resource configuration - make limits configurable
+const RESOURCE_CONFIG = {
+  DEFAULT_DOCUMENT_LIMIT: 50,
+  DEFAULT_RELATED_LIMIT: 5,
+  MAX_DOCUMENT_LIMIT: 100,
+} as const;
+
 export function setupServerResources(server: McpServer, repository: VectorizeRepository) {
   
   /**
@@ -14,7 +21,7 @@ export function setupServerResources(server: McpServer, repository: VectorizeRep
     async () => {
       try {
         const result = await repository.listDocuments({
-          limit: 50,
+          limit: RESOURCE_CONFIG.DEFAULT_DOCUMENT_LIMIT,
           offset: 0,
           sort_by: 'updated_at',
           sort_order: 'desc',
@@ -163,7 +170,7 @@ export function setupServerResources(server: McpServer, repository: VectorizeRep
         const documentId = match[1];
         
         const relatedDocs = await repository.findRelatedDocuments(documentId, {
-          limit: 5,
+          limit: RESOURCE_CONFIG.DEFAULT_RELATED_LIMIT,
           threshold: SEARCH_CONFIG.DEFAULT_THRESHOLD,
         });
 

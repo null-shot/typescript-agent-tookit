@@ -5,6 +5,7 @@ import { VectorizeRepository } from "./repository";
 import { setupServerTools } from "./tools";
 import { setupServerResources } from "./resources";
 import { setupServerPrompts } from "./prompts";
+import { MockVectorizeRepository, isCI } from './mocks';
 
 /**
  * VectorizeMcpServer extends McpHonoServerDO for vector database operations
@@ -40,55 +41,9 @@ export class VectorizeMcpServer extends McpHonoServerDO<{
    */
   private initializeRepository(): VectorizeRepository {
     if (!this.repository) {
-      // Detect CI environment or missing bindings
-      const isCI = process.env.CI === 'true' || !this.env.VECTORIZE_INDEX || !this.env.AI;
-      
-      if (isCI) {
+      if (isCI() || !this.env.VECTORIZE_INDEX || !this.env.AI) {
         console.warn('⚠️ CI environment detected or bindings missing. Using mock implementations.');
-        // Create realistic mocks for CI testing
-        const mockVectorize = {
-          upsert: async (vectors: any[]) => ({ 
-            count: vectors.length, 
-            ids: vectors.map(v => v.id) 
-          }),
-          query: async () => ({ 
-            matches: [
-              { 
-                id: 'mock-doc-1', 
-                score: 0.8, 
-                metadata: { 
-                  title: 'Mock Document', 
-                  category: 'test',
-                  content: 'Mock content for testing',
-                  author: 'Test Author',
-                  created_at: new Date().toISOString()
-                } 
-              }
-            ], 
-            count: 1 
-          }),
-          getByIds: async (ids: string[]) => ids.map(id => ({
-            id,
-            metadata: { 
-              title: 'Mock Document', 
-              content: 'Mock content for testing',
-              category: 'test',
-              author: 'Test Author',
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }
-          })),
-          deleteByIds: async (ids: string[]) => ({ count: ids.length, ids }),
-          describe: async () => ({ dimensions: 768, vectorCount: 5 }),
-        } as any;
-        
-        const mockEnv = {
-          AI: {
-            run: async () => ({ data: [new Array(768).fill(0.1)] }) // Mock embedding
-          }
-        };
-        
-        this.repository = new VectorizeRepository(mockVectorize, mockEnv);
+        this.repository = new MockVectorizeRepository();
       } else {
         this.repository = new VectorizeRepository(this.env.VECTORIZE_INDEX, this.env);
       }
