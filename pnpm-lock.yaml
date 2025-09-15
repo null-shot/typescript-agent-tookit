@@ -12359,11 +12359,14 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 24.3.0
+<<<<<<< HEAD
 
   '@types/yauzl@2.10.3':
     dependencies:
       '@types/node': 24.3.0
     optional: true
+=======
+>>>>>>> f86edc718a3ab77defd9d24d36d1a79066eec353
 
   '@typescript-eslint/eslint-plugin@8.41.0(@typescript-eslint/parser@8.41.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)':
     dependencies:
