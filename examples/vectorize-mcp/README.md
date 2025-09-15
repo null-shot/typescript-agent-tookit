@@ -309,12 +309,17 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 
 ---
 
-### 8. `batch_add_documents` - Bulk Import
+### 8. `batch_add_documents` - Atomic Bulk Import
 
-**Purpose**: Efficiently add multiple documents at once
+**Purpose**: Atomically add multiple documents - all succeed or all fail with automatic rollback
+
+**🔒 Atomic Guarantee**: 
+- **All succeed**: All documents are added successfully
+- **Any fail**: ALL documents are automatically rolled back (none remain)
+- **No partial states**: Never leaves some documents added and others failed
 
 **Required Fields**:
-- `documents`: Array of documents to add
+- `documents`: Array of documents to add (1-50 documents)
 
 **Optional Fields**:
 - `batch_size`: Process in batches (1-10, default: 5)
@@ -479,7 +484,7 @@ The server provides SSE (Server-Sent Events) endpoints for MCP clients:
 ## 📊 Performance Tips
 
 ### Embedding Generation
-- **Batch operations**: Use `batch_add_documents` for multiple documents
+- **Atomic batch operations**: Use `batch_add_documents` for guaranteed all-or-nothing document addition
 - **Content length**: Keep individual documents under 8K tokens
 - **Chunking**: Large documents are automatically chunked
 
