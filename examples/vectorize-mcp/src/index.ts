@@ -67,12 +67,17 @@ export default {
     // Forward all requests to the Durable Object server
     // Let the server handle routing and return appropriate 404s
 
-    // Route to Durable Object - let server handle all endpoints
+    // Route to Durable Object with session management
     const sessionIdStr = url.searchParams.get('sessionId');
     const id = sessionIdStr
       ? env.VECTORIZE_MCP_SERVER.idFromString(sessionIdStr)
       : env.VECTORIZE_MCP_SERVER.newUniqueId();
 
-    return env.VECTORIZE_MCP_SERVER.get(id).fetch(request);
+    url.searchParams.set('sessionId', id.toString());
+
+    return env.VECTORIZE_MCP_SERVER.get(id).fetch(new Request(
+      url.toString(),
+      request
+    ));
   }
 };

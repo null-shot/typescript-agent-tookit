@@ -5,7 +5,7 @@ import { VectorizeRepository } from "./repository";
 import { setupServerTools } from "./tools";
 import { setupServerResources } from "./resources";
 import { setupServerPrompts } from "./prompts";
-import { MockVectorizeRepository, isCI } from './mocks';
+import { createMockRepository, isCI } from './mocks';
 
 /**
  * VectorizeMcpServer extends McpHonoServerDO for vector database operations
@@ -43,13 +43,13 @@ export class VectorizeMcpServer extends McpHonoServerDO<{
     if (!this.repository) {
       if (isCI() || !this.env.VECTORIZE_INDEX || !this.env.AI) {
         console.warn('⚠️ CI environment detected or bindings missing. Using mock implementations.');
-        this.repository = new MockVectorizeRepository();
+        this.repository = createMockRepository();
       } else {
         this.repository = new VectorizeRepository(this.env.VECTORIZE_INDEX, this.env);
       }
     }
     
-    return this.repository;
+    return this.repository!; // Non-null assertion since we just initialized it
   }
 
   /**

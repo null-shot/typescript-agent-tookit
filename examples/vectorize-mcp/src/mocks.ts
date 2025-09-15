@@ -3,7 +3,6 @@
  * Separated from production code to avoid confusion in debugging
  */
 
-import { VectorizeRepository } from './repository';
 import { VectorDocument, EMBEDDING_CONFIG } from './schema';
 
 /**
@@ -116,14 +115,15 @@ export class MockWorkersAI {
 }
 
 /**
- * Mock Repository for CI environments
+ * Create a mock repository instance for CI environments
  */
-export class MockVectorizeRepository extends VectorizeRepository {
-  constructor() {
-    const mockVectorize = new MockVectorizeIndex();
-    const mockEnv = { AI: new MockWorkersAI() };
-    super(mockVectorize as any, mockEnv as any);
-  }
+export function createMockRepository(): any {
+  const mockVectorize = new MockVectorizeIndex();
+  const mockEnv = { AI: new MockWorkersAI() };
+  
+  // Import VectorizeRepository here to avoid circular dependency
+  const { VectorizeRepository } = require('./repository');
+  return new VectorizeRepository(mockVectorize, mockEnv);
 }
 
 /**

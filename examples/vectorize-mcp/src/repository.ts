@@ -1,4 +1,5 @@
 import { VectorDocument, DocumentFilter, EMBEDDING_CONFIG, SEARCH_CONFIG } from './schema';
+import { isCI } from './mocks';
 
 /**
  * VectorizeRepository handles all vector database operations
@@ -41,11 +42,7 @@ export class VectorizeRepository {
     } catch (error) {
       console.error('Error generating embedding:', error);
       
-      // Check if this is a CI environment or known error pattern
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      const isCI = process.env.CI === 'true' || errorMessage.includes('Status + 500') || errorMessage.includes('Status 500');
-      
-      if (isCI) {
+      if (isCI(error)) {
         console.warn('🤖 Using deterministic mock embedding for CI environment');
         // Return a deterministic mock embedding for CI consistency
         return new Array(EMBEDDING_CONFIG.DIMENSIONS).fill(0).map((_, i) => (i % 2 === 0 ? 0.1 : -0.1));
@@ -96,8 +93,7 @@ export class VectorizeRepository {
         },
       }]);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (process.env.CI === 'true' || errorMessage.includes('Status + 500') || errorMessage.includes('Status 500')) {
+      if (isCI(error)) {
         console.warn('🤖 Vectorize upsert failed in CI, continuing with mock success');
         // In CI, pretend it worked
       } else {
@@ -142,8 +138,7 @@ export class VectorizeRepository {
         returnMetadata: true,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (process.env.CI === 'true' || errorMessage.includes('Status + 500') || errorMessage.includes('Status 500')) {
+      if (isCI(error)) {
         console.warn('🤖 Using mock search results for CI environment');
         results = {
           matches: [
@@ -238,8 +233,7 @@ export class VectorizeRepository {
       const vector = results[0];
       return this.vectorToDocument(vector, includeEmbedding);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (process.env.CI === 'true' || errorMessage.includes('Status + 500') || errorMessage.includes('Status 500')) {
+      if (isCI(error)) {
         console.warn('🤖 Using mock document for CI environment');
         // For testing error cases, return null for specific test IDs
         if (id === 'non-existent-id' || id.includes('non-existent')) {
@@ -594,8 +588,7 @@ export class VectorizeRepository {
       indexInfo = await this.vectorizeIndex.describe();
       console.log('🔍 Raw Vectorize index info:', indexInfo);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (process.env.CI === 'true' || errorMessage.includes('Status + 500') || errorMessage.includes('Status 500')) {
+      if (isCI(error)) {
         console.warn('🤖 Using mock index info for CI environment');
         indexInfo = { dimensions: 768, vectorCount: 5 };
       } else {
