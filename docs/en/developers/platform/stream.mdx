@@ -1,0 +1,1138 @@
+export const metadata = {
+  "title": "Stream",
+  "description": "Video processing, live streaming, and media analysis for intelligent agent workflows"
+};
+
+# Stream
+
+**Bring video intelligence to your agents.** Cloudflare Stream provides powerful video processing, live streaming, and media analysis capabilities that enable your AI agents to work with video content at scale. From processing user uploads to conducting live video analysis, Stream makes video a first-class data type for your agents.
+
+## Key Features
+
+- **Video Processing**: Automatic transcoding, thumbnail generation, and format optimization
+- **Live Streaming**: Real-time video streaming with global CDN delivery
+- **AI Integration**: Built-in video analysis, transcript generation, and content recognition
+- **Global Delivery**: Sub-second video startup from 330+ edge locations worldwide
+- **Security**: Token-based access control and DRM protection for sensitive content
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add Stream bindings in your `wrangler.json`:
+
+```json
+{
+  "services": [
+    {
+      "binding": "STREAM",
+      "service": "stream-api"
+    }
+  ]
+}
+```
+
+### Simple Video Upload Example
+
+Upload and process a video with your agent:
+
+```typescript
+// src/agents/VideoProcessingAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class VideoProcessingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STREAM } = this.env;
+    
+    if (message.content.includes('upload video')) {
+      const videoUrl = this.extractVideoUrl(message.content);
+      
+      if (!videoUrl) {
+        return {
+          message: "Please provide a video URL to upload and process."
+        };
+      }
+      
+      // This is a sudo example. Ideally you would use a workflow for this logic!
+      try {
+        // Upload video from URL
+        const uploadResult = await STREAM.upload(videoUrl, {
+          metadata: {
+            uploadedBy: message.userId,
+            purpose: 'agent_processing',
+            timestamp: Date.now()
+          }
+        });
+        
+        // Wait for processing to complete
+        let video = await STREAM.get(uploadResult.id);
+        while (video.status === 'processing') {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          video = await STREAM.get(uploadResult.id);
+        }
+        
+        if (video.status !== 'ready') {
+          return {
+            message: "Video processing failed. Please check the URL and try again."
+          };
+        }
+        
+        return {
+          message: `✅ Video uploaded successfully!
+            📹 Video ID: ${video.id}
+            ⏱️ Duration: ${Math.round(video.duration / 60)} minutes
+            📺 Watch: ${video.playbackUrl}
+            🖼️ Thumbnail: ${video.thumbnail}
+
+            Your video is ready for analysis and streaming!`,
+          actions: [{
+            type: 'video_uploaded',
+            data: {
+              videoId: video.id,
+              playbackUrl: video.playbackUrl,
+              duration: video.duration
+            }
+          }]
+        };
+        
+      } catch (error) {
+        console.error('Video upload failed:', error);
+        return {
+          message: "Failed to upload video. Please check the URL and try again."
+        };
+      }
+    }
+    
+    return { message: "Send me a video URL to upload and process!" };
+  }
+}
+```
+
+### MCP Integration
+
+Stream capabilities exposed through MCP tools:
+
+```typescript
+// src/mcp/StreamMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class StreamMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'upload-video': async ({ videoUrl, metadata }: { videoUrl: string, metadata?: any }) => {
+        const { STREAM } = this.env;
+        
+        try {
+          const uploadResult = await STREAM.upload(videoUrl, {
+            metadata: {
+              ...metadata,
+              uploadedBy: 'mcp-server',
+              uploadedAt: Date.now()
+            }
+          });
+          
+          return {
+            success: true,
+            videoId: uploadResult.id,
+            message: `Video upload started: ${uploadResult.id}`,
+            status: 'processing'
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            message: 'Failed to upload video'
+          };
+        }
+      },
+      
+      'analyze-video': async ({ videoId }: { videoId: string }) => {
+        const { STREAM } = this.env;
+        
+        try {
+          // Generate transcript
+          const transcript = await STREAM.generateTranscript(videoId, 'en');
+          
+          // Analyze content
+          const analysis = await STREAM.analyzeContent(videoId, [
+            'object_detection',
+            'scene_classification',
+            'text_recognition'
+          ]);
+          
+          return {
+            success: true,
+            videoId,
+            transcript: transcript.text,
+            analysis: {
+              objects: analysis.objects.length,
+              scenes: analysis.scenes.length,
+              detectedText: analysis.detectedText.length
+            },
+            message: 'Video analysis completed successfully'
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            message: 'Failed to analyze video'
+          };
+        }
+      },
+      
+      'create-live-stream': async ({ title, description }: { title: string, description?: string }) => {
+        const { STREAM } = this.env;
+        
+        try {
+          const liveStream = await STREAM.createLiveStream({
+            title,
+            description: description || `Live stream created via MCP`,
+            recording: { enabled: true }
+          });
+          
+          return {
+            success: true,
+            streamId: liveStream.id,
+            rtmpUrl: liveStream.rtmpUrl,
+            streamKey: liveStream.streamKey,
+            playbackUrl: liveStream.playbackUrl,
+            message: `Live stream created: ${title}`
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            message: 'Failed to create live stream'
+          };
+        }
+      }
+    };
+  }
+}
+```
+
+## TypeScript API Reference
+
+You can access the Stream API via the `env` of the **Agent** or **MCP Tool**:
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+function example() {
+  // STREAM can be named to anything and equals the "binding" sent in wrangler.json
+  const { STREAM } = this.env;
+}
+```
+
+### Video Upload and Processing
+
+**`upload(file: File, options?: UploadOptions): Promise<VideoAsset>`**  
+Uploads a video file for processing and storage. Automatically transcodes to multiple formats and generates thumbnails for optimal delivery across devices.
+
+**`uploadFromUrl(url: string, options?: UploadOptions): Promise<VideoAsset>`**  
+Imports a video from an external URL. Useful for processing videos from user-provided links or integrating with other video platforms.
+
+**`copy(options: { url: string, meta?: object, watermark?: { uid: string } }): Promise<VideoAsset>`**  
+Upload video from URL with optional metadata and watermark. Based on the [/stream/copy endpoint](https://developers.cloudflare.com/stream/uploading-videos/upload-via-link/).
+
+**`getUploadUrl(options?: UploadOptions): Promise<UploadCredentials>`**  
+Generates a signed upload URL for direct creator uploads. Returns `uploadURL` and `uid` for client-side video uploads up to 200MB.
+
+**`getDirectUpload(options: { maxDurationSeconds: number, watermark?: { uid: string } }): Promise<DirectUploadCredentials>`**  
+Creates unique one-time upload URLs for [direct creator uploads](https://developers.cloudflare.com/stream/uploading-videos/direct-creator-uploads/).
+
+### Video Management
+
+**`get(videoId: string): Promise<VideoAsset | null>`**  
+Retrieves detailed information about a video asset including processing status, metadata, and available formats.
+
+**`list(options?: ListOptions): Promise<VideoAsset[]>`**  
+Lists video assets with filtering and pagination support. Supports search parameter for finding videos by name.
+
+**`delete(videoId: string): Promise<void>`**  
+Permanently deletes a video asset and all associated data including transcoded versions and thumbnails.
+
+**`update(videoId: string, meta: object): Promise<VideoAsset>`**  
+Updates video metadata such as name and custom properties.
+
+### Live Streaming
+
+**`createLiveStream(options: LiveStreamOptions): Promise<LiveStream>`**  
+Creates a new live stream with RTMPS ingest endpoints. Returns stream keys and playback URLs for real-time video broadcasting. Based on the [/live_inputs endpoint](https://developers.cloudflare.com/stream/stream-live/start-stream-live/).
+
+**`getLiveStream(streamId: string): Promise<LiveStream | null>`**  
+Retrieves live stream information including status, viewer count, and recording details.
+
+**`updateLiveStream(streamId: string, updates: Partial<LiveStreamOptions>): Promise<LiveStream>`**  
+Updates live stream configuration such as recording settings, access controls, and metadata.
+
+**`deleteLiveStream(streamId: string): Promise<void>`**  
+Deletes a live input. Live streams that are currently broadcasting will stop.
+
+### Video Editing
+
+**`generateCaptions(videoId: string, language: string): Promise<Caption>`**  
+Generates AI-powered captions for videos. Supports languages: cs, nl, en, fr, de, it, ja, ko, pl, pt, ru, es. Based on [captions API](https://developers.cloudflare.com/stream/edit-videos/adding-captions/).
+
+**`uploadCaptions(videoId: string, language: string, file: File): Promise<Caption>`**  
+Uploads WebVTT caption files for videos. Language must follow BCP 47 format.
+
+**`getCaptions(videoId: string): Promise<Caption[]>`**  
+Lists all captions associated with a video including auto-generated and uploaded captions.
+
+**`deleteCaptions(videoId: string, language: string): Promise<void>`**  
+Removes captions for a specific language from a video.
+
+**`createWatermark(options: WatermarkOptions): Promise<Watermark>`**  
+Creates a watermark profile from image file or URL. Based on [watermarks API](https://developers.cloudflare.com/stream/edit-videos/applying-watermarks/).
+
+**`getWatermark(watermarkId: string): Promise<Watermark>`**  
+Retrieves watermark profile information including size, position, and opacity settings.
+
+**`listWatermarkslist(): Promise<Watermark[]>`**  
+Lists all watermark profiles for the account.
+
+**`deleteWatermark(watermarkId: string): Promise<void>`**  
+Deletes a watermark profile. Won't remove watermarks from existing videos.
+
+**`clipVideo(options: ClipOptions): Promise<VideoAsset>`**  
+Creates a new video by clipping a portion of an existing video. Based on [video clipping API](https://developers.cloudflare.com/stream/edit-videos/video-clipping/).
+
+### Video Downloads and Transforms
+
+**`generateDownload(videoId: string): Promise<Download>`**  
+Enables MP4 downloads for a video. Returns download URL and processing status. Based on [downloads API](https://developers.cloudflare.com/stream/viewing-videos/download-videos/).
+
+**`getDownloads(videoId: string): Promise<Download[]>`**  
+Retrieves all available download formats and their processing status for a video.
+
+**`getThumbnail(videoId: string, options?: ThumbnailOptions): Promise<string>`**  
+Generates custom thumbnails at specified timestamps. Returns thumbnail URL.
+
+### Analytics
+
+**`getAnalytics(options?: AnalyticsOptions): Promise<StreamAnalytics>`**  
+Retrieves video and live stream analytics data. Based on [GraphQL Analytics API](https://developers.cloudflare.com/stream/getting-analytics/graphql-analytics-api/).
+
+**`getLiveViewerCount(streamId: string): Promise<ViewerCount>`**  
+Gets current viewer count for a live stream. Based on [live viewer counts](https://developers.cloudflare.com/stream/getting-analytics/live-viewer-counts/).
+
+### Search and Discovery
+
+**`search(query: string, options?: SearchOptions): Promise<VideoAsset[]>`**  
+Searches videos by name using the search parameter. Based on [search API](https://developers.cloudflare.com/stream/manage-video-library/searching/).
+
+## Examples
+
+### Video Content Analysis Agent
+
+```typescript
+// Agent that analyzes uploaded videos for content insights using AgentSDK
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class VideoAnalysisAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STREAM, MEMORY_STORE, ANALYTICS } = this.env;
+  
+      if (message.content.includes('analyze video')) {
+      const videoUrl = this.extractVideoUrl(message.content);
+      
+      if (!videoUrl) {
+        return {
+          message: "Please provide a video URL or upload a video file to analyze."
+        };
+      }
+      
+      try {
+        // Upload video from URL
+        const uploadResult = await STREAM.uploadFromUrl(videoUrl, {
+          metadata: {
+            uploadedBy: message.userId,
+            purpose: 'content_analysis',
+            timestamp: Date.now()
+          }
+        });
+        
+        // Wait for processing to complete
+        let video = await STREAM.get(uploadResult.id);
+        while (video.status === 'processing') {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          video = await STREAM.get(uploadResult.id);
+        }
+        
+        if (video.status !== 'ready') {
+          return {
+            message: "Failed to process video. Please check the URL and try again."
+          };
+        }
+        
+        // Generate transcript
+        const transcript = await STREAM.generateTranscript(video.id, 'en');
+        
+        // Analyze video content
+        const analysis = await STREAM.analyzeContent(video.id, [
+          'object_detection',
+          'scene_classification',
+          'text_recognition',
+          'face_detection'
+        ]);
+        
+        // Generate thumbnails for key scenes
+        const thumbnails = await STREAM.extractThumbnails(video.id, {
+          count: 5,
+          method: 'scene_detection'
+        });
+        
+        // Store analysis results
+        const analysisData = {
+          videoId: video.id,
+          duration: video.duration,
+          transcript: transcript.text,
+          objects: analysis.objects,
+          scenes: analysis.scenes,
+          text: analysis.detectedText,
+          faces: analysis.faces.length,
+          thumbnails: thumbnails.map(t => t.url),
+          analyzedAt: Date.now()
+        };
+        
+        await MEMORY_STORE.put(
+          `video_analysis:${video.id}`,
+          JSON.stringify(analysisData)
+        );
+        
+        // Track analytics
+        await ANALYTICS.writeDataPoint('video_analyzed', {
+          dimensions: { 
+            userId: message.userId,
+            videoId: video.id 
+          },
+          metrics: {
+            duration: video.duration,
+            objectsDetected: analysis.objects.length,
+            scenesDetected: analysis.scenes.length,
+            facesDetected: analysis.faces.length
+          }
+        });
+      
+        // Generate summary
+        const summary = `Video Analysis Complete:
+        
+📹 Duration: ${Math.round(video.duration / 60)} minutes
+🎯 Objects detected: ${analysis.objects.length} (${analysis.objects.slice(0, 3).map(o => o.label).join(', ')})
+🎬 Scenes: ${analysis.scenes.length} different scenes identified
+📝 Transcript: ${transcript.text.length} characters of speech
+👥 Faces: ${analysis.faces.length} face(s) detected
+🖼️ Key frames: ${thumbnails.length} thumbnails generated
+
+Key insights: ${this.generateInsights(analysis)}`;
+
+        return {
+          message: summary,
+          actions: [{
+            type: 'video_analysis_complete',
+            data: {
+              videoId: video.id,
+              summary: analysisData,
+              playbackUrl: video.playbackUrl,
+              thumbnails: thumbnails.map(t => t.url)
+            }
+          }]
+        };
+        
+      } catch (error) {
+        console.error('Video analysis failed:', error);
+        return {
+          message: "Failed to analyze video. Please check the URL and try again."
+        };
+      }
+    }
+    
+    if (message.content.includes('search videos')) {
+      const searchQuery = this.extractSearchQuery(message.content);
+      
+      // Search through analyzed videos
+      const videoList = await STREAM.list({
+        search: searchQuery,
+        limit: 10
+      });
+      
+      const searchResults = [];
+      
+      for (const video of videoList) {
+        const analysisKey = `video_analysis:${video.id}`;
+        const analysisData = await MEMORY_STORE.get(analysisKey);
+        
+        if (analysisData) {
+          const analysis = JSON.parse(analysisData);
+          
+          // Score relevance based on transcript and detected objects
+          const relevanceScore = this.calculateRelevance(searchQuery, analysis);
+          
+          if (relevanceScore > 0.3) {
+            searchResults.push({
+              video,
+              analysis,
+              relevanceScore,
+              matchedContent: this.findMatchedContent(searchQuery, analysis)
+            });
+          }
+        }
+      }
+      
+      // Sort by relevance
+      searchResults.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      
+      if (searchResults.length === 0) {
+        return {
+          message: `No videos found matching "${searchQuery}". Try uploading and analyzing videos first.`
+        };
+      }
+      
+      const response = `Found ${searchResults.length} video(s) matching "${searchQuery}":
+
+${searchResults.slice(0, 5).map((result, index) => 
+  `${index + 1}. Video ${result.video.id} (${Math.round(result.video.duration / 60)}min)
+     Match: ${result.matchedContent}
+     Relevance: ${Math.round(result.relevanceScore * 100)}%`
+).join('\n\n')}`;
+
+      return {
+        message: response,
+        actions: [{
+          type: 'video_search_results',
+          data: {
+            query: searchQuery,
+            results: searchResults.slice(0, 5)
+          }
+        }]
+      };
+    }
+    
+    return { message: "Send me a video URL to analyze or search for existing videos!" };
+  }
+  
+  private extractVideoUrl(content: string): string | null {
+    const urlRegex = /(https?:\/\/[^\s]+\.(mp4|mov|avi|mkv|webm))/i;
+    const match = content.match(urlRegex);
+    return match ? match[0] : null;
+  }
+  
+  private extractSearchQuery(content: string): string {
+    const match = content.match(/search videos?\s+(.+)/i);
+    return match ? match[1].trim() : '';
+  }
+  
+  private generateInsights(analysis: any): string {
+    // Generate insights based on analysis data
+    return `Primary objects: ${analysis.objects.slice(0, 3).map(o => o.label).join(', ')}`;
+  }
+  
+  private calculateRelevance(query: string, analysis: any): number {
+    // Simple relevance scoring based on transcript and objects
+    const queryLower = query.toLowerCase();
+    const transcript = analysis.transcript.toLowerCase();
+    const objects = analysis.objects.map(o => o.label.toLowerCase()).join(' ');
+    
+    let score = 0;
+    if (transcript.includes(queryLower)) score += 0.7;
+    if (objects.includes(queryLower)) score += 0.3;
+    
+    return Math.min(score, 1.0);
+  }
+  
+  private findMatchedContent(query: string, analysis: any): string {
+    const queryLower = query.toLowerCase();
+    
+    // Check transcript
+    if (analysis.transcript.toLowerCase().includes(queryLower)) {
+      return `Found in transcript: "${query}"`;
+    }
+    
+    // Check objects
+    const matchedObjects = analysis.objects.filter(o => 
+      o.label.toLowerCase().includes(queryLower)
+    );
+    
+    if (matchedObjects.length > 0) {
+      return `Found objects: ${matchedObjects.map(o => o.label).join(', ')}`;
+    }
+    
+    return 'General content match';
+  }
+}
+```
+
+### Live Streaming Event Agent
+
+```typescript
+// Agent that manages live streaming events and interactions using AgentSDK
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class LiveStreamingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STREAM, PUBSUB, MEMORY_STORE } = this.env;
+  
+    if (message.content.includes('start live stream')) {
+      const streamTitle = this.extractStreamTitle(message.content) || 'Live Stream';
+      
+      try {
+        // Create live stream
+        const liveStream = await STREAM.createLiveStream({
+          title: streamTitle,
+          description: `Live stream started by ${message.userId}`,
+          recording: {
+            enabled: true,
+            timeoutSeconds: 3600 // 1 hour max
+          },
+          watermark: {
+            enabled: true,
+            position: 'bottom-right'
+          },
+          metadata: {
+            hostUserId: message.userId,
+            startedAt: Date.now()
+          }
+        });
+        
+        // Store stream info
+        await MEMORY_STORE.put(
+          `live_stream:${liveStream.id}`,
+          JSON.stringify({
+            id: liveStream.id,
+            title: streamTitle,
+            hostUserId: message.userId,
+            startedAt: Date.now(),
+            status: 'created',
+            viewerCount: 0
+          })
+        );
+        
+        // Set up stream monitoring
+        await this.setupStreamMonitoring(liveStream.id);
+      
+      return {
+        message: `Live stream created! 
+
+🎥 Stream Title: ${streamTitle}
+📡 RTMP URL: ${liveStream.rtmpUrl}
+🔑 Stream Key: ${liveStream.streamKey}
+📺 Watch URL: ${liveStream.playbackUrl}
+
+Your stream is ready to receive video. Start broadcasting with your streaming software using the RTMP URL and stream key above.`,
+        actions: [{
+          type: 'live_stream_created',
+          data: {
+            streamId: liveStream.id,
+            rtmpUrl: liveStream.rtmpUrl,
+            streamKey: liveStream.streamKey,
+            playbackUrl: liveStream.playbackUrl
+          }
+        }]
+      };
+      
+    } catch (error) {
+      console.error('Failed to create live stream:', error);
+      return {
+        message: "Failed to create live stream. Please try again."
+      };
+    }
+  }
+  
+    if (message.content.includes('stream status')) {
+      const userStreams = await STREAM.list({
+        creator: message.userId,
+        status: 'live'
+      });
+      
+      if (userStreams.length === 0) {
+        return {
+          message: "You don't have any active live streams."
+        };
+      }
+      
+      const statusReports = [];
+      
+      for (const streamAsset of userStreams) {
+        const streamData = await MEMORY_STORE.get(`live_stream:${streamAsset.id}`);
+        const liveStream = await STREAM.getLiveStream(streamAsset.id);
+      
+      if (liveStream) {
+        const uptime = Math.floor((Date.now() - new Date(liveStream.startTime).getTime()) / 1000);
+        
+        statusReports.push(`
+🎥 ${liveStream.title || 'Untitled Stream'}
+📊 Status: ${liveStream.status}
+👥 Viewers: ${liveStream.viewerCount || 0}
+⏱️ Uptime: ${Math.floor(uptime / 60)}m ${uptime % 60}s
+📡 Recording: ${liveStream.recording?.enabled ? 'Yes' : 'No'}
+📺 Watch: ${liveStream.playbackUrl}`);
+      }
+    }
+    
+    return {
+      message: `Your Live Streams:\n${statusReports.join('\n')}`,
+      actions: [{
+        type: 'stream_status_report',
+        data: {
+          activeStreams: userStreams.length,
+          streams: userStreams
+        }
+      }]
+    };
+  }
+  
+    if (message.content.includes('end stream')) {
+      const streamId = this.extractStreamId(message.content);
+      
+      if (!streamId) {
+        // Find user's active streams
+        const userStreams = await STREAM.list({
+          creator: message.userId,
+          status: 'live'
+        });
+        
+        if (userStreams.length === 0) {
+          return {
+            message: "You don't have any active streams to end."
+          };
+        }
+        
+        if (userStreams.length === 1) {
+          // End the only active stream
+          const streamToEnd = userStreams[0];
+          await this.endStream(streamToEnd.id);
+          
+          return {
+            message: `Stream "${streamToEnd.title || 'Untitled'}" has been ended.`
+          };
+        } else {
+          // Multiple streams - ask user to specify
+          const streamList = userStreams.map((s, i) => 
+            `${i + 1}. ${s.title || 'Untitled'} (ID: ${s.id})`
+          ).join('\n');
+          
+          return {
+            message: `You have multiple active streams. Please specify which one to end:
+${streamList}
+
+Say "end stream [ID]" to end a specific stream.`
+          };
+        }
+      } else {
+        // End specific stream
+        await this.endStream(streamId);
+        return {
+          message: `Stream ${streamId} has been ended.`
+        };
+      }
+    }
+    
+    return { message: "Send me a command like 'start live stream [title]' or 'stream status'!" };
+  }
+  
+  private extractStreamTitle(content: string): string | null {
+    const match = content.match(/start live stream\s+(.+)/i);
+    return match ? match[1].trim() : null;
+  }
+  
+  private extractStreamId(content: string): string | null {
+    const match = content.match(/end stream\s+([a-zA-Z0-9-]+)/i);
+    return match ? match[1].trim() : null;
+  }
+
+  private async setupStreamMonitoring(streamId: string) {
+    const { PUBSUB, MEMORY_STORE, STREAM } = this.env;
+    
+    // Set up viewer count monitoring
+    setInterval(async () => {
+      try {
+        const liveStream = await STREAM.getLiveStream(streamId);
+        if (liveStream && liveStream.status === 'live') {
+          // Update viewer count
+          const streamData = await MEMORY_STORE.get(`live_stream:${streamId}`);
+          if (streamData) {
+            const data = JSON.parse(streamData);
+            data.viewerCount = liveStream.viewerCount || 0;
+            data.lastUpdate = Date.now();
+            
+            await MEMORY_STORE.put(`live_stream:${streamId}`, JSON.stringify(data));
+            
+            // Publish viewer count updates
+            await PUBSUB.publish(`stream:${streamId}:stats`, {
+              type: 'viewer_count_update',
+              viewerCount: liveStream.viewerCount,
+              timestamp: Date.now()
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Stream monitoring error:', error);
+      }
+    }, 30000); // Update every 30 seconds
+  }
+
+  private async endStream(streamId: string) {
+    const { STREAM, MEMORY_STORE, PUBSUB } = this.env;
+    
+    try {
+      const liveStream = await STREAM.getLiveStream(streamId);
+      if (liveStream) {
+        // End the live stream
+        await STREAM.updateLiveStream(streamId, { status: 'ended' });
+        
+        // Update stored data
+        const streamData = await MEMORY_STORE.get(`live_stream:${streamId}`);
+        if (streamData) {
+          const data = JSON.parse(streamData);
+          data.status = 'ended';
+          data.endedAt = Date.now();
+          data.finalViewerCount = liveStream.viewerCount || 0;
+          
+          await MEMORY_STORE.put(`live_stream:${streamId}`, JSON.stringify(data));
+        }
+        
+        // Notify subscribers
+        await PUBSUB.publish(`stream:${streamId}:events`, {
+          type: 'stream_ended',
+          streamId,
+          timestamp: Date.now()
+        });
+      }
+    } catch (error) {
+      console.error('Failed to end stream:', error);
+      throw error;
+    }
+  }
+}
+```
+
+### Video Tutorial Creation Agent
+
+```typescript
+// Agent that creates interactive video tutorials using AgentSDK
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class VideoTutorialAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STREAM, MEMORY_STORE, ANALYTICS } = this.env;
+  
+    if (message.content.includes('create tutorial')) {
+      const topic = this.extractTopic(message.content);
+      
+      if (!topic) {
+        return {
+          message: "What would you like to create a tutorial about? Please specify a topic."
+        };
+      }
+      
+      // Check if we have existing tutorial content for this topic
+      const existingTutorial = await MEMORY_STORE.get(`tutorial:${topic.toLowerCase()}`);
+      
+      if (existingTutorial) {
+        const tutorial = JSON.parse(existingTutorial);
+        return {
+          message: `I found an existing tutorial on "${topic}":
+
+📹 Video: ${tutorial.videoUrl}
+📝 Transcript: Available
+⏱️ Duration: ${Math.round(tutorial.duration / 60)} minutes
+📊 Views: ${tutorial.viewCount || 0}
+
+Would you like me to update this tutorial or create a new version?`,
+          actions: [{
+            type: 'existing_tutorial_found',
+            data: tutorial
+          }]
+        };
+      }
+      
+      // Generate tutorial script
+      const script = await this.generateTutorialScript(topic);
+      
+      // Create video from script (this would integrate with video generation)
+      const videoCreationResult = await this.createTutorialVideo(script, {
+        style: 'educational',
+        voiceover: true,
+        animations: true,
+        captions: true
+      });
+      
+      if (!videoCreationResult.success) {
+        return {
+          message: `Failed to create video tutorial for "${topic}". Please try again later.`
+        };
+      }
+      
+      // Upload generated video
+      const uploadResult = await STREAM.uploadFromUrl(videoCreationResult.videoUrl, {
+        metadata: {
+          type: 'tutorial',
+          topic: topic,
+          generatedBy: 'ai',
+          createdBy: message.userId,
+          timestamp: Date.now()
+        }
+      });
+      
+      // Wait for processing
+      let video = await STREAM.get(uploadResult.id);
+      while (video.status === 'processing') {
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        video = await STREAM.get(uploadResult.id);
+      }
+      
+      // Generate transcript and chapters
+      const transcript = await STREAM.generateTranscript(video.id);
+      const chapters = this.generateChapters(script);
+      
+      // Create interactive elements
+      const quizQuestions = this.generateQuizQuestions(script);
+      const keyTimestamps = this.identifyKeyTimestamps(transcript, script);
+      
+      // Generate thumbnails for chapters
+      const chapterThumbnails = await STREAM.extractThumbnails(video.id, {
+        timestamps: chapters.map(c => c.timestamp),
+        width: 1280,
+        height: 720
+      });
+      
+      // Store tutorial data
+      const tutorialData = {
+        id: video.id,
+        topic: topic,
+        title: script.title,
+        description: script.description,
+        videoUrl: video.playbackUrl,
+        duration: video.duration,
+        transcript: transcript.text,
+        chapters: chapters.map((chapter, index) => ({
+          ...chapter,
+          thumbnail: chapterThumbnails[index]?.url
+        })),
+        quizQuestions,
+        keyTimestamps,
+        createdBy: message.userId,
+        createdAt: Date.now(),
+        viewCount: 0,
+        rating: 0,
+        tags: this.extractTags(script.content)
+      };
+      
+      await MEMORY_STORE.put(
+        `tutorial:${topic.toLowerCase()}`,
+        JSON.stringify(tutorialData)
+      );
+      
+      // Track creation
+      await ANALYTICS.writeDataPoint('tutorial_created', {
+        dimensions: {
+          userId: message.userId,
+          topic: topic,
+          videoId: video.id
+        },
+        metrics: {
+          duration: video.duration,
+          chaptersCount: chapters.length,
+          quizQuestionsCount: quizQuestions.length
+        }
+      });
+    
+      return {
+        message: `✅ Tutorial created successfully!
+
+📚 Topic: ${topic}
+🎥 Title: ${script.title}
+⏱️ Duration: ${Math.round(video.duration / 60)} minutes
+📖 Chapters: ${chapters.length}
+❓ Quiz Questions: ${quizQuestions.length}
+
+📺 Watch: ${video.playbackUrl}
+
+Your tutorial includes:
+• Automatic captions and transcript
+• ${chapters.length} organized chapters
+• ${quizQuestions.length} interactive quiz questions
+• Key timestamps for easy navigation
+
+Ready to help others learn about ${topic}!`,
+        actions: [{
+          type: 'tutorial_created',
+          data: tutorialData
+        }]
+      };
+    }
+    
+    return { message: "Send me a tutorial topic to create, like 'create tutorial React basics'!" };
+  }
+  
+  private extractTopic(content: string): string | null {
+    const match = content.match(/create tutorial\s+(.+)/i);
+    return match ? match[1].trim() : null;
+  }
+  
+  private async generateTutorialScript(topic: string): Promise<any> {
+    // Generate tutorial script based on topic
+    return {
+      title: `Learn ${topic}`,
+      description: `A comprehensive tutorial on ${topic}`,
+      content: `Tutorial content for ${topic}`
+    };
+  }
+  
+  private async createTutorialVideo(script: any, options: any): Promise<{ success: boolean; videoUrl?: string }> {
+    // This would integrate with video generation service
+    return {
+      success: true,
+      videoUrl: 'https://example.com/generated-video.mp4'
+    };
+  }
+  
+  private generateChapters(script: any): any[] {
+    // Generate chapters from script
+    return [
+      { title: 'Introduction', timestamp: 0 },
+      { title: 'Main Content', timestamp: 60 },
+      { title: 'Summary', timestamp: 300 }
+    ];
+  }
+  
+  private generateQuizQuestions(script: any): any[] {
+    // Generate quiz questions from script
+    return [
+      { question: 'What is the main topic?', answer: script.title }
+    ];
+  }
+  
+  private identifyKeyTimestamps(transcript: any, script: any): any[] {
+    // Identify key moments in the video
+    return [
+      { label: 'Key Point 1', timestamp: 30 },
+      { label: 'Key Point 2', timestamp: 120 }
+    ];
+  }
+  
+  private extractTags(content: string): string[] {
+    // Extract relevant tags from content
+    return ['tutorial', 'educational'];
+  }
+}
+```
+
+## Best Practices
+
+### Video Processing Strategy
+
+```typescript
+// ✅ Good: Handle video processing with AgentSDK pattern
+export class VideoProcessingAgent extends AiAgentSDK {
+  async processVideoUpload(videoData: VideoInput) {
+    const { STREAM } = this.env;
+    
+    const upload = await STREAM.upload(videoData, {
+      metadata: { purpose: 'user_content' }
+    });
+    
+    // Poll for completion
+    let video = await STREAM.get(upload.id);
+    while (video.status === 'processing') {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      video = await STREAM.get(upload.id);
+    }
+    
+    return video;
+  }
+}
+```
+
+### Security and Access Control
+
+```typescript
+// ✅ Good: Use signed URLs for secure video access
+const signedUrl = await STREAM.getSignedUrl(videoId, {
+  expiresIn: 3600, // 1 hour
+  allowedIPs: [userIP],
+  downloadable: false
+});
+```
+
+### Performance Optimization
+
+```typescript
+// ✅ Good: Use appropriate video formats for different use cases
+const videoOptions = {
+  qualities: ['720p', '1080p'], // Adaptive bitrate
+  formats: ['mp4', 'webm'],     // Browser compatibility
+  thumbnails: {
+    count: 10,
+    interval: 30 // Every 30 seconds
+  }
+};
+```
+
+## Advanced Configuration
+
+### Wrangler Configuration
+
+```json
+{
+  "vars": {
+    "STREAM_ENABLED": "true",
+    "MAX_VIDEO_SIZE_MB": "500",
+    "DEFAULT_VIDEO_QUALITY": "720p"
+  },
+  "services": [
+    {
+      "binding": "STREAM",
+      "service": "stream-api"
+    }
+  ]
+}
+```
+
+### Video Processing Options
+
+- **Qualities**: 240p, 360p, 480p, 720p, 1080p, 1440p, 2160p
+- **Formats**: MP4 (H.264), WebM (VP9), HLS adaptive streaming
+- **Thumbnails**: JPEG, WebP, animated GIF previews
+- **Audio**: AAC, MP3, automatic volume normalization
+
+## Limitations
+
+- **File Size**: Maximum 5GB per video upload
+- **Duration**: Maximum 6 hours per video
+- **Live Stream**: Maximum 12 hours per stream
+- **Concurrent**: 1,000 concurrent live streams per account
+- **Storage**: Unlimited storage with automatic cleanup options
+
+## Related Services
+
+- **[Storage (R2)](/en/developers/platform/storage)** - Raw video file storage and backup
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Video performance metrics
+- **[Pub/Sub](/en/developers/platform/pubsub)** - Real-time stream event notifications
+
+---
+
+## Official Documentation
+
+- [Cloudflare Stream](https://developers.cloudflare.com/stream/)
+- [Stream API](https://developers.cloudflare.com/stream/api/) 

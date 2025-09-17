@@ -1,0 +1,286 @@
+export const metadata = {
+  "title": "Middleware",
+  "description": "Extending agent functionality with middleware for tool injection and AI SDK customization"
+};
+
+**Extend your agents with custom functionality.** Middleware provides a powerful way for services to inject tools or override AI SDK functionality, enabling seamless integration of external services and custom behavior in your agents.
+
+## Key Features
+
+- **Tool Injection**: Dynamically add tools to agents from external services
+- **AI SDK Override**: Customize how AI SDK methods behave
+- **Service Integration**: Connect agents with external platforms and APIs
+- **Extensible Architecture**: Build reusable middleware components
+
+## Getting Started
+
+### Basic Middleware Implementation
+
+Create a simple logging middleware:
+
+```typescript
+import { Middleware } from '@nullshot/agent';
+
+export class LoggingMiddleware implements AiSdkMiddleware {
+  async beforeStreamText(params: StreamTextParams): Promise<StreamTextParams> {
+    console.log('🚀 Starting text generation:', {
+      model: params.model,
+      messageCount: params.messages?.length || 0
+    });
+    
+    return params;
+  }
+  
+  async afterStreamText(result: StreamTextResult, params: StreamTextParams): Promise<StreamTextResult> {
+    console.log('✅ Text generation completed:', {
+      usage: result.usage
+    });
+    
+    return result;
+  }
+}
+```
+
+### Agent Integration
+
+Add middleware to your agent through the services parameter:
+
+```typescript
+import { AiSdkAgent } from '@nullshot/agent';
+import { openai } from '@ai-sdk/openai';
+
+export class MyAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel, services?: Service[]) {
+    super(state, env, model, [new LoggingMiddleware(), ...(services || [])]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    // Middleware will automatically be applied to this call
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      system: 'You are a helpful assistant.',
+      maxSteps: 5,
+      stopWhen: stepCountIs(5),
+      experimental_toolCallStreaming: true,
+    });
+
+    return result.toTextStreamResponse();
+  }
+}
+```
+
+## Middleware Methods
+
+### Pre-processing Hooks
+
+**`beforeStreamText(params: StreamTextParams): Promise<StreamTextParams>`**  
+Called before `streamText` executes. Modify parameters or add context before AI processing.
+
+**`beforeGenerateText(params: GenerateTextParams): Promise<GenerateTextParams>`**  
+Called before `generateText` executes. Transform input parameters or inject additional context.
+
+**`beforeGenerateObject(params: GenerateObjectParams): Promise<GenerateObjectParams>`**  
+Called before `generateObject` executes. Modify schema or parameters before structured generation.
+
+### Post-processing Hooks
+
+**`afterStreamText(result: StreamTextResult, params: StreamTextParams): Promise<StreamTextResult>`**  
+Called after `streamText` completes. Transform results or log completion data.
+
+**`afterGenerateText(result: GenerateTextResult, params: GenerateTextParams): Promise<GenerateTextResult>`**  
+Called after `generateText` completes. Modify the final result or perform cleanup.
+
+**`afterGenerateObject(result: GenerateObjectResult, params: GenerateObjectParams): Promise<GenerateObjectResult>`**  
+Called after `generateObject` completes. Transform structured output or validate results.
+
+### Tool and Context Injection
+
+**`injectTools(existingTools: Record<string, any>): Promise<Record<string, any>>`**  
+Add new tools to the agent's available tool set. Merge with existing tools.
+
+**`injectContext(messages: any[], context: AgentContext): Promise<any[]>`**  
+Modify or enhance the message array before AI processing. Add system messages or context.
+
+## Examples
+
+### Tool Injection Middleware
+
+```typescript
+import { tool } from 'ai';
+import { z } from 'zod';
+
+export class CustomToolsMiddleware implements AiSdkMiddleware {
+  async injectTools(existingTools: Record<string, any>): Promise<Record<string, any>> {
+    return {
+      ...existingTools,
+      getCurrentTime: tool({
+        description: 'Get the current date and time',
+        parameters: z.object({}),
+        execute: async () => {
+          return new Date().toISOString();
+        },
+      }),
+      calculateSum: tool({
+        description: 'Calculate the sum of two numbers',
+        parameters: z.object({
+          a: z.number().describe('First number'),
+          b: z.number().describe('Second number'),
+        }),
+        execute: async ({ a, b }) => {
+          return (a + b).toString();
+        },
+      }),
+    };
+  }
+}
+```
+
+### Context Enhancement Middleware
+
+```typescript
+export class ContextMiddleware implements AiSdkMiddleware {
+  async injectContext(messages: any[], context: AgentContext): Promise<any[]> {
+    const systemMessage = {
+      role: 'system',
+      content: `Current session: ${context.sessionId}. User timezone: ${context.timezone || 'UTC'}`
+    };
+    
+    return [systemMessage, ...messages];
+  }
+  
+  async beforeStreamText(params: StreamTextParams): Promise<StreamTextParams> {
+    if (params.system) {
+      params.system = `${params.system}\n\nRemember to be helpful and concise.`;
+    }
+    
+    return params;
+  }
+}
+```
+
+### Response Transformation Middleware
+
+```typescript
+export class ResponseMiddleware implements AiSdkMiddleware {
+  async afterStreamText(result: StreamTextResult, params: StreamTextParams): Promise<StreamTextResult> {
+    // Add metadata to the response
+    if (result.text) {
+      const enhanced = {
+        ...result,
+        metadata: {
+          processedAt: new Date().toISOString(),
+          model: params.model,
+          tokenCount: result.usage?.totalTokens || 0
+        }
+      };
+      
+      return enhanced;
+    }
+    
+    return result;
+  }
+}
+```
+
+### Multiple Middleware Composition
+
+```typescript
+export class MultiServiceAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel) {
+    super(state, env, model, [
+      new LoggingMiddleware(),
+      new CustomToolsMiddleware(),
+      new ContextMiddleware(),
+      new ResponseMiddleware()
+    ]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    // All middleware will be applied in sequence
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      system: 'You are an advanced AI assistant.',
+      maxSteps: 10,
+      stopWhen: stepCountIs(10),
+      experimental_toolCallStreaming: true,
+    });
+
+    return result.toTextStreamResponse();
+  }
+}
+```
+
+## Error Handling
+
+```typescript
+export class ErrorHandlingMiddleware implements AiSdkMiddleware {
+  async beforeStreamText(params: StreamTextParams): Promise<StreamTextParams> {
+    try {
+      // Validate parameters
+      if (!params.messages || params.messages.length === 0) {
+        throw new Error('No messages provided');
+      }
+      
+      return params;
+    } catch (error) {
+      console.error('Middleware error:', error);
+      throw error;
+    }
+  }
+  
+  async afterStreamText(result: StreamTextResult, params: StreamTextParams): Promise<StreamTextResult> {
+    try {
+      return result;
+    } catch (error) {
+      console.error('Post-processing error:', error);
+      return result; // Return original result to prevent cascade failures
+    }
+  }
+}
+```
+
+## Best Practices
+
+### Middleware Ordering
+
+Apply middleware in logical order - each middleware processes in sequence:
+
+```typescript
+// Processing order: Logging → Tools → Context → Response
+super(env,..., [
+    new LoggingMiddleware(),      // First: Log requests
+    new CustomToolsMiddleware(), // Second: Add tools
+    new ContextMiddleware(),     // Third: Enhance context
+    new ResponseMiddleware()     // Last: Transform responses
+  ]
+);
+```
+
+### Keep Middleware Focused
+
+Each middleware should have a single responsibility:
+
+```typescript
+// ✅ Good: Single purpose
+export class TimestampMiddleware implements AiSdkMiddleware {
+  async injectContext(messages: any[], context: AgentContext): Promise<any[]> {
+    const timestamp = { role: 'system', content: `Current time: ${new Date().toISOString()}` };
+    return [timestamp, ...messages];
+  }
+}
+
+// ❌ Avoid: Multiple responsibilities
+export class EverythingMiddleware implements AiSdkMiddleware {
+  // Don't do logging, tools, context, and validation all in one middleware
+}
+```
+
+## External Service Integration
+
+For complex integrations like toolbox services, see the [Toolbox Service implementation](https://github.com/null-shot/typescript-agent-framework/blob/main/packages/agent/src/services/toolbox.ts) as an example of middleware usage.
+
+## Next Steps
+
+- **[Sessions](/docs/developers/agents-framework/sessions)** - Learn how middleware integrates with session management
+- **[AI SDK](/docs/developers/agents-framework/ai-sdk)** - Explore AI SDK integration patterns
+- **[Platform Services](/docs/developers/platform/overview)** - Connect middleware with platform services
+
+Middleware provides a clean way to extend agent functionality without modifying core agent logic, enabling better separation of concerns and reusable components.

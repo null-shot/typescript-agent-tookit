@@ -1,0 +1,336 @@
+export const metadata = {
+  "title": "Cache",
+  "description": "Cloudflare edge caching using response headers and Workers Cache API for performance optimization"
+};
+
+**Accelerate your agents with intelligent edge caching.** Automatically cache content based on response headers and file extensions across 330+ global locations. For manual control, use the Workers Cache API to cache third-party API responses and custom content.
+
+## How Caching Works
+
+The platform respects origin server cache headers in the following order:
+
+### Do NOT Cache
+
+- `Cache-Control: private, no-store, no-cache, max-age=0`
+- `Set-Cookie` header exists
+- HTTP method is not `GET`
+
+### Cache Please
+
+- `Cache-Control: public` with `max-age > 0`
+- `Expires` header set to future date
+- Default file extensions (CSS, JS, images, etc.)
+
+## Default Cached File Extensions
+
+The following file types are automatically cached
+
+- **Static Assets**: CSS, JS, WOFF, WOFF2, TTF, ICO, SVG
+- **Images**: PNG, JPG, JPEG, GIF, WEBP, AVIF, BMP, TIFF, TIF
+- **Media**: MP4, MP3, OGG, FLAC, MKV, AVI, WEBM
+- **Documents**: PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, EPS
+- **Archives**: ZIP, RAR, TAR, GZ, 7Z, BZ2, ZST
+- **Other**: APK, BIN, CLASS, DMG, EJS, EOT, EXE, ISO, JAR, MID, MIDI, OTF, PICT, PLS, PS, SWF
+
+**Note**: HTML and JSON are NOT cached by default.
+
+## TypeScript API Reference
+
+You can access the cache API via the global `caches` object available in **Agents** and **MCP Tools**:
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+func example() {
+  // Access the default cache namespace
+  const cache = caches.default;
+  
+  // Or access named cache namespaces
+  const customCache = await caches.open('custom-namespace');
+}
+```
+
+### Cache Management
+
+**`caches.default`**  
+Access to the default cache namespace. This is the primary cache storage that persists across Worker executions and is shared globally.
+
+**`caches.open(cacheName: string): Promise<Cache>`**  
+Opens a named cache namespace. Each namespace is isolated and allows you to organize cached content by purpose or application area.
+
+### Cache Operations
+
+**`cache.match(request: Request | string): Promise<Response | undefined>`**  
+Retrieves a cached response for the given request. Returns `undefined` if no cached response exists. The request can be a full Request object or a string URL.
+
+**`cache.put(request: Request | string, response: Response): Promise<void>`**  
+Stores a response in the cache for the given request key. The response must be a valid Response object. Note that the response body can only be consumed once, so use `response.clone()` if you need to use the response elsewhere.
+
+**`cache.delete(request: Request | string): Promise<boolean>`**  
+Removes a cached response for the given request key. Returns `true` if a cached response was found and deleted, `false` if no cached response existed.
+
+**`cache.keys(request?: Request | string): Promise<ReadonlyArray<Request>>`**  
+Returns an array of Request objects representing all cached requests. If a request parameter is provided, only matching requests are returned.
+
+## Workers Cache API
+
+Use the Cache API for manual control when automatic caching isn't sufficient:
+
+### Third-Party API Caching
+
+```typescript
+// Cache external API responses manually
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    
+    if (url.pathname.startsWith('/api/weather')) {
+      const location = url.searchParams.get('location');
+      const cacheKey = new Request(`https://cache.example.com/weather/${location}`);
+      
+      // Check cache first
+      let response = await caches.default.match(cacheKey);
+      
+      if (!response) {
+        console.log(`Cache miss for weather: ${location}`);
+        
+        // Fetch from third-party API
+        const apiResponse = await fetch(`https://weather-api.com/current?location=${location}`, {
+          headers: { 'Authorization': `Bearer ${env.WEATHER_API_KEY}` }
+        });
+        
+        // Create cacheable response
+        response = new Response(apiResponse.body, {
+          status: apiResponse.status,
+          statusText: apiResponse.statusText,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=300', // 5 minutes
+            'Access-Control-Allow-Origin': '*'
+          }
+        });
+        
+        // Store in cache
+        ctx.waitUntil(caches.default.put(cacheKey, response.clone()));
+      } else {
+        console.log(`Cache hit for weather: ${location}`);
+      }
+      
+      return response;
+    }
+    
+    return new Response('Not found', { status: 404 });
+  }
+};
+```
+
+### Agent Response Caching
+
+```typescript
+// Cache agent processing results
+export async function processMessage(
+  message: AgentMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  
+  if (message.content.includes('analyze document')) {
+    const documentId = extractDocumentId(message.content);
+    const cacheKey = new Request(`https://cache.agent.com/analysis/${documentId}`);
+    
+    // Check if analysis is cached
+    const cachedAnalysis = await caches.default.match(cacheKey);
+    
+    if (cachedAnalysis) {
+      const analysis = await cachedAnalysis.json();
+      return {
+        message: `Document analysis (cached): ${analysis.summary}`,
+        actions: [{
+          type: 'document_analysis',
+          data: { ...analysis, source: 'cache' }
+        }]
+      };
+    }
+    
+    // Perform expensive analysis
+    const document = await platform.storage.get(`documents/${documentId}`);
+    const analysis = await performComplexAnalysis(document);
+    
+    // Cache the result for 1 hour
+    const cacheResponse = new Response(JSON.stringify(analysis), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600'
+      }
+    });
+    
+    await caches.default.put(cacheKey, cacheResponse.clone());
+    
+    return {
+      message: `Document analysis: ${analysis.summary}`,
+      actions: [{
+        type: 'document_analysis',
+        data: { ...analysis, source: 'computed' }
+      }]
+    };
+  }
+}
+```
+
+## Cache Control Headers
+
+### CDN-Specific Headers
+
+```typescript
+// Fine-tune edge caching behavior
+const response = new Response(data, {
+  headers: {
+    'Cache-Control': 'public, max-age=300',        // Browser cache: 5 min
+    'CDN-Cache-Control': 'public, max-age=3600',   // Edge cache: 1 hour
+    'Cloudflare-CDN-Cache-Control': 'max-age=86400' // CF specific: 24 hours
+  }
+});
+```
+
+## Cache Purging
+
+### Purge Specific URLs
+
+```typescript
+// Purge cache when content updates
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    
+    if (request.method === 'POST' && url.pathname === '/api/purge') {
+      const { urls } = await request.json();
+      
+      // Purge from Workers cache
+      for (const key of keys) {
+        await caches.default.delete(key);
+      }
+      
+      return new Response('Cache purged', { status: 200 });
+    }
+  }
+};
+```
+
+## Tiered Caching Strategy
+
+### Layered Cache Approach
+
+```typescript
+// Implement tiered caching: Workers Cache → Edge Cache → Origin
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const cacheKey = new Request(request.url);
+    
+    // Layer 1: Workers Cache (fastest)
+    let response = await caches.default.match(cacheKey);
+    
+    if (!response) {
+      // Layer 2: Fetch with edge caching
+      response = await fetch(request, {
+        cf: {
+          cacheEverything: true,
+          cacheTtl: 3600,
+          cacheKey: request.url
+        }
+      });
+      
+      if (response.ok) {
+        // Store in Workers cache for next time
+        const cacheableResponse = new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: {
+            ...response.headers,
+            'Cache-Control': 'public, max-age=300'
+          }
+        });
+        
+        ctx.waitUntil(caches.default.put(cacheKey, cacheableResponse.clone()));
+        return cacheableResponse;
+      }
+    }
+    
+    return response;
+  }
+};
+```
+
+## Best Practices
+
+### ✅ Recommended Patterns
+
+```typescript
+// 1. Use response headers for automatic caching
+const response = new Response(data, {
+  headers: {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'public, max-age=3600',
+    'Vary': 'Accept-Encoding' // Cache different versions for compression
+  }
+});
+
+// 2. Cache expensive third-party API calls
+const cacheKey = `api:${endpoint}:${JSON.stringify(params)}`;
+let cached = await caches.default.match(cacheKey);
+if (!cached) {
+  cached = await fetch(thirdPartyAPI);
+  await caches.default.put(cacheKey, cached.clone());
+}
+
+// 3. Implement cache warming for critical content
+async function warmCache(urls: string[]) {
+  const promises = urls.map(url => 
+    fetch(url).then(response => 
+      caches.default.put(url, response.clone())
+    )
+  );
+  await Promise.all(promises);
+}
+```
+
+### ❌ Anti-Patterns
+
+```typescript
+// ❌ Don't cache user-specific data globally
+const userResponse = new Response(userData, {
+  headers: { 'Cache-Control': 'public, max-age=3600' } // Wrong!
+});
+
+// ✅ Use private caching for user data
+const userResponse = new Response(userData, {
+  headers: { 'Cache-Control': 'private, max-age=300' }
+});
+
+// ❌ Don't cache without considering invalidation
+await caches.default.put(key, response); // No way to update!
+
+// ✅ Include cache tags for easy purging
+const response = new Response(data, {
+  headers: {
+    'Cache-Control': 'public, max-age=3600',
+    'Cache-Tag': 'user:123,profile'
+  }
+});
+```
+
+## Cache Limits
+
+- **Object Size**: 512MB maximum per cached response
+- **Request Size**: 128MB maximum for cache keys
+- **Cache Storage**: Shared across all Workers in your account
+- **TTL Range**: 1 second minimum, no maximum
+
+## Related Services
+
+- **[Storage (R2)](/en/developers/platform/storage)** - Long-term object storage
+- **[Analytics Engine](/en/developers/platform/analytics-storage)** - Track cache performance
+
+---
+
+## Official Documentation
+
+- [Default Cache Behavior](https://developers.cloudflare.com/cache/concepts/default-cache-behavior/)
+- [Workers Cache API](https://developers.cloudflare.com/workers/examples/cache-api/)

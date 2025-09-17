@@ -1,0 +1,226 @@
+export const metadata = {
+  "title": "Sessions",
+  "description": "Managing user sessions and routing conversations with Hono and Durable Objects"
+};
+
+# Sessions
+
+Sessions enable you to maintain conversation context across multiple interactions. Every agent conversation gets its own unique session powered by Cloudflare Durable Objects, giving you persistent, stateful conversations that scale automatically.
+
+## The Magic: Durable Objects
+
+The **key insight** is that each session maps to a unique Durable Object instance. When you route to `/agent/chat/abc123`, you're talking to the same persistent object every time. This is where the magic happens - your conversation state, memory, and context live in that specific instance.
+
+```typescript
+// This is the core pattern - route to a unique AGENT instance
+const agent = AGENT.get(id); // Gets the specific Durable Object for this session
+```
+
+## Quick Start: Default Router
+
+The simplest setup uses our default Hono router. It automatically handles session IDs and routes to the right agent instance:
+
+```typescript
+import { Hono } from 'hono';
+import { createDefaultAgentRouter } from '@typescript-agent-framework/core';
+import { MyAgent } from './agents/my-agent';
+
+const app = new Hono<{ Bindings: Env }>();
+
+// Default router handles /agent/chat/:sessionId automatically
+app.route('/agent', createDefaultAgentRouter(MyAgent));
+
+export default {
+  fetch: app.fetch,
+};
+```
+
+**That's it!** You now have:
+- `POST /agent/chat/:sessionId` - Send messages to a specific session
+- Automatic Durable Object routing
+- Persistent conversation state
+
+## How Session Routing Works
+
+The router implementation ([source](https://github.com/null-shot/typescript-agent-framework/blob/main/packages/agent/src/router.ts)) follows this pattern:
+
+1. **Extract session ID** from the URL path (`/agent/chat/abc123`)
+2. **Generate Durable Object ID** from the session ID  
+3. **Route to specific agent instance** using `AGENT.get(id)`
+4. **Maintain conversation state** in that persistent object
+
+```typescript
+// Simplified router logic
+app.post('/chat/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId');
+  const id = env.AGENT.idFromName(sessionId); // Create consistent DO ID
+  const agent = env.AGENT.get(id); // Get the persistent instance
+  return agent.fetch(c.req.raw); // Route to the agent
+});
+```
+
+## Session ID Patterns
+
+### UUID Sessions (Default)
+```bash
+POST /agent/chat/550e8400-e29b-41d4-a716-446655440000
+```
+
+### User-Based Sessions  
+```bash
+POST /agent/chat/user-12345-conversation-1
+POST /agent/chat/user-12345-conversation-2
+```
+
+### Custom Session Naming
+```bash
+POST /agent/chat/support-ticket-67890
+POST /agent/chat/onboarding-flow-step-3
+```
+
+The session ID becomes the Durable Object name, so make it meaningful!
+
+## Custom Routers
+
+You don't need the default router. Here's a minimal custom implementation ([example](https://github.com/null-shot/typescript-agent-template/blob/main/src/index.ts)):
+
+```typescript
+import { Hono } from 'hono';
+
+const app = new Hono<{ Bindings: Env }>();
+
+app.post('/chat/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId');
+  
+  // Create Durable Object ID from session
+  const id = c.env.AGENT.idFromName(sessionId);
+  const agent = c.env.AGENT.get(id);
+  
+  // Forward the request to the agent
+  return agent.fetch(c.req.raw);
+});
+
+export default {
+  fetch: app.fetch,
+};
+```
+
+### JWT-Based User Sessions (Coming Soon)
+
+Here's how you might implement user-specific sessions with JWT tokens:
+
+```typescript
+import { Hono } from 'hono';
+import { jwt } from 'hono/jwt';
+
+const app = new Hono<{ Bindings: Env }>();
+
+// Middleware to verify JWT and extract user ID
+app.use('/chat/*', jwt({ secret: 'your-secret' }));
+
+app.post('/chat/:sessionId', async (c) => {
+  const payload = c.get('jwtPayload');
+  const userId = payload.sub; // Extract user ID from JWT
+  const sessionId = c.req.param('sessionId');
+  
+  // Check if user owns this session (database lookup)
+  const session = await c.env.DB.prepare(
+    'SELECT * FROM sessions WHERE id = ? AND user_id = ?'
+  ).bind(sessionId, userId).first();
+  
+  if (!session) {
+    return c.json({ error: 'Session not found' }, 404);
+  }
+  
+  // Route to the agent for this session
+  const id = c.env.AGENT.idFromName(sessionId);
+  const agent = c.env.AGENT.get(id);
+  
+  return agent.fetch(c.req.raw);
+});
+```
+
+## The Agent Implementation
+
+Your actual agent ([source](https://github.com/null-shot/typescript-agent-framework/blob/main/packages/agent/src/agent.ts)) runs inside the Durable Object:
+
+```typescript
+export class MyAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+    this.model = openai('gpt-4o-mini');
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const sessionId = message.metadata?.sessionId || 'default';
+    
+    // This is where the magic happens - persistent conversation state
+    const result = await this.streamText(sessionId, {
+      model: this.model,
+      system: 'You are a helpful assistant.',
+      messages: [{ role: 'user', content: message.content }],
+      maxSteps: 5,
+    });
+
+    return result.toDataStreamResponse();
+  }
+}
+```
+
+## Key Points
+
+### ✅ Do This
+- **Always route to AGENT.get(id)** - This is crucial for persistence
+- **Use meaningful session IDs** - They become Durable Object names
+- **Let the framework handle state** - It's built for this
+
+### ❌ Avoid This
+- Don't try to manage state outside the agent
+- Don't create new Durable Object IDs for the same session
+- Don't skip the routing layer - it handles the magic
+
+## Production Patterns
+
+### Health Checks
+```typescript
+app.get('/health', (c) => {
+  return c.json({ status: 'ok', timestamp: Date.now() });
+});
+```
+
+### Session Management API
+```typescript
+app.get('/sessions/:userId', async (c) => {
+  const userId = c.req.param('userId');
+  
+  // Get user's sessions from database
+  const sessions = await c.env.DB.prepare(
+    'SELECT id, created_at, last_activity FROM sessions WHERE user_id = ?'
+  ).bind(userId).all();
+  
+  return c.json(sessions);
+});
+```
+
+### Session Cleanup
+```typescript
+app.delete('/sessions/:sessionId', async (c) => {
+  const sessionId = c.req.param('sessionId');
+  
+  // Clean up database record
+  await c.env.DB.prepare(
+    'DELETE FROM sessions WHERE id = ?'
+  ).bind(sessionId).run();
+  
+  // The Durable Object will be cleaned up automatically by Cloudflare
+  return c.json({ message: 'Session deleted' });
+});
+```
+
+## Next Steps
+
+- **[Agent SDK](./agent-sdk)** - Build your agent logic
+- **[AI SDK Integration](./ai-sdk)** - Add AI models to your agents  
+- **[Platform Services](../platform/overview)** - Storage, analytics, and more
+
+Remember: The session is just a routing mechanism. The real magic happens inside your Durable Object agent instance. Keep it simple, let the framework handle the complexity, and focus on building great conversational experiences! 🚀 

@@ -1,0 +1,800 @@
+export const metadata = {
+  "title": "Email Routing",
+  "description": "Intelligent email processing and automated response systems for agent workflows"
+};
+
+# Email Routing
+
+**Transform emails into agent conversations.** Cloudflare Email Routing enables your AI agents to process incoming emails, send automated responses, and integrate email communication seamlessly into your agent workflows. Perfect for customer support, lead processing, and intelligent email automation.
+
+## Key Features
+
+- **Incoming Email Processing**: Automatically route and process incoming emails to your agents
+- **Intelligent Parsing**: Extract structured data from email content, attachments, and headers
+- **Automated Responses**: Send contextual replies based on email content and intent
+- **Anti-Spam Protection**: Built-in spam filtering and security scanning
+- **Global Delivery**: Reliable email delivery through Cloudflare's global network
+
+## TypeScript API Reference
+
+### Email Processing
+
+**`onEmailReceived(handler: EmailHandler): void`**  
+Registers a handler function that processes incoming emails. The handler receives parsed email data and can trigger agent workflows.
+
+**`parseEmail(emailData: RawEmail): ParsedEmail`**  
+Parses raw email data into structured format including sender, recipients, subject, body, and attachments.
+
+**`extractIntent(email: ParsedEmail): EmailIntent`**  
+Analyzes email content to determine user intent, sentiment, and required actions. Uses AI to understand the purpose of the email.
+
+### Email Sending
+
+**`send(emailOptions: SendEmailOptions): Promise<EmailDeliveryResult>`**  
+Sends an email with support for HTML content, attachments, and delivery tracking. Includes anti-spam compliance features.
+
+**`sendTemplate(templateId: string, data: TemplateData, recipient: string): Promise<EmailDeliveryResult>`**  
+Sends an email using a pre-defined template with dynamic data substitution. Useful for consistent branding and automated responses.
+
+**`reply(originalEmail: ParsedEmail, content: string, options?: ReplyOptions): Promise<EmailDeliveryResult>`**  
+Replies to an email maintaining proper threading and context. Automatically handles Reply-To headers and conversation tracking.
+
+### Email Management
+
+**`getConversation(conversationId: string): Promise<EmailConversation>`**  
+Retrieves an email conversation thread with all messages, participants, and metadata for context-aware responses.
+
+**`searchEmails(query: EmailSearchQuery): Promise<EmailSearchResult[]>`**  
+Searches through processed emails using content, sender, date, and other criteria for building knowledge bases.
+
+**`markAsProcessed(emailId: string, result: ProcessingResult): Promise<void>`**  
+Marks an email as processed and stores the agent's response or action taken for audit and analytics purposes.
+
+## Agent Examples
+
+### Customer Support Email Agent
+
+```typescript
+// Agent that processes customer support emails automatically
+export async function onEmailReceived(
+  email: ParsedEmail,
+  platform: PlatformServices
+): Promise<void> {
+  const { emailRouting, memoryStore, analytics, databases } = platform;
+  
+  // Extract customer information
+  const customerEmail = email.from.address;
+  const subject = email.subject;
+  const content = email.body.text || email.body.html;
+  
+  // Get or create customer record
+  let customer = await databases.query(
+    'SELECT * FROM customers WHERE email = ? LIMIT 1',
+    [customerEmail]
+  );
+  
+  if (customer.length === 0) {
+    // New customer
+    const newCustomerId = await databases.query(
+      'INSERT INTO customers (email, first_contact, status) VALUES (?, ?, ?)',
+      [customerEmail, Date.now(), 'new']
+    );
+    
+    customer = [{
+      id: newCustomerId.insertId,
+      email: customerEmail,
+      first_contact: Date.now(),
+      status: 'new'
+    }];
+  }
+  
+  const customerId = customer[0].id;
+  
+  // Analyze email intent and urgency
+  const intent = await emailRouting.extractIntent(email);
+  const urgency = determineUrgency(intent, subject, content);
+  
+  // Store email conversation
+  await memoryStore.put(
+    `email_conversation:${email.messageId}`,
+    JSON.stringify({
+      messageId: email.messageId,
+      customerId,
+      customerEmail,
+      subject,
+      content,
+      intent: intent.type,
+      urgency,
+      receivedAt: email.receivedAt,
+      status: 'pending'
+    })
+  );
+  
+  // Handle different types of inquiries
+  if (intent.type === 'technical_support') {
+    await handleTechnicalSupport(email, intent, customerId, platform);
+  } else if (intent.type === 'billing_inquiry') {
+    await handleBillingInquiry(email, intent, customerId, platform);
+  } else if (intent.type === 'general_question') {
+    await handleGeneralInquiry(email, intent, customerId, platform);
+  } else if (urgency === 'high') {
+    await escalateToHuman(email, intent, customerId, platform);
+  } else {
+    await sendAutoResponse(email, intent, customerId, platform);
+  }
+  
+  // Track analytics
+  await analytics.track('email_processed', {
+    customerId,
+    intentType: intent.type,
+    urgency,
+    responseType: 'automated',
+    processingTime: Date.now() - email.receivedAt
+  });
+}
+
+async function handleTechnicalSupport(
+  email: ParsedEmail,
+  intent: EmailIntent,
+  customerId: number,
+  platform: PlatformServices
+) {
+  const { emailRouting, databases, memoryStore } = platform;
+  
+  // Extract technical details
+  const issue = extractTechnicalIssue(email.body.text);
+  const productInfo = extractProductInfo(email.body.text);
+  
+  // Check knowledge base for similar issues
+  const similarIssues = await searchKnowledgeBase(issue.description);
+  
+  if (similarIssues.length > 0 && similarIssues[0].confidence > 0.8) {
+    // Found a good match in knowledge base
+    const solution = similarIssues[0].solution;
+    
+    await emailRouting.reply(email, `
+Hello,
+
+Thank you for contacting our technical support team. I've analyzed your issue regarding "${issue.description}" and found a solution that should help.
+
+**Solution:**
+${solution.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}
+
+**Additional Resources:**
+- Documentation: ${solution.documentationUrl}
+- Video Tutorial: ${solution.videoUrl || 'Not available'}
+
+If this doesn't resolve your issue, please reply to this email with:
+1. Your product version/model
+2. Steps you've already tried
+3. Any error messages you're seeing
+
+Our technical team will then provide personalized assistance.
+
+Best regards,
+Technical Support Team
+
+Reference ID: ${email.messageId}
+    `.trim(), {
+      priority: 'normal',
+      category: 'technical_support'
+    });
+    
+    // Log successful automated resolution
+    await memoryStore.put(
+      `support_ticket:${email.messageId}`,
+      JSON.stringify({
+        customerId,
+        issue: issue.description,
+        solution: solution.id,
+        resolvedAutomatically: true,
+        resolvedAt: Date.now()
+      })
+    );
+    
+  } else {
+    // Escalate to human support
+    await escalateToHuman(email, intent, customerId, platform);
+  }
+}
+
+async function handleBillingInquiry(
+  email: ParsedEmail,
+  intent: EmailIntent,
+  customerId: number,
+  platform: PlatformServices
+) {
+  const { emailRouting, databases } = platform;
+  
+  // Get customer billing info
+  const billingInfo = await databases.query(
+    'SELECT * FROM billing WHERE customer_id = ? ORDER BY created_at DESC LIMIT 5',
+    [customerId]
+  );
+  
+  const inquiry = extractBillingInquiry(email.body.text);
+  
+  if (inquiry.type === 'invoice_request') {
+    // Send recent invoices
+    const invoices = billingInfo.filter(b => b.type === 'invoice');
+    
+    await emailRouting.reply(email, `
+Hello,
+
+Here are your recent invoices:
+
+${invoices.map(invoice => 
+  `• Invoice #${invoice.invoice_number} - $${invoice.amount} (${new Date(invoice.created_at).toLocaleDateString()})`
+).join('\n')}
+
+You can also access all your invoices in your account dashboard: https://dashboard.example.com/billing
+
+If you need invoices from a different time period, please let me know the specific dates.
+
+Best regards,
+Billing Team
+    `.trim());
+    
+  } else if (inquiry.type === 'payment_issue') {
+    // Handle payment issues with care
+    await emailRouting.reply(email, `
+Hello,
+
+Thank you for contacting us about your payment. I understand this can be concerning, and I'm here to help.
+
+Based on your account, I can see the following recent payment activity:
+${billingInfo.slice(0, 3).map(payment => 
+  `• ${new Date(payment.created_at).toLocaleDateString()} - $${payment.amount} (${payment.status})`
+).join('\n')}
+
+To ensure we address your specific concern accurately, I'm connecting you with our billing specialist who will:
+1. Review your account in detail
+2. Explain any charges or payment issues
+3. Provide immediate assistance if needed
+
+You should receive a response within 2 business hours.
+
+Best regards,
+Billing Team
+
+Reference: ${email.messageId}
+    `.trim());
+    
+    // Flag for human review
+    await escalateToHuman(email, intent, customerId, platform, 'billing_specialist');
+  }
+}
+
+async function sendAutoResponse(
+  email: ParsedEmail,
+  intent: EmailIntent,
+  customerId: number,
+  platform: PlatformServices
+) {
+  const { emailRouting } = platform;
+  
+  const responseTemplate = getResponseTemplate(intent.type);
+  
+  await emailRouting.reply(email, `
+Hello,
+
+Thank you for your email. I've received your message and wanted to acknowledge it right away.
+
+${responseTemplate.acknowledgment}
+
+Based on your message, it appears you're interested in ${intent.summary}. ${responseTemplate.nextSteps}
+
+Expected response time: ${getExpectedResponseTime(intent.urgency)}
+
+If your inquiry is urgent, please call our support line at (555) 123-4567.
+
+Best regards,
+Customer Service Team
+
+Reference ID: ${email.messageId}
+  `.trim(), {
+    priority: intent.urgency === 'high' ? 'high' : 'normal'
+  });
+}
+```
+
+### Lead Processing Email Agent
+
+```typescript
+// Agent that processes sales leads from contact forms and emails
+export async function onEmailReceived(
+  email: ParsedEmail,
+  platform: PlatformServices
+): Promise<void> {
+  const { emailRouting, databases, memoryStore, analytics } = platform;
+  
+  // Check if this is a lead-related email
+  const isLead = email.to.some(recipient => 
+    recipient.address.includes('sales@') || 
+    recipient.address.includes('contact@') ||
+    recipient.address.includes('info@')
+  );
+  
+  if (!isLead) return;
+  
+  // Extract lead information
+  const leadData = extractLeadInfo(email);
+  const intent = await emailRouting.extractIntent(email);
+  
+  // Score the lead quality
+  const leadScore = calculateLeadScore(leadData, intent, email);
+  
+  // Store lead in database
+  const leadId = await databases.query(`
+    INSERT INTO leads (
+      email, name, company, phone, source, 
+      intent, score, raw_message, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [
+    leadData.email,
+    leadData.name,
+    leadData.company,
+    leadData.phone,
+    'email',
+    intent.type,
+    leadScore,
+    email.body.text,
+    Date.now()
+  ]);
+  
+  // Process based on lead score and intent
+  if (leadScore >= 80) {
+    // High-quality lead - immediate response
+    await sendHighPriorityLeadResponse(email, leadData, platform);
+    await notifySalesTeam(leadData, leadScore, platform);
+  } else if (leadScore >= 50) {
+    // Medium-quality lead - nurture sequence
+    await startNurtureSequence(email, leadData, platform);
+  } else {
+    // Low-quality lead - general information
+    await sendGeneralInfoResponse(email, leadData, platform);
+  }
+  
+  // Track lead metrics
+  await analytics.track('lead_received', {
+    leadId: leadId.insertId,
+    score: leadScore,
+    intent: intent.type,
+    source: 'email',
+    company: leadData.company,
+    responseType: leadScore >= 80 ? 'high_priority' : 'standard'
+  });
+}
+
+async function sendHighPriorityLeadResponse(
+  email: ParsedEmail,
+  leadData: LeadData,
+  platform: PlatformServices
+) {
+  const { emailRouting } = platform;
+  
+  await emailRouting.reply(email, `
+Hello ${leadData.name || 'there'},
+
+Thank you for your interest in our solutions! I'm excited to learn more about ${leadData.company || 'your company'} and how we can help you achieve your goals.
+
+Based on your inquiry, it sounds like you're looking for ${leadData.intent || 'solutions that can make a real impact'}. We've helped similar companies achieve:
+
+• 40% reduction in operational costs
+• 3x faster time-to-market
+• 99.9% system reliability
+
+I'd love to schedule a brief 15-minute call to understand your specific needs and show you how our platform can deliver similar results for ${leadData.company || 'your team'}.
+
+Are you available for a quick call this week? I have openings:
+• Tuesday 2:00 PM - 4:00 PM EST
+• Wednesday 10:00 AM - 12:00 PM EST  
+• Thursday 1:00 PM - 3:00 PM EST
+
+You can also book directly on my calendar: https://cal.example.com/sales
+
+Looking forward to speaking with you!
+
+Best regards,
+Sarah Johnson
+Senior Solutions Consultant
+${leadData.phone ? `\nP.S. I notice you provided your phone number (${leadData.phone}). I may give you a quick call later today if that's convenient.` : ''}
+  `.trim(), {
+    priority: 'high',
+    category: 'sales_lead'
+  });
+}
+
+async function startNurtureSequence(
+  email: ParsedEmail,
+  leadData: LeadData,
+  platform: PlatformServices
+) {
+  const { emailRouting, memoryStore } = platform;
+  
+  // Send initial response
+  await emailRouting.reply(email, `
+Hello ${leadData.name || 'there'},
+
+Thank you for reaching out! I appreciate your interest in learning more about our solutions.
+
+Based on your message, it sounds like you're exploring options for ${leadData.intent || 'improving your operations'}. You're not alone - many companies in ${leadData.industry || 'your industry'} are facing similar challenges.
+
+I've put together some resources that might be helpful:
+
+📊 **Case Study**: How ${leadData.industry || 'companies like yours'} achieved 35% efficiency gains
+🎥 **Demo Video**: 5-minute overview of our platform in action
+📋 **ROI Calculator**: Estimate your potential savings
+
+Download these resources: https://resources.example.com/starter-pack
+
+I'll also be sending you some industry insights over the next few days that I think you'll find valuable.
+
+Best regards,
+Marketing Team
+
+P.S. If you'd like to skip the education phase and jump straight to a demo, just reply "DEMO" and I'll connect you with our solutions team immediately.
+  `.trim());
+  
+  // Schedule nurture sequence
+  await scheduleNurtureEmails(leadData, platform);
+}
+
+async function scheduleNurtureEmails(
+  leadData: LeadData,
+  platform: PlatformServices
+) {
+  const { memoryStore } = platform;
+  
+  const nurtureSequence = [
+    {
+      delay: 2 * 24 * 60 * 60 * 1000, // 2 days
+      template: 'industry_insights',
+      subject: `${leadData.industry || 'Industry'} Trends You Should Know`
+    },
+    {
+      delay: 5 * 24 * 60 * 60 * 1000, // 5 days
+      template: 'success_stories',
+      subject: 'How Companies Like Yours Are Winning'
+    },
+    {
+      delay: 8 * 24 * 60 * 60 * 1000, // 8 days
+      template: 'demo_offer',
+      subject: 'Ready for a 15-Minute Demo?'
+    }
+  ];
+  
+  // Store nurture schedule
+  await memoryStore.put(
+    `nurture_sequence:${leadData.email}`,
+    JSON.stringify({
+      leadData,
+      sequence: nurtureSequence,
+      startedAt: Date.now(),
+      currentStep: 0
+    })
+  );
+}
+```
+
+### Newsletter and Content Distribution Agent
+
+```typescript
+// Agent that manages newsletter subscriptions and content distribution
+export async function onEmailReceived(
+  email: ParsedEmail,
+  platform: PlatformServices
+): Promise<void> {
+  const { emailRouting, databases, memoryStore } = platform;
+  
+  // Check if this is a subscription-related email
+  const content = email.body.text.toLowerCase();
+  
+  if (content.includes('subscribe') || content.includes('newsletter')) {
+    await handleSubscription(email, platform);
+  } else if (content.includes('unsubscribe')) {
+    await handleUnsubscription(email, platform);
+  } else if (content.includes('preferences') || content.includes('update')) {
+    await handlePreferencesUpdate(email, platform);
+  }
+}
+
+async function handleSubscription(
+  email: ParsedEmail,
+  platform: PlatformServices
+) {
+  const { emailRouting, databases } = platform;
+  
+  const subscriberEmail = email.from.address;
+  const preferences = extractSubscriptionPreferences(email.body.text);
+  
+  // Check if already subscribed
+  const existing = await databases.query(
+    'SELECT * FROM newsletter_subscribers WHERE email = ?',
+    [subscriberEmail]
+  );
+  
+  if (existing.length > 0) {
+    // Update existing subscription
+    await databases.query(
+      'UPDATE newsletter_subscribers SET preferences = ?, updated_at = ? WHERE email = ?',
+      [JSON.stringify(preferences), Date.now(), subscriberEmail]
+    );
+    
+    await emailRouting.reply(email, `
+Hello!
+
+Your newsletter preferences have been updated successfully!
+
+Current subscriptions:
+${preferences.topics.map(topic => `• ${topic}`).join('\n')}
+
+Frequency: ${preferences.frequency || 'Weekly'}
+
+You can update your preferences anytime by replying to any newsletter or visiting: https://newsletter.example.com/preferences
+
+Welcome back!
+
+Best regards,
+Newsletter Team
+    `.trim());
+    
+  } else {
+    // New subscription
+    await databases.query(`
+      INSERT INTO newsletter_subscribers (
+        email, preferences, subscribed_at, status, source
+      ) VALUES (?, ?, ?, ?, ?)
+    `, [
+      subscriberEmail,
+      JSON.stringify(preferences),
+      Date.now(),
+      'active',
+      'email_request'
+    ]);
+    
+    await emailRouting.reply(email, `
+🎉 Welcome to our newsletter!
+
+Thank you for subscribing! You're now part of our community of ${await getSubscriberCount()} readers who stay ahead of the curve.
+
+Your subscription preferences:
+${preferences.topics.map(topic => `• ${topic}`).join('\n')}
+
+Frequency: ${preferences.frequency || 'Weekly'}
+
+**What to expect:**
+• Industry insights and trends
+• Exclusive content and early access
+• Tips and best practices
+• Community highlights
+
+Your first newsletter will arrive ${getNextNewsletterDate()}. 
+
+Manage preferences: https://newsletter.example.com/preferences
+Unsubscribe: https://newsletter.example.com/unsubscribe
+
+Thanks for joining us!
+
+The Newsletter Team
+    `.trim());
+    
+    // Send welcome series
+    await scheduleWelcomeSeries(subscriberEmail, preferences, platform);
+  }
+}
+
+async function scheduleWelcomeSeries(
+  email: string,
+  preferences: any,
+  platform: PlatformServices
+) {
+  const { memoryStore } = platform;
+  
+  const welcomeSeries = [
+    {
+      delay: 1 * 60 * 60 * 1000, // 1 hour
+      subject: 'Getting Started - Your Welcome Guide',
+      template: 'welcome_guide'
+    },
+    {
+      delay: 3 * 24 * 60 * 60 * 1000, // 3 days
+      subject: 'Top Resources Our Community Loves',
+      template: 'top_resources'
+    },
+    {
+      delay: 7 * 24 * 60 * 60 * 1000, // 1 week
+      subject: 'How Are We Doing? Quick Feedback',
+      template: 'feedback_request'
+    }
+  ];
+  
+  await memoryStore.put(
+    `welcome_series:${email}`,
+    JSON.stringify({
+      email,
+      preferences,
+      series: welcomeSeries,
+      startedAt: Date.now(),
+      currentStep: 0
+    })
+  );
+}
+
+// Function to send newsletter to all subscribers
+export async function sendNewsletter(
+  content: NewsletterContent,
+  platform: PlatformServices
+): Promise<void> {
+  const { emailRouting, databases, analytics } = platform;
+  
+  // Get all active subscribers
+  const subscribers = await databases.query(
+    'SELECT * FROM newsletter_subscribers WHERE status = "active"'
+  );
+  
+  let sentCount = 0;
+  let errorCount = 0;
+  
+  for (const subscriber of subscribers) {
+    try {
+      const preferences = JSON.parse(subscriber.preferences);
+      
+      // Check if subscriber wants this type of content
+      if (shouldReceiveContent(content, preferences)) {
+        // Personalize content
+        const personalizedContent = personalizeNewsletter(content, subscriber, preferences);
+        
+        await emailRouting.send({
+          to: subscriber.email,
+          subject: personalizedContent.subject,
+          html: personalizedContent.html,
+          text: personalizedContent.text,
+          headers: {
+            'List-Unsubscribe': `https://newsletter.example.com/unsubscribe?email=${subscriber.email}`,
+            'List-ID': 'newsletter@example.com'
+          },
+          tracking: {
+            opens: true,
+            clicks: true,
+            unsubscribes: true
+          }
+        });
+        
+        sentCount++;
+      }
+    } catch (error) {
+      console.error(`Failed to send newsletter to ${subscriber.email}:`, error);
+      errorCount++;
+    }
+  }
+  
+  // Track newsletter performance
+  await analytics.track('newsletter_sent', {
+    contentId: content.id,
+    totalSubscribers: subscribers.length,
+    sentCount,
+    errorCount,
+    deliveryRate: sentCount / subscribers.length
+  });
+}
+```
+
+## Best Practices
+
+### Email Processing
+
+```typescript
+// ✅ Good: Always validate and sanitize email content
+function processEmailSafely(email: ParsedEmail) {
+  const sanitizedContent = sanitizeHtml(email.body.html);
+  const validatedSender = validateEmailAddress(email.from.address);
+  
+  if (!validatedSender) {
+    throw new Error('Invalid sender address');
+  }
+  
+  return {
+    ...email,
+    body: { ...email.body, html: sanitizedContent }
+  };
+}
+```
+
+### Response Generation
+
+```typescript
+// ✅ Good: Personalize responses based on available data
+function generatePersonalizedResponse(email: ParsedEmail, customerData: any) {
+  const name = customerData.name || extractNameFromEmail(email.from.address);
+  const company = customerData.company || extractCompanyFromSignature(email.body.text);
+  
+  return {
+    greeting: name ? `Hello ${name},` : 'Hello,',
+    context: company ? `I understand you're reaching out on behalf of ${company}.` : '',
+    signature: getPersonalizedSignature(customerData.tier)
+  };
+}
+```
+
+### Anti-Spam Compliance
+
+```typescript
+// ✅ Good: Include required unsubscribe mechanisms
+const emailOptions = {
+  to: recipient,
+  subject: 'Your Newsletter',
+  html: content,
+  headers: {
+    'List-Unsubscribe': `<https://example.com/unsubscribe?email=${recipient}>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    'List-ID': 'newsletter@example.com'
+  }
+};
+```
+
+## Configuration
+
+### Wrangler Configuration
+
+```json
+{
+  "send_email": [
+    {
+      "name": "EMAIL_SENDER",
+      "destination_address": "support@yourdomain.com"
+    }
+  ],
+  "vars": {
+    "EMAIL_DOMAIN": "yourdomain.com",
+    "SUPPORT_EMAIL": "support@yourdomain.com",
+    "SALES_EMAIL": "sales@yourdomain.com"
+  }
+}
+```
+
+### Email Routing Rules
+
+```json
+{
+  "routing_rules": [
+    {
+      "matcher": { "type": "literal", "value": "support@yourdomain.com" },
+      "action": { "type": "worker", "value": "support-agent" }
+    },
+    {
+      "matcher": { "type": "literal", "value": "sales@yourdomain.com" },
+      "action": { "type": "worker", "value": "sales-agent" }
+    }
+  ]
+}
+```
+
+## Security Features
+
+- **SPF/DKIM/DMARC**: Automatic email authentication
+- **Spam Filtering**: Advanced spam and phishing protection  
+- **Content Scanning**: Automatic malware and virus scanning
+- **Rate Limiting**: Protection against email bombing
+- **Encryption**: TLS encryption in transit
+
+## Limitations
+
+- **Message Size**: Maximum 25MB per email (including attachments)
+- **Recipients**: Maximum 50 recipients per email
+- **Send Rate**: 200 emails per minute per worker
+- **Storage**: Email data retained for 30 days
+- **Attachments**: Common file types supported, executables blocked
+
+## Related Services
+
+- **[Memory Store](/en/developers/platform/memory-store)** - Store conversation history and customer data
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Track email performance metrics
+- **[Workflows](/en/developers/platform/workflows)** - Orchestrate complex email sequences
+
+---
+
+## Official Documentation
+
+- [Email Routing](https://developers.cloudflare.com/email-routing/)
+- [Email Workers](https://developers.cloudflare.com/email-routing/email-workers/) 

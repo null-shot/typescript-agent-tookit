@@ -1,0 +1,325 @@
+export const metadata = {
+  "title": "TODO List Example",
+  "description": "Build a complete TODO List MCP server with full CRUD operations using TypeScript"
+};
+
+**Ready to see MCP in action?** This example showcases a complete TODO management system built with our TypeScript MCP Framework. You'll see full CRUD operations, type-safe schemas, and production-ready patterns in just a few files.
+
+## What You'll Build
+
+A fully functional TODO MCP server with:
+
+- ✅ **Create** - Add new tasks with validation
+- 📖 **Read** - List and search todos
+- ✏️ **Update** - Modify existing tasks  
+- 🗑️ **Delete** - Remove completed tasks
+- 🔍 **Smart Filtering** - By status, priority, and date
+- 📊 **Rich Resources** - Data access for AI agents
+
+## Architecture Overview
+
+```
+todo-mcp-server/
+├── src/
+│   ├── index.ts       # Entry point & routing
+│   ├── server.ts      # MCP server configuration  
+│   ├── tools.ts       # CRUD tool implementations
+│   ├── resources.ts   # Data resources for agents
+│   ├── schema.ts      # Zod schemas & validation
+│   └── repository.ts  # Data persistence layer
+```
+
+The architecture follows clean separation of concerns with type-safe interfaces throughout.
+
+## Key Implementation Patterns
+
+### 1. Type-Safe Schemas (`schema.ts`)
+
+Clean data models with full validation:
+
+```typescript
+import { z } from 'zod';
+
+export const TodoSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  description: z.string().optional(),
+  completed: z.boolean().default(false),
+  priority: z.enum(['low', 'medium', 'high']).default('medium'),
+  dueDate: z.string().datetime().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type Todo = z.infer<typeof TodoSchema>;
+```
+
+### 2. CRUD Tools (`tools.ts`)
+
+Complete set of operations with error handling:
+
+```typescript
+export function setupTodoTools(server: McpServer) {
+  // CREATE Todo
+  server.tool(
+    'createTodo',
+    'Create a new todo item',
+    {
+      title: z.string().describe('Todo title'),
+      description: z.string().optional().describe('Optional description'),
+      priority: z.enum(['low', 'medium', 'high']).optional(),
+      dueDate: z.string().datetime().optional()
+    },
+    async ({ title, description, priority, dueDate }) => {
+      const todo = await todoRepository.create({
+        title, description, priority, dueDate
+      });
+      
+      return {
+        content: [{
+          type: "text",
+          text: JSON.stringify({ success: true, todo })
+        }]
+      };
+    }
+  );
+
+  // READ Todos with filtering
+  server.tool(
+    'listTodos',
+    'List todos with optional filtering',
+    {
+      completed: z.boolean().optional(),
+      priority: z.enum(['low', 'medium', 'high']).optional()
+    },
+    async ({ completed, priority }) => {
+      const todos = await todoRepository.findAll({ completed, priority });
+      return {
+        content: [{
+          type: "text", 
+          text: JSON.stringify({ success: true, todos })
+        }]
+      };
+    }
+  );
+}
+```
+
+### 3. SQL Database & Repository (`repository.ts`)
+
+**Powered by Durable Object SQLite storage** - This example uses [agent local SQL storage](/en/developers/platform/d1-database#agent-and-mcp-tool-local-storage-methods) for zero-latency data access and immediate consistency.
+
+#### Why Durable Object Storage?
+
+✅ **Zero Network Latency** - Sub-millisecond data access  
+✅ **No Additional Costs** - Included in Durable Object pricing  
+✅ **Immediate Consistency** - No replication lag  
+✅ **ACID Compliance** - Full transaction support  
+✅ **Perfect for Agent State** - Isolated, persistent storage per agent
+
+#### SQL Schema Definition
+
+From the [TypeScript Agent Framework schema](https://github.com/null-shot/typescript-agent-framework/blob/main/examples/crud-mcp/src/schema.ts):
+
+```typescript
+// SQL table schema
+const TODO_TABLE_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS todos (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT,
+    completed BOOLEAN DEFAULT 0,
+    priority TEXT DEFAULT 'medium',
+    due_date TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  
+  CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(completed);
+  CREATE INDEX IF NOT EXISTS idx_todos_priority ON todos(priority);
+  CREATE INDEX IF NOT EXISTS idx_todos_due_date ON todos(due_date);
+`;
+```
+
+#### Repository Implementation
+
+Clean data layer with SQL persistence:
+
+```typescript
+export class TodoRepository {
+  constructor(private storage: SqlStorage) {
+    this.initializeDatabase();
+  }
+
+  private async initializeDatabase() {
+    // Apply SQL schema on startup
+    await this.storage.exec(TODO_TABLE_SCHEMA);
+  }
+
+  async create(data: Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>): Promise<Todo> {
+    const todo: Todo = {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      completed: false,
+      priority: 'medium',
+      ...data
+    };
+
+    await this.storage
+      .prepare(`
+        INSERT INTO todos (id, title, description, completed, priority, due_date, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      .bind(
+        todo.id, todo.title, todo.description, 
+        todo.completed ? 1 : 0, todo.priority, 
+        todo.dueDate, todo.createdAt, todo.updatedAt
+      )
+      .run();
+
+    return todo;
+  }
+
+  async findAll(filters?: { completed?: boolean; priority?: string }): Promise<Todo[]> {
+    let sql = 'SELECT * FROM todos WHERE 1=1';
+    const params: any[] = [];
+    
+    if (filters?.completed !== undefined) {
+      sql += ' AND completed = ?';
+      params.push(filters.completed ? 1 : 0);
+    }
+    
+    if (filters?.priority) {
+      sql += ' AND priority = ?';
+      params.push(filters.priority);
+    }
+    
+    sql += ' ORDER BY created_at DESC';
+    
+    const result = await this.storage
+      .prepare(sql)
+      .bind(...params)
+      .all();
+
+    return result.map(this.mapRowToTodo);
+  }
+
+  private mapRowToTodo(row: any): Todo {
+    return {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      completed: Boolean(row.completed),
+      priority: row.priority,
+      dueDate: row.due_date,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+}
+```
+
+**Key Benefits**: The repository pattern abstracts SQL complexity while leveraging the [powerful SQL storage capabilities](/en/developers/platform/d1-database) built into our platform.
+
+### 4. Smart Resources (`resources.ts`)
+
+Rich data access for AI agents:
+
+```typescript
+export function setupTodoResources(server: McpServer) {
+  // Live todo statistics
+  server.resource(
+    'todo-stats',
+    'resource://todo-stats',
+    async () => {
+      const todos = await todoRepository.findAll();
+      const stats = {
+        total: todos.length,
+        completed: todos.filter(t => t.completed).length,
+        byPriority: {
+          high: todos.filter(t => t.priority === 'high').length,
+          medium: todos.filter(t => t.priority === 'medium').length,
+          low: todos.filter(t => t.priority === 'low').length
+        }
+      };
+
+      return {
+        contents: [{
+          uri: 'resource://todo-stats',
+          mimeType: 'application/json',
+          text: JSON.stringify(stats, null, 2)
+        }]
+      };
+    }
+  );
+}
+```
+
+### 5. Server Configuration (`server.ts`)
+
+Bringing it all together:
+
+```typescript
+import { McpHonoServerDO } from "@nullshot/mcp-framework";
+import { setupTodoTools } from "./tools";
+import { setupTodoResources } from "./resources";
+
+export class TodoMCPServer extends McpHonoServerDO<Env> {
+  getImplementation(): Implementation {
+    return {
+      name: 'TodoMCPServer',
+      version: '1.0.0',
+    };
+  }
+
+  configureServer(server: McpServer): void {
+    setupTodoTools(server);
+    setupTodoResources(server);
+  }
+}
+```
+
+## Why This Pattern Works
+
+**🛡️ Type Safety** - Zod schemas ensure data integrity at runtime  
+**🧩 Modular Design** - Each concern is cleanly separated  
+**🚀 AI-Ready** - Resources provide rich context for agents  
+**🔧 Extensible** - Easy to add new operations and filters  
+**✅ Production Ready** - Error handling and validation built-in
+
+## Test It Out
+
+```bash
+# Clone the example
+git clone https://github.com/null-shot/typescript-agent-framework
+cd examples/crud-mcp
+
+# Install & run
+pnpm install
+pnpm dev
+
+# Test in MCP Inspector at http://localhost:6274
+```
+
+## What Makes This Special
+
+This isn't just another CRUD example. It demonstrates:
+
+- **Schema-First Design** - Types drive everything
+- **Agent-Friendly Resources** - AI can understand your data
+- **Real Error Handling** - Production-grade validation
+- **Clean Architecture** - Maintainable and extensible
+
+## Next Steps
+
+Ready to build your own? Check out:
+
+- **[Complete Source Code](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/crud-mcp)** - Full implementation with tests
+- **[Getting Started Guide](/en/developers/mcp-framework/getting-started)** - Build from scratch
+- **[Integration Testing](/en/developers/mcp-framework/integration-testing)** - Test your CRUD operations
+- **[Agent Framework](/en/developers/agents-framework/overview)** - Connect to AI agents
+
+---
+
+🎯 **Ready to build?** This TODO example shows how clean architecture and MCP make building AI-ready tools a breeze. Start with the [complete source](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/crud-mcp) and adapt it to your needs! 

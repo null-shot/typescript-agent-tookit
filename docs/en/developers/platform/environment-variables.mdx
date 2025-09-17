@@ -1,0 +1,615 @@
+export const metadata = {
+  "title": "Environment Variables",
+  "description": "Configure non-sensitive application settings for different deployment environments using Cloudflare Workers environment variables."
+};
+
+Environment variables are a type of binding that attach text strings or JSON values to your Worker. They provide a flexible way to manage non-sensitive configuration data that changes between deployments, such as API endpoints, feature flags, and environment-specific settings.
+
+For sensitive information like API keys or passwords, use [secrets](/en/developers/platform/secrets) instead of environment variables.
+
+## Add Environment Variables via Wrangler Config
+
+To add environment variables using Wrangler, define text and JSON values via the `wrangler.json` file.
+
+### Basic Configuration
+
+```json
+// wrangler.json
+{
+  "name": "my-agent",
+  "vars": {
+    "API_HOST": "api.example.com",
+    "ENVIRONMENT": "production", 
+    "ENABLE_ANALYTICS": "true",
+    "MAX_CONTEXT_LENGTH": "4000",
+    "SERVICE_CONFIG": "{\"timeout\": 5000, \"retries\": 3}"
+  }
+}
+```
+
+### Accessing Environment Variables
+
+Environment variables are available through the `env` parameter in your Agent or MCP Server:
+
+## Alternative Access via Node.js process.env
+
+For Node.js compatibility, you can also access environment variables through `process.env` by enabling the `nodejs_compat_populate_process_env` compatibility flag in your Wrangler configuration.
+
+### Enabling Node.js process.env Support
+
+Add the compatibility flag to your `wrangler.json`:
+
+```json
+// wrangler.json
+{
+  "name": "my-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+  "vars": {
+    "API_HOST": "api.example.com",
+    "ENVIRONMENT": "production",
+    "ENABLE_ANALYTICS": "true"
+  }
+}
+```
+
+### Runtime Access Only
+
+**⚠️ Critical Limitation**: `process.env` variables are only available during runtime execution (inside functions, handlers, and methods). They **cannot** be accessed at module initialization time.
+
+```typescript
+// ❌ WRONG - This will NOT work!
+// process.env is empty at module initialization
+const config = {
+  apiHost: process.env.API_HOST, // Will be undefined!
+  environment: process.env.ENVIRONMENT // Will be undefined!
+};
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // config.apiHost will be undefined here
+    return new Response(`API Host: ${config.apiHost}`);
+  }
+};
+```
+
+```typescript
+// ✅ CORRECT - Access process.env inside runtime functions
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Access process.env inside the function - this works!
+    const config = {
+      apiHost: process.env.API_HOST,
+      environment: process.env.ENVIRONMENT,
+      analyticsEnabled: process.env.ENABLE_ANALYTICS === 'true'
+    };
+    
+    return new Response(`API Host: ${config.apiHost}, Env: ${config.environment}`);
+  }
+};
+```
+
+### When to Use process.env vs env Parameter
+
+**Use `env` parameter when:**
+- Building Cloudflare Workers-specific applications
+- You need reliable access to all bindings (D1, KV, R2, etc.)
+- Working with TypeScript and want full type safety
+- Performance is critical (direct access, no compatibility layer)
+
+**Use `process.env` when:**
+- Migrating Node.js applications to Cloudflare Workers
+- Using third-party libraries that expect `process.env`
+- Maintaining compatibility with existing Node.js codebases
+- Working with tools that automatically populate `process.env`
+
+**Remember:** Both approaches access the same underlying environment variables, but `process.env` requires the compatibility flag and only works at runtime.
+
+### Agent Integration
+
+Access environment variables within your Agent class:
+
+```typescript
+// src/agents/ConfigurableAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class ConfigurableAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+    this.initializeWithConfig();
+  }
+  
+  private initializeWithConfig() {
+    // Access environment variables through this.env
+    const { API_HOST, ENABLE_ANALYTICS, MAX_CONTEXT_LENGTH } = this.env;
+    
+    console.log('Agent initialized with config:', {
+      apiHost: API_HOST,
+      analyticsEnabled: ENABLE_ANALYTICS === 'true',
+      maxContext: parseInt(MAX_CONTEXT_LENGTH) || 4000
+    });
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    // Use environment variables to control behavior
+    const isAnalyticsEnabled = this.env.ENABLE_ANALYTICS === 'true';
+    const maxContextLength = parseInt(this.env.MAX_CONTEXT_LENGTH) || 4000;
+    
+    if (isAnalyticsEnabled) {
+      // Track message processing
+      await this.trackEvent('message_processed', {
+        messageLength: message.content.length,
+        userId: message.userId
+      });
+    }
+    
+    // Apply context length limits
+    const trimmedContent = message.content.length > maxContextLength 
+      ? message.content.substring(0, maxContextLength)
+      : message.content;
+    
+    return {
+      message: `Processed: ${trimmedContent}`,
+      config: {
+        apiHost: this.env.API_HOST,
+        analyticsEnabled: isAnalyticsEnabled
+      }
+    };
+  }
+}
+```
+
+### MCP Integration
+
+Access environment variables in your MCP Server:
+
+```typescript
+// src/mcp/ConfigurableMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class ConfigurableMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'get-config': async () => {
+        // Access environment variables through this.env
+        const { API_HOST, ENVIRONMENT, ENABLE_ANALYTICS } = this.env;
+        
+        return {
+          apiHost: API_HOST,
+          environment: ENVIRONMENT,
+          analyticsEnabled: ENABLE_ANALYTICS === 'true',
+          timestamp: Date.now()
+        };
+      },
+      
+      'process-with-config': async ({ data }: { data: string }) => {
+        const maxContextLength = parseInt(this.env.MAX_CONTEXT_LENGTH) || 4000;
+        const serviceConfig = JSON.parse(this.env.SERVICE_CONFIG);
+        
+        // Apply configuration-based processing
+        const processedData = data.length > maxContextLength 
+          ? data.substring(0, maxContextLength)
+          : data;
+        
+        return {
+          success: true,
+          processed: processedData,
+          config: serviceConfig,
+          environment: this.env.ENVIRONMENT
+        };
+      }
+    };
+  }
+}
+```
+
+## Configuring Multiple Environments
+
+Environments in Wrangler let you specify different configurations for the same Worker. Environment variables (`vars`) are not inherited by environments and must be specified for each environment.
+
+### Environment-Specific Configuration
+
+```json
+// wrangler.json
+{
+  "name": "my-agent",
+  "vars": {
+    "API_HOST": "api.example.com",
+    "ENVIRONMENT": "development",
+    "ENABLE_DEBUG": "true",
+    "LOG_LEVEL": "debug"
+  },
+  "env": {
+    "staging": {
+      "vars": {
+        "API_HOST": "staging-api.example.com",
+        "ENVIRONMENT": "staging",
+        "ENABLE_DEBUG": "true",
+        "LOG_LEVEL": "info"
+      }
+    },
+    "production": {
+      "vars": {
+        "API_HOST": "production-api.example.com",
+        "ENVIRONMENT": "production",
+        "ENABLE_DEBUG": "false", 
+        "LOG_LEVEL": "warn"
+      }
+    }
+  }
+}
+```
+
+### Deploy to Specific Environments
+
+Use the `--env` flag to deploy to specific environments:
+
+```bash
+# Deploy to staging
+npx wrangler deploy --env staging
+
+# Deploy to production  
+npx wrangler deploy --env production
+
+# Develop with staging environment
+npx wrangler dev --env staging
+```
+
+## Local Development with .dev.vars
+
+For local development, create a `.dev.vars` file in the root of your project to define variables that will be used when running `wrangler dev`. This file should be formatted like a `dotenv` file.
+
+### Basic .dev.vars File
+
+```bash
+# .dev.vars
+API_HOST=localhost:3000
+ENVIRONMENT=development
+ENABLE_DEBUG=true
+LOG_LEVEL=debug
+DATABASE_URL=sqlite:./dev.db
+```
+
+### Environment-Specific .dev.vars Files
+
+To use different variables for each environment during development, create files named `.dev.vars.<environment-name>`:
+
+```bash
+# .dev.vars.staging
+API_HOST=staging-api.example.com
+ENVIRONMENT=staging
+ENABLE_DEBUG=true
+LOG_LEVEL=info
+```
+
+```bash
+# .dev.vars.production
+API_HOST=production-api.example.com
+ENVIRONMENT=production
+ENABLE_DEBUG=false
+LOG_LEVEL=warn
+```
+
+When you run `wrangler dev --env staging`, the `.dev.vars.staging` file will be loaded instead of the default `.dev.vars` file.
+
+**Important:** Add `.dev.vars*` files to your `.gitignore` to prevent accidentally committing local development configuration:
+
+```gitignore
+# .gitignore
+.dev.vars
+.dev.vars.*
+```
+
+## Environment Variables vs Secrets
+
+### Use Environment Variables For:
+- API endpoints and hostnames
+- Feature flags and configuration toggles
+- Non-sensitive limits and thresholds
+- Environment identifiers
+- Public configuration values
+
+### Use Secrets For:
+- API keys and tokens
+- Database passwords
+- Encryption keys
+- Any sensitive data
+
+For sensitive information, use [secrets](/en/developers/platform/secrets) instead of environment variables. Secret values are encrypted and not visible in the Cloudflare dashboard after you define them.
+
+## Practical Examples
+
+### Feature Flag Configuration
+
+```typescript
+export interface Env {
+  ENABLE_ADVANCED_ANALYTICS: string;
+  ENABLE_CACHING: string;
+  ENABLE_RATE_LIMITING: string;
+  MAX_REQUESTS_PER_MINUTE: string;
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Parse feature flags
+    const features = {
+      advancedAnalytics: env.ENABLE_ADVANCED_ANALYTICS === 'true',
+      caching: env.ENABLE_CACHING === 'true', 
+      rateLimiting: env.ENABLE_RATE_LIMITING === 'true'
+    };
+    
+    const maxRequestsPerMinute = parseInt(env.MAX_REQUESTS_PER_MINUTE) || 60;
+    
+    // Use feature flags to control behavior
+    if (features.rateLimiting) {
+      // Implement rate limiting logic
+    }
+    
+    if (features.caching) {
+      // Check cache before processing
+    }
+    
+    return new Response('OK');
+  },
+};
+```
+
+### Environment-Aware Configuration
+
+```typescript
+export interface Env {
+  ENVIRONMENT: string;
+  API_BASE_URL: string;
+  DATABASE_TIMEOUT_MS: string;
+  LOG_LEVEL: string;
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const environment = env.ENVIRONMENT;
+    const isDevelopment = environment === 'development';
+    const isProduction = environment === 'production';
+    
+    // Environment-specific configuration
+    const config = {
+      apiBaseUrl: env.API_BASE_URL,
+      databaseTimeout: parseInt(env.DATABASE_TIMEOUT_MS) || 5000,
+      logLevel: env.LOG_LEVEL || 'info',
+      verboseLogging: isDevelopment,
+      retryAttempts: isProduction ? 3 : 1
+    };
+    
+    if (config.verboseLogging) {
+      console.log('Request received:', {
+        url: request.url,
+        method: request.method,
+        environment,
+        config
+      });
+    }
+    
+    return new Response(`Environment: ${environment}`);
+  },
+};
+```
+
+### JSON Configuration
+
+```typescript
+export interface Env {
+  SERVICE_LIMITS: string;
+  TENANT_CONFIG: string;
+}
+
+interface ServiceLimits {
+  maxFileSize: number;
+  dailyRequests: number;
+  rateLimitPerMinute: number;
+}
+
+interface TenantConfig {
+  features: string[];
+  branding: {
+    name: string;
+    color: string;
+  };
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Parse JSON configuration
+    const serviceLimits: ServiceLimits = JSON.parse(env.SERVICE_LIMITS);
+    const tenantConfig: TenantConfig = JSON.parse(env.TENANT_CONFIG);
+    
+    // Use parsed configuration
+    const maxFileSize = serviceLimits.maxFileSize;
+    const features = tenantConfig.features;
+    
+    return new Response(`Max file size: ${maxFileSize}MB`);
+  },
+};
+```
+
+## Wrangler Configuration Examples
+
+### Complete Multi-Environment Setup
+
+```json
+// wrangler.json
+{
+  "name": "agent-platform",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+  "vars": {
+    "ENVIRONMENT": "development",
+    "API_BASE_URL": "https://dev-api.example.com",
+    "ENABLE_DEBUG_FEATURES": "true",
+    "LOG_LEVEL": "debug",
+    "MAX_CONTEXT_LENGTH": "2000",
+    "RATE_LIMIT_PER_MINUTE": "100",
+    "SERVICE_LIMITS": "{\"maxFileSize\": 5, \"dailyRequests\": 500}"
+  },
+  "env": {
+    "staging": {
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "API_BASE_URL": "https://staging-api.example.com",
+        "ENABLE_DEBUG_FEATURES": "true",
+        "LOG_LEVEL": "info",
+        "MAX_CONTEXT_LENGTH": "4000",
+        "RATE_LIMIT_PER_MINUTE": "200",
+        "SERVICE_LIMITS": "{\"maxFileSize\": 10, \"dailyRequests\": 2000}"
+      }
+    },
+    "production": {
+      "vars": {
+        "ENVIRONMENT": "production",
+        "API_BASE_URL": "https://api.example.com",
+        "ENABLE_DEBUG_FEATURES": "false",
+        "LOG_LEVEL": "warn",
+        "MAX_CONTEXT_LENGTH": "8000",
+        "RATE_LIMIT_PER_MINUTE": "500",
+        "SERVICE_LIMITS": "{\"maxFileSize\": 25, \"dailyRequests\": 10000}"
+      }
+    }
+  }
+}
+```
+
+## Best Practices
+
+### Naming Conventions
+
+- Use UPPER_CASE with underscores for environment variable names
+- Group related variables with prefixes (e.g., `API_`, `DB_`, `FEATURE_`)
+- Use descriptive names that clearly indicate the variable's purpose
+
+```json
+{
+  "vars": {
+    "API_BASE_URL": "https://api.example.com",
+    "API_TIMEOUT_MS": "5000",
+    "API_RETRY_ATTEMPTS": "3",
+    "DB_CONNECTION_TIMEOUT": "10000",
+    "DB_MAX_CONNECTIONS": "10",
+    "FEATURE_ENABLE_ANALYTICS": "true",
+    "FEATURE_ENABLE_CACHING": "false",
+    "FEATURE_ENABLE_DEBUG": "false",
+    "LIMIT_MAX_FILE_SIZE_MB": "10",
+    "LIMIT_REQUESTS_PER_MINUTE": "60",
+    "LIMIT_DAILY_REQUESTS": "1000"
+  }
+}
+```
+
+### Type Safety
+
+Environment variables, secrets, and service bindings are automatically generated as TypeScript types. In any agent or MCP project, run:
+
+```bash
+npm run codegen
+```
+
+This will automatically update the `env.d.ts` file with statically generated types for:
+- Environment variables from your `wrangler.json` configuration
+- Secrets defined in your project
+- Service bindings and other Cloudflare bindings
+
+Example generated types:
+
+```typescript
+// Generated in env.d.ts
+declare namespace Cloudflare {
+  interface Env {
+    // Environment Variables
+    API_BASE_URL: string;
+    ENVIRONMENT: string;
+    ENABLE_ANALYTICS: string;
+    MAX_CONTEXT_LENGTH: string;
+    
+    // Secrets
+    API_KEY: string;
+    DATABASE_PASSWORD: string;
+    
+    // Service Bindings
+    USER_DB: D1Database;
+    STORAGE_BUCKET: R2Bucket;
+  }
+}
+
+interface CloudflareEnv extends Cloudflare.Env {}
+```
+
+Helper functions for type conversion:
+
+```typescript
+function getEnvBoolean(value: string | undefined, defaultValue = false): boolean {
+  if (!value) return defaultValue;
+  return value.toLowerCase() === 'true' || value === '1';
+}
+
+function getEnvNumber(value: string | undefined, defaultValue = 0): number {
+  if (!value) return defaultValue;
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+}
+
+function getEnvJSON<T>(value: string | undefined, defaultValue: T): T {
+  if (!value) return defaultValue;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return defaultValue;
+  }
+}
+```
+
+### Validation
+
+Validate environment variables at startup:
+
+```typescript
+function validateEnvironment(env: Env): void {
+  const required = ['API_BASE_URL', 'ENVIRONMENT'];
+  
+  for (const key of required) {
+    if (!env[key as keyof Env]) {
+      throw new Error(`Required environment variable ${key} is not set`);
+    }
+  }
+  
+  if (!env.API_BASE_URL.startsWith('https://')) {
+    throw new Error('API_BASE_URL must use HTTPS');
+  }
+  
+  const maxRequests = getEnvNumber(env.LIMIT_REQUESTS_PER_MINUTE, 60);
+  if (maxRequests <= 0 || maxRequests > 10000) {
+    throw new Error('LIMIT_REQUESTS_PER_MINUTE must be between 1 and 10000');
+  }
+}
+```
+
+## Variable Types and Conversions
+
+- **Strings**: Direct access via `env.VARIABLE_NAME`
+- **Numbers**: Convert with `parseInt()` or `parseFloat()`
+- **Booleans**: Compare with `'true'` or `'1'` for truthy values
+- **JSON**: Parse with `JSON.parse()` for complex objects
+- **Arrays**: Store as JSON strings and parse with `JSON.parse()`
+
+
+
+## Related Resources
+
+- **[Secrets](/en/developers/platform/secrets)** - Secure storage for sensitive configuration data
+- **[Wrangler Environments](https://developers.cloudflare.com/workers/wrangler/environments/)** - Managing multiple deployment environments
+- **[Cloudflare Workers Configuration](https://developers.cloudflare.com/workers/wrangler/configuration/)** - Complete Wrangler configuration reference
+
+---
+
+*For the complete official documentation on Cloudflare Workers environment variables, see the [Cloudflare Workers Environment Variables documentation](https://developers.cloudflare.com/workers/configuration/environment-variables/).* 

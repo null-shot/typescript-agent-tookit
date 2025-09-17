@@ -1,0 +1,84 @@
+export const metadata = {
+  "title": "AI MCP Tools",
+  "description": "How Tools and the Model Context Protocol (MCP) let AI systems act in the real world"
+};
+
+# MCP Tools: Structured Actions for Agent Execution
+
+LLMs are powerful at reasoning—**but reasoning alone doesn’t build anything**.  
+That’s where **Tools**, powered by the **Model Context Protocol (MCP)**, come in.
+
+In **NullShot**, tools are how language models gain structured, safe access to act in the real world.  
+From opening GitHub issues to scheduling meetings to triggering onchain logic—**tools bridge the gap between language and execution**.
+
+## What Are MCP Tools?
+
+At its core, an **MCP Tool** is a plain JSON contract that defines:  
+- **Name** → what the tool is called  
+- **Input schema** → what’s required to run it  
+- **Output** → what comes back  
+
+➡️ Think of it as a **lightweight interface** between model intent and system behavior.  
+All written in **natural, declarative terms**:
+
+- 🧑‍💻 **Human-readable** – You can write and reason about it without learning a framework  
+- 🛡️ **Machine-enforceable** – Inputs are validated before anything happens  
+- 🧠 **Context-aware** – Metadata tells the model *when* and *why* it should use them  
+
+**Agents don’t guess** what to do—they choose from **well-defined capabilities**.  
+Every action is **deliberate and traceable**.
+
+## Why Tools Matter
+
+Tools are how agents go from **knowing → doing**.  
+They’re designed for **control, traceability, and composition** from the start.
+
+- **Safe by design** – Every input is validated before execution  
+- **Observable by default** – Calls are logged, permission-checked, and versioned  
+- **Composable by intent** – Tools combine into higher-order behaviors without retraining models  
+
+In NullShot, tools aren’t static—they’re **living, remixable code**.  
+Communities can **fork, extend, remix** tools like open source.  
+Every new capability added becomes available **canvas-wide** for any agent.
+
+## How It Powers Agents
+
+Agents inside NullShot don’t guess—they act via tools.
+
+**Execution flow:**
+1. Agent observes context (user input, events, platform state)  
+2. Matches context → available tools in catalog  
+3. Emits a call:  
+
+```json
+{ 
+  "tool": "calendar.schedule", 
+  "inputs": { "title": "Kickoff", "time": "Tuesday 10am" } 
+}
+```
+
+4. MCP Tool catches the call, validates it, executes via Worker at the edge  
+
+✅ No prompt trickery.  
+✅ No hidden heuristics.  
+➡️ Just **transparent, composable action**.
+
+## Example Tools
+
+- `notifications.send` Sends a real-time toast or in-app ping
+- `github.createIssue` Files a bug report to the right repo
+- `crypto.swap` Swaps assets via decentralized exchange
+- `calendar.schedule` Reserves time and sends invitations
+
+Most tools are < 50 lines of code, making it easy to develop and the Playground makes it seamless to test, combine and iterate.
+
+**Simple to write, fast to deploy, easy to reason about.**
+
+## Build Your Own
+
+With the **[MCP Tool Template]**, contributors can:  
+- Publish new tools  
+- Add real capabilities to their agents  
+- Make them available across the ecosystem  
+
+From **internal workflows** to **public infrastructure**, every new tool expands what the community can do—**together**.

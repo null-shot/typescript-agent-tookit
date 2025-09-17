@@ -1,0 +1,805 @@
+export const metadata = {
+  "title": "Storage (R2/S3)",
+  "description": "S3-compatible object storage for files, models, and datasets with zero egress fees"
+};
+
+# Storage (R2)
+
+**Unlimited object storage for your AI agents, without the bandwidth costs.** Cloudflare R2 is S3-compatible object storage that eliminates egress fees, making it perfect for agents that process large files, store AI models, handle user uploads, or manage massive datasets.
+
+## Key Features
+
+- **Zero Egress Fees**: No charges for data retrieval or transfer
+- **S3 Compatible**: Use existing AWS S3 SDKs and tools
+- **Global Performance**: Automatically cached at Cloudflare's edge
+- **Multipart Uploads**: Handle files up to 5TB with resumable uploads
+- **Presigned URLs**: Secure direct client uploads without exposing credentials
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add R2 storage in your `wrangler.json`:
+
+```json
+{
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "my-agent-storage"
+    }
+  ]
+}
+```
+
+### Hello World Storage
+
+Create a simple storage example that saves and retrieves data:
+
+```typescript
+// src/agents/HelloWorldStorageAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class HelloWorldStorageAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STORAGE } = this.env;
+    
+    if (message.content.includes('save hello')) {
+      // Save a simple hello world message
+      const key = `hello/${Date.now()}.txt`;
+      const data = `Hello World! Saved at ${new Date().toISOString()}`;
+      
+      await STORAGE.put(key, data, {
+        contentType: 'text/plain',
+        metadata: {
+          userId: message.userId,
+          createdAt: new Date().toISOString()
+        }
+      });
+      
+      return {
+        message: `Hello World message saved to ${key}`,
+        actions: [{
+          type: 'file_saved',
+          data: { key, size: data.length }
+        }]
+      };
+    }
+    
+    if (message.content.includes('get hello')) {
+      // List and retrieve hello world messages
+      const listResult = await STORAGE.list({ prefix: 'hello/' });
+      
+      if (listResult.objects.length === 0) {
+        return { message: "No hello world messages found. Try 'save hello' first!" };
+      }
+      
+      const latestFile = listResult.objects[0];
+      const fileObject = await STORAGE.get(latestFile.key);
+      const content = await fileObject?.text();
+      
+      return {
+        message: `Retrieved: ${content}`,
+        actions: [{
+          type: 'file_retrieved',
+          data: { key: latestFile.key, content }
+        }]
+      };
+    }
+    
+    return { message: "Try 'save hello' or 'get hello'!" };
+  }
+}
+```
+
+### MCP Integration
+
+Storage is perfect for MCP tools that need to persist data:
+
+```typescript
+// src/mcp/StorageMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class StorageMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'save-file': async ({ fileName, content }: { fileName: string; content: string }) => {
+        const { STORAGE } = this.env;
+        
+        const key = `mcp-files/${fileName}`;
+        await STORAGE.put(key, content, {
+          contentType: 'text/plain',
+          metadata: {
+            savedBy: 'mcp-server',
+            savedAt: new Date().toISOString()
+          }
+        });
+        
+        return {
+          success: true,
+          key,
+          message: `File saved as ${fileName}`,
+          size: content.length
+        };
+      },
+      
+      'list-files': async () => {
+        const { STORAGE } = this.env;
+        
+        const listResult = await STORAGE.list({ prefix: 'mcp-files/' });
+        
+        return {
+          success: true,
+          files: listResult.objects.map(obj => ({
+            name: obj.key.replace('mcp-files/', ''),
+            size: obj.size,
+            lastModified: obj.lastModified
+          })),
+          totalFiles: listResult.objects.length
+        };
+      }
+    };
+  }
+}
+
+// Export the Durable Object class
+export { StorageMCPServer };
+
+// Wrangler configuration for the MCP server
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const id = env.STORAGE_MCP_SERVER.idFromName('storage-mcp');
+    const obj = env.STORAGE_MCP_SERVER.get(id);
+    return obj.fetch(request);
+  }
+};
+```
+
+## TypeScript API Reference
+
+You can access the storage API via the `env` of the **Agent** or **MCP Tool**:
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+function example() {
+  // STORAGE can be named to anything and equals the "binding" sent in wrangler.json
+  const { STORAGE } = this.env;
+}
+```
+
+### Basic Storage Operations
+
+**`get(key: string): Promise<StorageObject | null>`**  
+Retrieves an object from storage by its key. Returns null if the object doesn't exist.
+
+**`put(key: string, data: string | ArrayBuffer | ReadableStream, options?: PutOptions): Promise<void>`**  
+Stores an object in storage with optional metadata and content type.
+
+**`delete(key: string): Promise<void>`**  
+Permanently deletes an object from storage.
+
+**`head(key: string): Promise<StorageObjectMetadata | null>`**  
+Retrieves only the metadata of an object without downloading the content.
+
+### Advanced Operations
+
+**`list(options?: ListOptions): Promise<StorageListResult>`**  
+Lists objects in the bucket with optional filtering by prefix and pagination.
+
+**`copy(sourceKey: string, destinationKey: string): Promise<void>`**  
+Copies an object from one key to another within the same bucket.
+
+**`getPresignedUrl(key: string, operation: 'get' | 'put', expiresIn?: number): Promise<string>`**  
+Generates a time-limited URL for direct client access without exposing credentials.
+
+### Multipart Upload Methods
+
+**`createMultipartUpload(key: string): Promise<MultipartUpload>`**  
+Initiates a multipart upload for files larger than 100MB.
+
+**`uploadPart(uploadId: string, partNumber: number, data: ArrayBuffer): Promise<UploadPart>`**  
+Uploads a single part of a multipart upload.
+
+**`completeMultipartUpload(uploadId: string, parts: UploadPart[]): Promise<void>`**  
+Completes a multipart upload by combining all uploaded parts.
+
+### Type Definitions
+
+```typescript
+interface StorageObject {
+  body: ReadableStream;
+  metadata: StorageObjectMetadata;
+  text(): Promise<string>;
+  json(): Promise<any>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+interface StorageObjectMetadata {
+  key: string;
+  size: number;
+  etag: string;
+  lastModified: Date;
+  contentType?: string;
+  customMetadata?: Record<string, string>;
+}
+
+interface PutOptions {
+  contentType?: string;
+  metadata?: Record<string, string>;
+  contentEncoding?: string;
+  cacheControl?: string;
+}
+
+interface ListOptions {
+  prefix?: string;
+  delimiter?: string;
+  cursor?: string;
+  limit?: number;
+}
+```
+
+## Examples
+
+### Document Processing Agent
+
+```typescript
+// Agent that processes and stores documents with AI analysis
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class DocumentProcessingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STORAGE, MEMORY_STORE } = this.env;
+    
+    // Check if message contains a document upload
+    const documentUrl = extractDocumentUrl(message.content);
+    if (!documentUrl) {
+      return { message: "Please provide a document to analyze." };
+    }
+    
+    try {
+      // Download the document
+      const documentResponse = await fetch(documentUrl);
+      const documentData = await documentResponse.arrayBuffer();
+      
+      // Generate unique key for the document
+      const documentKey = `documents/${message.userId}/${Date.now()}-${generateId()}.pdf`;
+      
+      // Store original document
+      await STORAGE.put(documentKey, documentData, {
+        contentType: 'application/pdf',
+        metadata: {
+          userId: message.userId,
+          originalName: extractFileName(documentUrl),
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      
+      // Process document with AI
+      const extractedText = await this.extractTextFromPDF(documentData);
+      const analysis = await this.analyzeDocument(extractedText);
+      
+      // Store analysis results
+      const analysisKey = `analysis/${documentKey.replace('documents/', '')}.json`;
+      await STORAGE.put(analysisKey, JSON.stringify(analysis), {
+        contentType: 'application/json',
+        metadata: {
+          originalDocument: documentKey,
+          analysisType: 'full',
+          version: '1.0'
+        }
+      });
+      
+      // Store reference in memory for quick access
+      await MEMORY_STORE.put(
+        `user:${message.userId}:last_document`,
+        JSON.stringify({
+          documentKey,
+          analysisKey,
+          summary: analysis.summary,
+          processedAt: Date.now()
+        })
+      );
+      
+      return {
+        message: `Document analyzed successfully! Key insights: ${analysis.summary}`,
+        actions: [{
+          type: 'document_processed',
+          data: {
+            documentKey,
+            insights: analysis.keyPoints,
+            confidence: analysis.confidence
+          }
+        }]
+      };
+      
+    } catch (error) {
+      return { 
+        message: "Sorry, I couldn't process that document. Please try again with a valid PDF." 
+      };
+    }
+  }
+}
+```
+
+### AI Model Management Agent
+
+```typescript
+// Agent that manages and serves AI models
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class AIModelManagerAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STORAGE, MEMORY_STORE } = this.env;
+  
+  if (message.content.includes('deploy model')) {
+    const modelName = extractModelName(message.content);
+    const modelVersion = extractModelVersion(message.content) || 'latest';
+    
+    // Check if model exists in storage
+    const modelKey = `models/${modelName}/${modelVersion}/model.bin`;
+    const modelExists = await STORAGE.head(modelKey);
+    
+    if (!modelExists) {
+      return { 
+        message: `Model ${modelName}:${modelVersion} not found. Available models: ${await this.listAvailableModels()}` 
+      };
+    }
+    
+    // Create deployment configuration
+    const deployConfig = {
+      modelKey,
+      deployedAt: Date.now(),
+      version: modelVersion,
+      status: 'active',
+      endpoints: this.generateModelEndpoints(modelName, modelVersion)
+    };
+    
+    // Store deployment config
+    const configKey = `deployments/${modelName}/config.json`;
+    await STORAGE.put(configKey, JSON.stringify(deployConfig), {
+      contentType: 'application/json',
+      metadata: {
+        modelName,
+        version: modelVersion,
+        deployedBy: message.userId
+      }
+    });
+    
+    // Update memory store for quick lookups
+    await MEMORY_STORE.put(
+      `deployment:${modelName}`,
+      JSON.stringify(deployConfig)
+    );
+    
+    return {
+      message: `Model ${modelName}:${modelVersion} deployed successfully! Endpoint: ${deployConfig.endpoints.inference}`,
+      actions: [{
+        type: 'model_deployed',
+        data: deployConfig
+      }]
+    };
+  }
+  
+  if (message.content.includes('model inference')) {
+    const modelName = extractModelName(message.content);
+    const inputData = extractInferenceData(message.content);
+    
+    // Get deployment config
+    const deploymentData = await MEMORY_STORE.get(`deployment:${modelName}`);
+    if (!deploymentData) {
+      return { message: `Model ${modelName} is not deployed.` };
+    }
+    
+    const deployment = JSON.parse(deploymentData);
+    
+    // Load model from storage
+    const modelObject = await STORAGE.get(deployment.modelKey);
+    if (!modelObject) {
+      return { message: `Model file not found in storage.` };
+    }
+    
+    // Run inference (simplified)
+    const results = await this.runModelInference(modelObject.body, inputData);
+    
+    // Store inference results
+    const resultKey = `results/${modelName}/${Date.now()}-${generateId()}.json`;
+    await STORAGE.put(resultKey, JSON.stringify(results), {
+      contentType: 'application/json',
+      metadata: {
+        modelName,
+        userId: message.userId,
+        inputHash: this.hashInput(inputData)
+      }
+    });
+    
+    return {
+      message: `Inference complete! Results: ${results.summary}`,
+      actions: [{
+        type: 'inference_complete',
+        data: { resultKey, predictions: results.predictions }
+      }]
+    };
+  }
+  
+  return { message: "Send me a model command!" };
+}
+```
+
+### Media Processing Agent
+
+```typescript
+// Agent that handles image/video processing and storage
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class MediaProcessingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { STORAGE } = this.env;
+  
+  const mediaUrl = extractMediaUrl(message.content);
+  if (!mediaUrl) {
+    return { message: "Please provide an image or video to process." };
+  }
+  
+  try {
+    // Download media file
+    const mediaResponse = await fetch(mediaUrl);
+    const mediaData = await mediaResponse.arrayBuffer();
+    const contentType = mediaResponse.headers.get('content-type') || 'application/octet-stream';
+    
+    // Determine media type and processing
+    const isImage = contentType.startsWith('image/');
+    const isVideo = contentType.startsWith('video/');
+    
+    if (!isImage && !isVideo) {
+      return { message: "Please provide a valid image or video file." };
+    }
+    
+    // Generate storage keys
+    const timestamp = Date.now();
+    const fileId = generateId();
+    const originalKey = `media/original/${message.userId}/${timestamp}-${fileId}`;
+    const processedKey = `media/processed/${message.userId}/${timestamp}-${fileId}`;
+    
+    // Store original file
+    await STORAGE.put(originalKey, mediaData, {
+      contentType,
+      metadata: {
+        userId: message.userId,
+        originalUrl: mediaUrl,
+        uploadedAt: new Date().toISOString(),
+        fileSize: mediaData.byteLength.toString()
+      }
+    });
+    
+    let processingResults;
+    
+    if (isImage) {
+      // Process image: resize, optimize, extract metadata
+      const processedImage = await this.processImage(mediaData, {
+        resize: { width: 1024, height: 1024 },
+        quality: 85,
+        format: 'webp'
+      });
+      
+      // Store processed image
+      await STORAGE.put(processedKey + '.webp', processedImage.data, {
+        contentType: 'image/webp',
+        metadata: {
+          originalKey,
+          processedAt: new Date().toISOString(),
+          operations: JSON.stringify(processedImage.operations)
+        }
+      });
+      
+      // Extract image analysis
+      processingResults = {
+        type: 'image',
+        dimensions: processedImage.dimensions,
+        objects: await this.detectObjects(processedImage.data),
+        colors: await this.extractColors(processedImage.data),
+        text: await this.extractTextFromImage(processedImage.data)
+      };
+      
+    } else if (isVideo) {
+      // Process video: extract frames, generate thumbnail, analyze content
+      const videoAnalysis = await this.processVideo(mediaData);
+      
+      // Store thumbnail
+      const thumbnailKey = processedKey + '_thumbnail.jpg';
+      await STORAGE.put(thumbnailKey, videoAnalysis.thumbnail, {
+        contentType: 'image/jpeg',
+        metadata: {
+          originalKey,
+          type: 'thumbnail',
+          timestamp: '00:05' // 5 second mark
+        }
+      });
+      
+      // Store key frames
+      for (let i = 0; i < videoAnalysis.keyFrames.length; i++) {
+        const frameKey = `${processedKey}_frame_${i}.jpg`;
+        await STORAGE.put(frameKey, videoAnalysis.keyFrames[i], {
+          contentType: 'image/jpeg',
+          metadata: {
+            originalKey,
+            type: 'keyframe',
+            frameNumber: i.toString()
+          }
+        });
+      }
+      
+      processingResults = {
+        type: 'video',
+        duration: videoAnalysis.duration,
+        resolution: videoAnalysis.resolution,
+        scenes: videoAnalysis.scenes,
+        audio: videoAnalysis.audioAnalysis
+      };
+    }
+    
+    // Store analysis results
+    const analysisKey = `analysis/media/${timestamp}-${fileId}.json`;
+    await STORAGE.put(analysisKey, JSON.stringify(processingResults), {
+      contentType: 'application/json',
+      metadata: {
+        originalKey,
+        analysisType: 'media_processing',
+        version: '1.0'
+      }
+    });
+    
+    // Generate presigned URLs for client access
+    const originalUrl = await STORAGE.getPresignedUrl(originalKey, 'get', 3600);
+    const processedUrl = await STORAGE.getPresignedUrl(
+      processedKey + (isImage ? '.webp' : '_thumbnail.jpg'), 
+      'get', 
+      3600
+    );
+    
+    return {
+      message: `Media processed successfully! Analysis: ${JSON.stringify(processingResults, null, 2)}`,
+      actions: [{
+        type: 'media_processed',
+        data: {
+          originalUrl,
+          processedUrl,
+          analysis: processingResults,
+          storageKeys: {
+            original: originalKey,
+            processed: processedKey,
+            analysis: analysisKey
+          }
+        }
+      }]
+    };
+    
+  } catch (error) {
+    return { 
+      message: "Sorry, I couldn't process that media file. Please try again." 
+    };
+  }
+}
+```
+
+## Best Practices
+
+### Large File Handling
+
+```typescript
+// ✅ Good: Use multipart upload for files > 100MB
+class FileUploadAgent extends AiAgentSDK {
+  async uploadLargeFile(key: string, file: File) {
+    const { STORAGE } = this.env;
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+    
+    if (file.size > CHUNK_SIZE) {
+      const upload = await STORAGE.createMultipartUpload(key);
+      const parts = [];
+      
+      for (let i = 0; i < file.size; i += CHUNK_SIZE) {
+        const chunk = file.slice(i, i + CHUNK_SIZE);
+        const partNumber = Math.floor(i / CHUNK_SIZE) + 1;
+        const part = await STORAGE.uploadPart(upload.uploadId, partNumber, await chunk.arrayBuffer());
+        parts.push(part);
+      }
+      
+      await STORAGE.completeMultipartUpload(upload.uploadId, parts);
+    } else {
+      await STORAGE.put(key, await file.arrayBuffer());
+    }
+  }
+}
+```
+
+### Security with Presigned URLs
+
+```typescript
+// ✅ Good: Generate time-limited presigned URLs for client access
+class SecureUploadAgent extends AiAgentSDK {
+  async generateSecureUploadUrl(userId: string, fileName: string) {
+    const { STORAGE } = this.env;
+    const key = `uploads/${userId}/${Date.now()}-${fileName}`;
+    const uploadUrl = await STORAGE.getPresignedUrl(key, 'put', 300); // 5 minute expiry
+    
+    return {
+      uploadUrl,
+      key,
+      expiresAt: Date.now() + 300000
+    };
+  }
+}
+```
+
+### Cost Optimization
+
+```typescript
+// ✅ Good: Use appropriate storage classes and lifecycle policies
+const storageOptions = {
+  // Frequently accessed data
+  hot: { metadata: { storageClass: 'standard' } },
+  
+  // Infrequently accessed data
+  warm: { metadata: { storageClass: 'infrequent_access' } },
+  
+  // Archive data
+  cold: { metadata: { storageClass: 'glacier' } }
+};
+```
+
+## Advanced Configuration
+
+### Multipart Upload Configuration
+
+Configure multipart uploads for optimal performance with large files:
+
+```typescript
+class AdvancedStorageAgent extends AiAgentSDK {
+  async uploadWithOptimalChunking(key: string, data: ArrayBuffer) {
+    const { STORAGE } = this.env;
+    
+    // Determine optimal chunk size based on file size
+    const fileSize = data.byteLength;
+    const CHUNK_SIZE = this.calculateOptimalChunkSize(fileSize);
+    
+    if (fileSize > 100 * 1024 * 1024) { // 100MB threshold
+      const upload = await STORAGE.createMultipartUpload(key);
+      const parts = [];
+      
+      for (let offset = 0; offset < fileSize; offset += CHUNK_SIZE) {
+        const chunk = data.slice(offset, Math.min(offset + CHUNK_SIZE, fileSize));
+        const partNumber = Math.floor(offset / CHUNK_SIZE) + 1;
+        
+        const part = await STORAGE.uploadPart(upload.uploadId, partNumber, chunk);
+        parts.push(part);
+      }
+      
+      await STORAGE.completeMultipartUpload(upload.uploadId, parts);
+    } else {
+      await STORAGE.put(key, data);
+    }
+  }
+  
+  private calculateOptimalChunkSize(fileSize: number): number {
+    // Optimize chunk size based on file size
+    if (fileSize < 100 * 1024 * 1024) return 5 * 1024 * 1024;   // 5MB for smaller files
+    if (fileSize < 1024 * 1024 * 1024) return 10 * 1024 * 1024; // 10MB for medium files
+    return 25 * 1024 * 1024; // 25MB for large files
+  }
+}
+```
+
+### Storage Metadata Management
+
+Use metadata effectively for organization and retrieval:
+
+```typescript
+interface StorageMetadata {
+  userId: string;
+  contentType: string;
+  tags: string[];
+  version: string;
+  createdAt: string;
+  lastModified?: string;
+}
+
+class MetadataStorageAgent extends AiAgentSDK {
+  async putWithMetadata(key: string, data: string | ArrayBuffer, metadata: StorageMetadata) {
+    const { STORAGE } = this.env;
+    
+    await STORAGE.put(key, data, {
+      contentType: metadata.contentType,
+      metadata: {
+        userId: metadata.userId,
+        tags: metadata.tags.join(','),
+        version: metadata.version,
+        createdAt: metadata.createdAt,
+        lastModified: metadata.lastModified || new Date().toISOString()
+      }
+    });
+  }
+  
+  async searchByMetadata(prefix: string, filters: Partial<StorageMetadata>) {
+    const { STORAGE } = this.env;
+    const listResult = await STORAGE.list({ prefix });
+    
+    return listResult.objects.filter(obj => {
+      const metadata = obj.metadata;
+      if (!metadata) return false;
+      
+      // Filter by user ID
+      if (filters.userId && metadata.userId !== filters.userId) return false;
+      
+      // Filter by tags
+      if (filters.tags) {
+        const objTags = metadata.tags?.split(',') || [];
+        const hasAllTags = filters.tags.every(tag => objTags.includes(tag));
+        if (!hasAllTags) return false;
+      }
+      
+      return true;
+    });
+  }
+}
+```
+
+### Multiple R2 Buckets Configuration
+
+Configure multiple buckets for different use cases:
+
+```json
+{
+  "r2_buckets": [
+    {
+      "binding": "USER_STORAGE",
+      "bucket_name": "user-data-bucket"
+    },
+    {
+      "binding": "AI_MODELS",
+      "bucket_name": "ai-models-bucket"
+    },
+    {
+      "binding": "MEDIA_STORAGE",
+      "bucket_name": "media-processing-bucket"
+    }
+  ]
+}
+```
+
+## Limitations & Considerations
+
+- **Object Size**: Maximum 5TB per object
+- **Request Rate**: 1,000 requests per second per prefix
+- **Metadata**: Maximum 2KB of custom metadata per object
+- **Multipart**: Minimum 5MB per part
+
+## Related Services
+
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Store file metadata and references
+- **[Cache](/en/developers/platform/cache)** - Cache frequently accessed files
+- **[Workflows](/en/developers/platform/workflows)** - Orchestrate multi-step storage operations
+
+---
+
+## Official Documentation
+
+- [R2 Storage Documentation](https://developers.cloudflare.com/r2/) 
