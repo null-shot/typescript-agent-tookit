@@ -1,0 +1,527 @@
+export const metadata = {
+  "title": "External Services",
+  "description": "Connect your AI Agents to third-party APIs, webhooks, and external systems with built-in route registration"
+};
+
+**Integrate your AI Agents with any external API or service.** External Services provide a robust foundation for connecting to third-party systems like Discord, Stripe, webhooks, and custom admin interfaces. With built-in route registration using Hono framework, request handling, and OpenAPI support, you can rapidly build production-ready integrations.
+
+## Key Features
+
+- **Route Registration**: Automatically register HTTP endpoints using Hono framework
+- **Webhook Support**: Built-in webhook validation and processing for services like Discord, Stripe, GitHub
+- **OpenAPI Integration**: Generate client SDKs and documentation from OpenAPI specifications
+- **Request/Response Handling**: Type-safe request parsing and response formatting with Hono context
+- **Authentication**: Built-in support for API keys, OAuth, and custom authentication schemes
+- **Error Handling**: Graceful error management with retry logic and circuit breakers
+
+## Getting Started
+
+External Services extend the base `Service` class and use the `registerRoutes` method with Hono framework to expose HTTP endpoints:
+
+```typescript
+import { Service } from '@typescript-agent-framework/core';
+import { Hono, Context } from 'hono';
+
+export abstract class ExampleService extends Service {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  /**
+   * Register HTTP routes for external API access using Hono
+   * Called automatically during service initialization
+   */
+  registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
+    app.get('/hello', async (c) => {
+      // TODO: Your magic
+    });
+  }
+}
+```
+
+External services automatically register their routes when added to an agent using the Hono framework:
+
+```typescript
+// Adding your custom service will automatically bootstrap the routes from your External Service
+export class ExampleAgent extends AiSdkAgent<EnvWithAgent> {
+	constructor(state: DurableObjectState, env: EnvWithAgent) {
+		super(state, env, ..., [new ExampleService()]);
+  }
+```
+
+## Examples
+
+### Discord Webhook Service
+
+Capture Discord messages and process them with your AI agent:
+
+```typescript
+// src/services/discord-webhook-service.ts
+import { ExternalService } from './base-external-service';
+import { Hono, Context } from 'hono';
+import crypto from 'crypto';
+
+interface DiscordMessage {
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    username: string;
+    discriminator: string;
+  };
+  channel_id: string;
+  guild_id?: string;
+  timestamp: string;
+}
+
+export class DiscordWebhookService extends ExternalService {
+  private webhookSecret: string;
+
+  constructor(env: Env) {
+    super(env);
+    this.webhookSecret = env.DISCORD_WEBHOOK_SECRET;
+  }
+
+  registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
+    // Register Discord webhook endpoint
+    app.post('/webhook/discord', async (c) => {
+      return await this.handleDiscordWebhook(c);
+    });
+  }
+
+  /**
+   * Handle incoming Discord webhook
+   */
+  private async handleDiscordWebhook(c: Context): Promise<Response> {
+    if (!this.validateRequest(c, 'POST')) {
+      return this.createErrorResponse(c, 'Method not allowed', 405);
+    }
+
+    // Verify Discord webhook signature
+    const signature = c.req.header('X-Signature-Ed25519');
+    const timestamp = c.req.header('X-Signature-Timestamp');
+    const body = await c.req.text();
+
+    if (!this.verifyDiscordSignature(signature, timestamp, body)) {
+      return this.createErrorResponse(c, 'Invalid signature', 401);
+    }
+
+    try {
+      const payload = JSON.parse(body);
+
+      // Handle Discord verification challenge
+      if (payload.type === 1) {
+        return c.json({ type: 1 });
+      }
+
+      // Process Discord interaction/message
+      if (payload.type === 2 || payload.type === 3) {
+        const result = await this.processDiscordMessage(payload);
+        return this.createSuccessResponse(c, result);
+      }
+
+      return this.createSuccessResponse(c, { message: 'Webhook received' });
+    } catch (error) {
+      console.error('Discord webhook error:', error);
+      return this.createErrorResponse(c, 'Failed to process webhook', 500);
+    }
+  }
+}
+```
+
+### Stripe Payment Service
+
+Handle Stripe webhooks and payment processing:
+
+```typescript
+// src/services/stripe-payment-service.ts
+import { ExternalService } from './base-external-service';
+import { Hono, Context } from 'hono';
+
+interface PaymentIntent {
+  amount: number;
+  currency: string;
+  customer_id?: string;
+  metadata?: Record<string, string>;
+}
+
+export class StripePaymentService extends ExternalService {
+  private stripeSecretKey: string;
+  private webhookSecret: string;
+
+  constructor(env: Env) {
+    super(env);
+    this.stripeSecretKey = env.STRIPE_SECRET_KEY;
+    this.webhookSecret = env.STRIPE_WEBHOOK_SECRET;
+  }
+
+  registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
+    // Register Stripe webhook endpoint
+    app.post('/webhook/stripe', async (c) => {
+      return await this.handleStripeWebhook(c);
+    });
+  }
+
+  /**
+   * Handle Stripe webhook events
+   */
+  private async handleStripeWebhook(c: Context): Promise<Response> {
+    if (!this.validateRequest(c, 'POST')) {
+      return this.createErrorResponse(c, 'Method not allowed', 405);
+    }
+
+    const signature = c.req.header('stripe-signature');
+    const body = await c.req.text();
+
+    // Verify webhook signature
+    if (!this.verifyStripeSignature(body, signature)) {
+      return this.createErrorResponse(c, 'Invalid signature', 401);
+    }
+
+    try {
+      const event = JSON.parse(body);
+
+      switch (event.type) {
+        case 'payment_intent.succeeded':
+          await this.handlePaymentSuccess(event.data.object);
+          break;
+        case 'payment_intent.payment_failed':
+          await this.handlePaymentFailure(event.data.object);
+          break;
+        case 'customer.subscription.created':
+          await this.handleSubscriptionCreated(event.data.object);
+          break;
+        case 'invoice.payment_succeeded':
+          await this.handleInvoicePayment(event.data.object);
+          break;
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      return this.createSuccessResponse(c, { received: true });
+    } catch (error) {
+      console.error('Stripe webhook error:', error);
+      return this.createErrorResponse(c, 'Webhook processing failed', 500);
+    }
+  }
+}
+```
+
+### Admin Agent Service
+
+Create a VS Code-like admin interface for configuration management:
+
+```typescript
+// src/services/admin-agent-service.ts
+import { ExternalService } from './base-external-service';
+import { Hono, Context } from 'hono';
+
+interface ConfigUpdate {
+  key: string;
+  value: any;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  description?: string;
+}
+
+interface AgentConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  settings: Record<string, any>;
+  last_modified: string;
+  version: number;
+}
+
+export class AdminAgentService extends ExternalService {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  registerRoutes<E extends AgentEnv>(app: Hono<{ Bindings: E }>): void {
+    // Configuration management endpoints
+    app.auth(...) // Add your auth middleware flavor with Hono
+
+    app.get('/admin/configs', async (c) => {
+      return await this.getConfigs(c);
+    });
+
+    app.post('/admin/configs/update', async (c) => {
+      return await this.updateConfig(c);
+    });
+  }
+
+  /**
+   * Get all system configurations
+   */
+  private async getConfigs(c: Context): Promise<Response> {
+    try {
+      const { DATABASE } = this.env;
+      
+      const configs = await DATABASE.prepare(`
+        SELECT config_key, config_value, config_type, description, updated_at
+        FROM system_configs
+        ORDER BY config_key
+      `).all();
+
+      const formattedConfigs = configs.results.map((config: any) => ({
+        key: config.config_key,
+        value: this.parseConfigValue(config.config_value, config.config_type),
+        type: config.config_type,
+        description: config.description,
+        lastModified: config.updated_at
+      }));
+
+      return this.createSuccessResponse(c, { configs: formattedConfigs });
+    } catch (error) {
+      console.error('Failed to fetch configs:', error);
+      return this.createErrorResponse(c, 'Failed to fetch configurations', 500);
+    }
+  }
+
+  /**
+   * Update system configuration with AI validation
+   */
+  private async updateConfig(c: Context): Promise<Response> {
+    try {
+      const { key, value, type, description }: ConfigUpdate = await c.req.json();
+
+      // Validate configuration change with AI
+      const validation = await this.validateConfigWithAI(key, value, type);
+      if (!validation.isValid) {
+        return this.createErrorResponse(c, validation.reason || 'Configuration invalid', 400);
+      }
+
+      const { DATABASE } = this.env;
+      
+      // Update configuration
+      await DATABASE.prepare(`
+        INSERT OR REPLACE INTO system_configs (
+          config_key, config_value, config_type, description, updated_at
+        ) VALUES (?, ?, ?, ?, ?)
+      `).bind(
+        key,
+        JSON.stringify(value),
+        type,
+        description || '',
+        new Date().toISOString()
+      ).run();
+
+      // Log configuration change
+      await this.logConfigChange(key, value, 'update');
+
+      // Get AI suggestion for related configurations
+      const suggestion = await this.getRelatedConfigSuggestion(key, value);
+
+      return this.createSuccessResponse(c, {
+        success: true,
+        message: `Configuration '${key}' updated successfully`,
+        suggestion
+      });
+    } catch (error) {
+      console.error('Failed to update config:', error);
+      return this.createErrorResponse(c, 'Failed to update configuration', 500);
+    }
+  }
+```
+
+## Agent Integration
+
+Integrate external services with your AI agents:
+
+```typescript
+// src/agents/integrated-agent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+import { DiscordWebhookService } from '../services/discord-webhook-service';
+import { StripePaymentService } from '../services/stripe-payment-service';
+import { AdminAgentService } from '../services/admin-agent-service';
+
+export class IntegratedAgent extends AiAgentSDK {
+  private discordService: DiscordWebhookService;
+  private stripeService: StripePaymentService;
+  private adminService: AdminAgentService;
+
+  constructor(env: Env) {
+    // Initialize services
+    this.discordService = new DiscordWebhookService(env);
+    this.stripeService = new StripePaymentService(env);
+    this.adminService = new AdminAgentService(env);
+
+    // Pass services to parent
+    super(env, ..., [
+      this.discordService,
+      this.stripeService,
+      this.adminService
+    ]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const content = messages.content.toLowerCase();
+
+    // Handle Discord-related queries
+    if (content.includes('discord') || content.includes('channel')) {
+      return { 
+        message: 'Discord integration available. Use /discord/channels to list channels.' 
+      };
+    }
+
+    // Handle payment-related queries
+    if (content.includes('payment') || content.includes('stripe')) {
+      return { 
+        message: 'Payment processing available. Use /payments/create-intent to create payments.' 
+      };
+    }
+
+    // Handle admin queries
+    if (content.includes('config') || content.includes('admin')) {
+      return { 
+        message: 'Admin interface available. Use /admin/configs to manage system configuration.' 
+      };
+    }
+
+    return { message: 'How can I help you with Discord, payments, or system configuration?' };
+  }
+}
+```
+
+## Secret Variables
+
+Configure your external services with secrets:
+
+```typescript
+// .dev.vars
+DISCORD_BOT_TOKEN = "your-discord-bot-token"
+DISCORD_PUBLIC_KEY = "your-discord-public-key"
+STRIPE_PUBLISHABLE_KEY = "pk_test_..."
+```
+
+Then run `npm run codegen` to automatically generate the in `env.d.ts` for typed access to secrets
+
+To set a secret in your remote deployment run `wrangler secret put SECRET_KEY` then past the value in the following prompt request.
+
+## Best Practices
+
+### Security
+
+```typescript
+// ✅ Good: Always validate webhook signatures
+private verifyWebhookSignature(signature: string, body: string, secret: string): boolean {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(body, 'utf8')
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+}
+
+// ✅ Good: Use environment variables for secrets
+const apiKey = this.env.THIRD_PARTY_API_KEY;
+
+// ❌ Bad: Hardcoded secrets
+const apiKey = "sk_live_...";
+```
+
+### Error Handling
+
+```typescript
+// ✅ Good: Use Hono context for consistent error responses
+private async callExternalAPI(c: Context, url: string, data: any, retries = 3): Promise<Response> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return this.createSuccessResponse(c, result);
+    } catch (error) {
+      if (attempt === retries) {
+        return this.createErrorResponse(c, `API call failed: ${error.message}`, 500);
+      }
+      
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+}
+
+// ✅ Good: Graceful degradation with fallback
+private async getDataWithFallback(c: Context): Promise<Response> {
+  try {
+    const data = await this.callExternalAPI(c, '/api/data', {});
+    return data;
+  } catch (error) {
+    console.warn('External API failed, using cached data:', error);
+    const cachedData = await this.getCachedData();
+    return this.createSuccessResponse(c, cachedData);
+  }
+}
+```
+
+## Advanced Configuration
+
+### Middleware Integration
+
+Use Hono middleware for authentication and request processing:
+
+```typescript
+// Add authentication middleware
+app.use('/admin/*', async (c, next) => {
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader || !this.validateAuthToken(authHeader)) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  await next();
+});
+
+// Add CORS middleware
+app.use('*', cors({
+  origin: ['https://yourapp.com'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowHeaders: ['Content-Type', 'Authorization']
+}));
+```
+
+### OpenAPI Integration
+
+Generate service clients from OpenAPI specifications:
+
+```typescript
+// Generate client from OpenAPI spec with Hono
+const client = await generateClientFromOpenAPI({
+  spec: 'https://api.example.com/openapi.json',
+  honoApp: app,
+  authenticate: (c) => {
+    c.req.header('Authorization', `Bearer ${this.env.API_KEY}`);
+  }
+});
+```
+
+## Limitations
+
+- **Request Size**: Maximum 100MB per webhook request
+- **Timeout**: 30 second timeout for external API calls
+- **Rate Limiting**: Built-in rate limiting of 1000 requests per minute per service
+- **Concurrency**: Maximum 50 concurrent external requests per service
+
+## Related Services
+
+- **[Workflows](/en/developers/platform/workflows)** - Trigger workflows from external events
+- **[Secret Manager](/en/developers/platform/secret-manager)** - Secure API key management
+- **[Analytics Engine](/en/developers/platform/analytics-engine)** - Track external service metrics
+
+---
+
+## Official Documentation
+
+- [TypeScript Agent Framework](https://github.com/null-shot/typescript-agent-framework)
+- [External Service API Reference](https://github.com/null-shot/typescript-agent-framework/blob/main/packages/agent/src/service.ts)
+- [Route Registration Guide](https://github.com/null-shot/typescript-agent-framework/blob/main/packages/agent/src/services/toolbox.ts) 

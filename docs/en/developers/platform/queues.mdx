@@ -1,0 +1,873 @@
+export const metadata = {
+  "title": "Queues",
+  "description": "Reliable message queuing for async agent workflows and task processing"
+};
+
+**Orchestrate complex agent workflows with bulletproof message queuing.** Cloudflare Queues enables your AI agents to process tasks asynchronously, handle workload spikes, and coordinate multi-step workflows with guaranteed delivery and automatic retries.
+
+## Key Features
+
+- **Guaranteed Delivery**: Messages are delivered at least once with automatic retries
+- **Dead Letter Queues**: Failed messages are automatically moved to DLQ for debugging
+- **Batch Processing**: Handle up to 100 messages per batch for efficiency
+- **Delay Scheduling**: Schedule messages for future processing
+- **Global Distribution**: Queues available in all Cloudflare edge locations
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add queues in your `wrangler.json`:
+
+```json
+{
+  "queues": {
+    "producers": [
+      {
+        "queue": "document-processing",
+        "binding": "DOCUMENT_QUEUE"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "document-processing",s
+        "max_batch_size": 10, // How many messages you want to process per instancess
+        "max_batch_timeout": 5000 // Max amount of time to wait for the batch of "10" to fill
+        "max_retries": 10, Max amount of retries before a message goes to dead letter queue
+        "dead_letter_queue": "unique-queue-name", // failed messages can be processed by another worker via DQL pattern
+        "max_concurrency": 5 // Max amount of unique instances to process messages.
+      }
+    ]
+  }
+}
+```
+
+### Consumer Example
+
+In order to consume queues, you will need to apply the function below to the index of your project in which you may forward to custom services, agents or MCP tools.
+
+```typescript
+// src/queues/HelloWorldQueue.ts
+export default {  
+  // Queue consumer function within your Agent or MCP Tool index
+  async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        console.log('Processing message:', message.body);
+        
+        // Process the message
+        const { message: content, timestamp, requestId } = message.body;
+        console.log(`Hello World: ${content} (${requestId})`);
+        
+        // Acknowledge successful processing
+        message.ack();
+      } catch (error) {
+        console.error('Message processing failed:', error);
+        message.retry();
+      }
+    }
+  }
+};
+```
+
+### Agent Integration
+
+Send messages to queues from your agent class:
+
+```typescript
+// src/agents/QueueAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class QueueAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { DOCUMENT_QUEUE } = this.env;
+    
+    if (message.content.includes('process document')) {
+      const documentUrl = this.extractDocumentUrl(message.content);
+      
+      // Send document processing task to queue
+      await DOCUMENT_QUEUE.send({
+        body: {
+          documentUrl,
+          userId: message.userId,
+          taskId: crypto.randomUUID(),
+          priority: 'normal',
+          createdAt: Date.now()
+        }
+      });
+      
+      return {
+        message: 'Document processing task queued successfully!',
+        actions: [{
+          type: 'task_queued',
+          data: { taskType: 'document_processing' }
+        }]
+      };
+    }
+    
+    return { message: 'Send me a document to process!' };
+  }
+  
+  private extractDocumentUrl(content: string): string {
+    // Extract document URL from message content
+    const urlMatch = content.match(/https?:\/\/[^\s]+/);
+    return urlMatch ? urlMatch[0] : '';
+  }
+}
+```
+
+### MCP Integration
+
+Queues are powerful tools for handling background tasks in MCP Tools:
+
+```typescript
+// src/mcp/QueueMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class QueueMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'queue-task': async ({ taskType, data }: { taskType: string, data: any }) => {
+        const { TASK_QUEUE } = this.env;
+        
+        // Send task to appropriate queue
+        await TASK_QUEUE.send({
+          body: {
+            taskType,
+            data,
+            queuedBy: 'mcp-server',
+            queuedAt: Date.now(),
+            taskId: crypto.randomUUID()
+          }
+        });
+        
+        return {
+          success: true,
+          message: `Task "${taskType}" queued successfully`,
+          taskId: crypto.randomUUID()
+        };
+      },
+      
+      'batch-queue-tasks': async ({ tasks }: { tasks: Array<{taskType: string, data: any}> }) => {
+        const { TASK_QUEUE } = this.env;
+        
+        // Send multiple tasks in batch
+        const messages = tasks.map(task => ({
+          body: {
+            ...task,
+            queuedBy: 'mcp-server',
+            queuedAt: Date.now(),
+            taskId: crypto.randomUUID()
+          }
+        }));
+        
+        await TASK_QUEUE.sendBatch(messages);
+        
+        return {
+          success: true,
+          message: `${tasks.length} tasks queued successfully`,
+          taskCount: tasks.length
+        };
+      }
+    };
+  }
+}
+```
+
+## TypeScript API Reference
+
+You can access queue bindings via the `env` of your **Agent** or **MCP Tool**:
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+function example() {
+  // TASK_QUEUE can be named to anything and equals the "binding" set in wrangler.json
+  const { TASK_QUEUE } = this.env;
+}
+```
+
+### Queue Producer Methods
+
+**`send(message: QueueMessage): Promise<void>`**  
+Sends a single message to the queue. The message will be delivered to consumers with guaranteed delivery and automatic retries.
+
+**`sendBatch(messages: QueueMessage[]): Promise<void>`**  
+Sends multiple messages to the queue in a single API call for improved efficiency. Can send up to 100 messages at once.
+
+**`sendDelayed(message: QueueMessage, delaySeconds: number): Promise<void>`**  
+Schedules a message for future delivery. The message will be delivered after the specified delay.
+
+### Queue Consumer Interface
+
+**`queue(batch: MessageBatch, env: Env): Promise<void>`**  
+Consumer function that processes batches of messages from the queue. This function is automatically called and must be placed at the index of your project.
+
+### TypeScript Interfaces
+
+```typescript
+interface QueueMessage {
+  body: any;                    // Message payload (JSON serializable)
+  id?: string;                  // Optional message ID
+  timestamp?: number;           // Message timestamp
+  contentType?: string;         // Content type hint
+  metadata?: Record<string, any>; // Additional metadata
+}
+
+interface MessageBatch<T = any> {
+  queue: string;                // Queue name
+  messages: Array<{
+    id: string;
+    body: T;
+    timestamp: number;
+    attempts: number;
+    metadata?: Record<string, any>;
+    
+    // Message control methods
+    ack(): void;                // Mark message as successfully processed
+    retry(delaySeconds?: number): void; // Retry message after delay
+    abandon(): void;            // Send to dead letter queue
+  }>;
+}
+
+interface QueueBinding {
+  send(message: QueueMessage): Promise<void>;
+  sendBatch(messages: QueueMessage[]): Promise<void>;
+  sendDelayed(message: QueueMessage, delaySeconds: number): Promise<void>;
+}
+```
+
+## Examples
+
+### Document Processing Pipeline
+
+```typescript
+// Document processing agent with multi-stage pipeline
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+interface DocumentProcessingRequest {
+  pipelineId: string;
+  userId: string;
+  documentUrl: string;
+  stage: 'download' | 'ocr' | 'analyze' | 'complete';
+}
+
+export class DocumentProcessingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { DOCUMENT_QUEUE } = this.env;
+    
+    const documentUrl = this.extractDocumentUrl(message.content);
+    if (!documentUrl) {
+      return { message: "Please provide a document to process." };
+    }
+    
+    // Start document processing pipeline
+    const pipelineId = crypto.randomUUID();
+    
+    await DOCUMENT_QUEUE.send({
+      body: {
+        pipelineId,
+        userId: message.userId,
+        documentUrl,
+        stage: 'download',
+        startedAt: Date.now(),
+        requestedBy: message.userId
+      }
+    });
+    
+    return {
+      message: `Document processing started! Pipeline ID: ${pipelineId}`,
+      actions: [{
+        type: 'pipeline_started',
+        data: { pipelineId, stage: 'download' }
+      }]
+    };
+  }
+  
+  private extractDocumentUrl(content: string): string {
+    const urlMatch = content.match(/https?:\/\/[^\s]+\.pdf/i);
+    return urlMatch ? urlMatch[0] : '';
+  }
+}
+
+// Queue consumer for document processing
+export default {
+  async queue(batch: MessageBatch<DocumentProcessingRequest>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        const { pipelineId, userId, documentUrl, stage } = message.body;
+        const { DOCUMENT_QUEUE, STORAGE } = env;
+        
+        switch (stage) {
+          case 'download':
+            // Download document
+            const documentData = await this.downloadDocument(documentUrl);
+            const documentKey = `documents/${pipelineId}/original.pdf`;
+            await STORAGE.put(documentKey, documentData);
+            
+            // Send to OCR stage
+            await DOCUMENT_QUEUE.send({
+              body: {
+                ...message.body,
+                stage: 'ocr',
+                documentKey
+              }
+            });
+            break;
+        message.ack(); // Mark as successfully processed
+        
+      } catch (error) {
+        console.error('Document processing error:', error);
+        
+        // Retry up to 3 times with exponential backoff
+        if (message.attempts < 3) {
+          message.retry(Math.pow(2, message.attempts) * 30); // 30s, 60s, 120s
+        } else {
+          message.abandon(); // Send to dead letter queue
+        }
+      }
+    }
+  }
+};
+```
+
+### Multi-Agent Task Coordination
+
+```typescript
+// Agent that coordinates tasks across multiple specialized agents
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+interface ResearchTask {
+  workflowId: string;
+  taskType: 'web-research' | 'data-analysis' | 'report-generation';
+  topic: string;
+  requirements?: any;
+}
+
+export class ResearchCoordinatorAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { RESEARCH_QUEUE, MEMORY_STORE } = this.env;
+  
+    if (message.content.includes('research project')) {
+      const projectTopic = this.extractTopic(message.content);
+      const workflowId = crypto.randomUUID();
+      
+      // Create workflow state
+      const workflowState = {
+        id: workflowId,
+        topic: projectTopic,
+        userId: message.userId,
+        startedAt: Date.now(),
+        status: 'initiated',
+        tasks: {
+          'web-research': { status: 'pending', agent: 'research-agent' },
+          'data-analysis': { status: 'pending', agent: 'analytics-agent' },
+          'report-generation': { status: 'pending', agent: 'writing-agent' },
+          'peer-review': { status: 'pending', agent: 'review-agent' }
+        }
+      };
+      
+      await MEMORY_STORE.put(`workflow:${workflowId}`, JSON.stringify(workflowState));
+      
+      // Start with web research
+      await RESEARCH_QUEUE.send({
+        body: {
+          workflowId,
+          taskType: 'web-research',
+          topic: projectTopic,
+          requirements: {
+            sources: 10,
+            depth: 'comprehensive',
+            recency: '6 months'
+          }
+        }
+      });
+      
+      return {
+        message: `Research project started! Workflow ID: ${workflowId}. I'll coordinate multiple agents to research "${projectTopic}".`,
+        actions: [{
+          type: 'workflow_started',
+          data: { workflowId, topic: projectTopic }
+        }]
+      };
+    }
+    
+    return { message: 'Ask me to start a research project!' };
+  }
+}
+
+// Research Agent Queue Consumer
+export const researchWorker = {
+  async queue(batch: MessageBatch<ResearchTask>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        const { workflowId, taskType, topic, requirements } = message.body;
+        const { STORAGE, MEMORY_STORE, ANALYTICS_QUEUE } = env;
+        
+        if (taskType === 'web-research') {
+          // Conduct web research
+          const researchResults = await conductWebResearch(topic, requirements);
+          
+          // Store results
+          const resultsKey = `workflows/${workflowId}/research-results.json`;
+          await STORAGE.put(resultsKey, JSON.stringify(researchResults));
+          
+          // Update workflow state
+          const workflowData = await MEMORY_STORE.get(`workflow:${workflowId}`);
+          const workflow = JSON.parse(workflowData);
+          workflow.tasks['web-research'].status = 'completed';
+          workflow.tasks['web-research'].resultsKey = resultsKey;
+          workflow.tasks['web-research'].completedAt = Date.now();
+          
+          // Check if data analysis can start
+          if (workflow.tasks['web-research'].status === 'completed') {
+            workflow.tasks['data-analysis'].status = 'in-progress';
+            
+            // Send to analytics queue
+            await ANALYTICS_QUEUE.send({
+              body: {
+                workflowId,
+                taskType: 'data-analysis',
+                researchKey: resultsKey,
+                analysisType: 'comprehensive'
+              }
+            });
+          }
+          
+          await MEMORY_STORE.put(`workflow:${workflowId}`, JSON.stringify(workflow));
+          message.ack();
+        }        
+      } catch (error) {
+        console.error('Research task error:', error);
+        message.retry(60); // Retry after 1 minute
+      }
+    }
+  }
+};
+
+// Analytics Agent Queue Consumer  
+export const analyticsWorker = {
+  async queue(batch: MessageBatch<ResearchTask>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        const { workflowId, taskType, researchKey } = message.body;
+        const { STORAGE, MEMORY_STORE, WRITING_QUEUE } = env;
+        
+        if (taskType === 'data-analysis') {
+          // Load research results
+          const researchObject = await STORAGE.get(researchKey);
+          const researchData = JSON.parse(await researchObject.text());
+          
+          // Perform analysis
+          const analysis = await analyzeResearchData(researchData);
+          
+          // Store analysis
+          const analysisKey = `workflows/${workflowId}/analysis-results.json`;
+          await STORAGE.put(analysisKey, JSON.stringify(analysis));
+          
+          // Update workflow and trigger report generation
+          const workflowData = await MEMORY_STORE.get(`workflow:${workflowId}`);
+          const workflow = JSON.parse(workflowData);
+          workflow.tasks['data-analysis'].status = 'completed';
+          workflow.tasks['data-analysis'].resultsKey = analysisKey;
+          workflow.tasks['report-generation'].status = 'in-progress';
+          
+          await MEMORY_STORE.put(`workflow:${workflowId}`, JSON.stringify(workflow));
+          
+          // Send to writing queue
+          await WRITING_QUEUE.send({
+            body: {
+              workflowId,
+              taskType: 'report-generation',
+              researchKey,
+              analysisKey,
+              reportType: 'comprehensive'
+            }
+          });
+
+          message.ack();
+        }
+        
+      } catch (error) {
+        console.error('Analytics task error:', error);
+        message.retry(60);
+      }
+    }
+  }
+};
+```
+
+### Email Processing Pipeline
+
+```typescript
+// Email processing agent with priority-based routing
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+interface EmailMessage {
+  emailId: string;
+  from: string;
+  subject: string;
+  body: string;
+  priority: 'urgent' | 'normal' | 'low';
+}
+
+export class EmailProcessingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { EMAIL_QUEUE } = this.env;
+    
+    // This would be triggered by email webhook
+    if (message.metadata?.type === 'incoming_email') {
+      const emailData = message.metadata.emailData;
+      
+      // Classify email priority
+      const priority = this.classifyEmailPriority(emailData.subject, emailData.body);
+      
+      await EMAIL_QUEUE.send({
+        body: {
+          emailId: emailData.id,
+          from: emailData.from,
+          subject: emailData.subject,
+          body: emailData.body,
+          priority,
+          receivedAt: Date.now()
+        }
+      });
+      
+      return {
+        message: `Email queued with ${priority} priority for processing.`,
+        actions: [{
+          type: 'email_queued',
+          data: { emailId: emailData.id, priority }
+        }]
+      };
+    }
+    
+    return { message: 'Send me an email to process!' };
+  }
+}
+
+// Email processing queue consumer
+export default {
+  async queue(batch: MessageBatch<EmailMessage>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        const { emailId, from, subject, body, priority } = message.body;
+        
+        // Process based on priority
+        const response = await this.generateEmailResponse(body, priority);
+        
+        // Send response with appropriate delay
+        const delay = priority === 'urgent' ? 0 : priority === 'normal' ? 60 : 300;
+        await this.sendEmailResponse(from, subject, response, delay);
+        
+        message.ack();
+      } catch (error) {
+        console.error('Email processing error:', error);
+        
+        // Retry with backoff based on priority
+        const retryDelay = message.body.priority === 'urgent' ? 30 : 60;
+        message.retry(retryDelay);
+      }
+    }
+  }
+};
+```
+
+### Scheduled Task Management
+
+```typescript
+// Agent that schedules and manages recurring tasks
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+interface ScheduledTask {
+  taskId: string;
+  userId: string;
+  taskType: string;
+  schedule: string;
+  data: any;
+}
+
+export class TaskSchedulerAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { TASK_QUEUE, MEMORY_STORE } = this.env;
+    
+    if (message.content.includes('schedule task')) {
+      const taskDetails = this.extractTaskDetails(message.content);
+      const schedule = this.extractSchedule(message.content);
+      
+      const scheduledTask = {
+        id: crypto.randomUUID(),
+        userId: message.userId,
+        task: taskDetails,
+        schedule,
+        createdAt: Date.now(),
+        nextRun: this.calculateNextRun(schedule),
+        status: 'active'
+      };
+      
+      // Store task definition
+      await MEMORY_STORE.put(
+        `scheduled_task:${scheduledTask.id}`,
+        JSON.stringify(scheduledTask)
+      );
+      
+      // Schedule first execution
+      const delaySeconds = Math.floor((scheduledTask.nextRun - Date.now()) / 1000);
+      await TASK_QUEUE.sendDelayed({
+        body: {
+          taskId: scheduledTask.id,
+          execution: 'scheduled'
+        }
+      }, delaySeconds);
+      
+      return {
+        message: `Task scheduled successfully! ID: ${scheduledTask.id}`,
+        actions: [{
+          type: 'task_scheduled',
+          data: scheduledTask
+        }]
+      };
+    }
+    
+    return { message: 'Tell me what task to schedule!' };
+  }
+}
+
+// Scheduled task processor
+export default {
+  async queue(batch: MessageBatch<ScheduledTask>, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        const { taskId } = message.body;
+        const { MEMORY_STORE, STORAGE, TASK_QUEUE } = env;
+        
+        // Get task definition
+        const taskData = await MEMORY_STORE.get(`scheduled_task:${taskId}`);
+        if (!taskData) {
+          message.ack(); // Task no longer exists
+          continue;
+        }
+        
+        const task = JSON.parse(taskData);
+        
+        if (task.status !== 'active') {
+          message.ack(); // Task is disabled
+          continue;
+        }
+        
+        // Execute the task
+        const executionResult = await this.executeScheduledTask(task);
+        
+        // Log execution
+        const executionLog = {
+          taskId,
+          executedAt: Date.now(),
+          result: executionResult,
+          success: executionResult.success
+        };
+        
+        await STORAGE.put(
+          `task_logs/${taskId}/${Date.now()}.json`,
+          JSON.stringify(executionLog)
+        );
+        
+        // Schedule next execution if task is recurring
+        if (task.schedule !== 'once') {
+          const nextRun = this.calculateNextRun(task.schedule, Date.now());
+          task.nextRun = nextRun;
+          task.lastRun = Date.now();
+          task.executionCount = (task.executionCount || 0) + 1;
+          
+          await MEMORY_STORE.put(`scheduled_task:${taskId}`, JSON.stringify(task));
+          
+          // Queue next execution
+          const delaySeconds = Math.floor((nextRun - Date.now()) / 1000);
+          if (delaySeconds > 0) {
+            await TASK_QUEUE.sendDelayed({
+              body: {
+                taskId,
+                execution: 'scheduled'
+              }
+            }, delaySeconds);
+          }
+        }
+        
+        message.ack();
+      } catch (error) {
+        console.error('Scheduled task execution error:', error);
+        message.retry(300); // Retry in 5 minutes
+      }
+    }
+  }
+};
+```
+
+## Best Practices
+
+### Batch Processing Strategy
+
+```typescript
+// ✅ Good: Process messages in batches for efficiency
+export default {
+  async queue(batch: MessageBatch, env: Env): Promise<void> {
+    const results = await Promise.allSettled(
+      batch.messages.map(async (message) => {
+        const result = await this.processMessage(message.body);
+        message.ack();
+        return result;
+      })
+    );
+    
+    // Handle any failures
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        batch.messages[index].retry(60);
+      }
+    });
+  },
+  
+  async processMessage(data: any): Promise<any> {
+    // Process individual message
+    return { processed: true, data };
+  }
+};
+
+// ❌ Bad: Processing messages one by one sequentially
+for (const message of batch.messages) {
+  await processMessage(message.body);
+  message.ack();
+}
+```
+
+### Error Handling & Retry Logic
+
+```typescript
+// ✅ Good: Implement smart retry logic with exponential backoff
+export default {
+  async queue(batch: MessageBatch, env: Env): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        await this.processMessage(message.body);
+        message.ack();
+      } catch (error) {
+        if (error.type === 'rate_limit') {
+          // Exponential backoff for rate limits
+          const delay = Math.min(Math.pow(2, message.attempts) * 30, 300);
+          message.retry(delay);
+        } else if (message.attempts < 5) {
+          message.retry(60); // Standard retry
+        } else {
+          console.error('Max retries exceeded:', error);
+          message.abandon(); // Send to DLQ
+        }
+      }
+    }
+  }
+};
+
+// ❌ Bad: No retry logic or error handling
+try {
+  await processMessage(message.body);
+  message.ack();
+} catch (error) {
+  // Message is lost!
+}
+```
+
+### Message Deduplication
+
+```typescript
+// ✅ Good: Use message IDs and memory store for deduplication
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class DeduplicationAgent extends AiAgentSDK {
+  async sendUniqueMessage(queueBinding: QueueBinding, data: any): Promise<void> {
+    const { MEMORY_STORE } = this.env;
+    const messageId = this.generateMessageId(data); // Hash of content
+    
+    // Check if already processed
+    const processed = await MEMORY_STORE.get(`processed:${messageId}`);
+    if (processed) {
+      return; // Skip duplicate
+    }
+    
+    await queueBinding.send({
+      id: messageId,
+      body: data
+    });
+    
+    // Mark as sent with TTL
+    await MEMORY_STORE.put(`processed:${messageId}`, 'true', { 
+      expirationTtl: 3600 
+    });
+  }
+  
+  private generateMessageId(data: any): string {
+    // Generate consistent hash from message content
+    return btoa(JSON.stringify(data)).replace(/[^a-zA-Z0-9]/g, '');
+  }
+}
+
+// ❌ Bad: No deduplication - same message processed multiple times
+await QUEUE.send({ body: data }); // Could be sent multiple times
+```
+
+### Multiple Queues in One Worker
+
+```typescript
+export default {
+  // Handle high-priority queue
+  async queue(batch: MessageBatch, env: Env): Promise<void> {
+    if (batch.queue === 'high-priority-tasks') {
+      await this.processHighPriorityTasks(batch, env);
+    } else if (batch.queue === 'batch-processing') {
+      await this.processBatchTasks(batch, env);
+    }
+  }
+};
+```
+
+## Limitations
+
+- **Message Size**: Maximum 128 KB per message and 25GB total backlog size
+- **Batch Size**: Maximum 100 messages per batch and 256 KB Total  
+- **Retention**: Messages retained for 14 days maximum
+- **Visibility Timeout**: 12 hours maximum processing time and 100 retries
+- **Producer Rate Limits**: 5,000 messages/second per queue
+- **Dead Letter Queue**: Maximum 3 redirections before permanent failure
+
+## Related Services
+
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Store queue state and processing flags
+- **[Analytics Engine](/en/developers/platform/analytics-engine)** - Track queue metrics and performance  
+- **[Workflows](/en/developers/platform/workflows)** - Orchestrate complex multi-queue workflows
+
+---
+
+## Official Documentation
+
+- [Cloudflare Queues Documentation](https://developers.cloudflare.com/queues/) 
+- [Queue Concurrency Logic](https://developers.cloudflare.com/queues/configuration/consumer-concurrency/)

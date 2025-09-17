@@ -1,0 +1,541 @@
+export const metadata = {
+  "title": "External Databases",
+  "description": "Connect to external databases with zero-latency acceleration via Hyperdrive"
+};
+
+# External Databases
+
+**Connect your agents to any database, anywhere, instantly.** Cloudflare Hyperdrive accelerates queries to your existing databases by intelligently caching connections and data at the edge. Perfect for agents that need to access PostgreSQL, MySQL, and other external databases with dramatically reduced latency.
+
+## Key Features
+
+- **Zero-Configuration Acceleration**: Automatic query optimization and connection pooling
+- **Universal Compatibility**: Works with PostgreSQL, MySQL, and any database with connection strings
+- **Geographic Distribution**: Smart caching across Cloudflare's global network
+- **Connection Pooling**: Efficient database connection management at scale
+- **Query Caching**: Intelligent caching of frequently accessed data
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add Hyperdrive configuration in your `wrangler.json`:
+
+```json
+{
+  "hyperdrive": [
+    {
+      "binding": "EXTERNAL_DB",
+      "id": "your-hyperdrive-config-id"
+    }
+  ]
+}
+```
+
+### Hello World Database Query
+
+Create a simple agent that queries an external PostgreSQL database:
+
+```typescript
+// src/agents/DatabaseAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class DatabaseAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { EXTERNAL_DB } = this.env;
+    
+    if (message.content.includes('get user count')) {
+      try {
+        // Query external database through Hyperdrive
+        const result = await EXTERNAL_DB.prepare(
+          'SELECT COUNT(*) as user_count FROM users WHERE active = ?'
+        ).bind(true).first();
+        
+        return {
+          message: `Active users: ${result.user_count}`,
+          actions: [{
+            type: 'database_query_executed',
+            data: { 
+              query: 'user_count',
+              result: result.user_count 
+            }
+          }]
+        };
+      } catch (error) {
+        console.error('Database query failed:', error);
+        return {
+          message: "Unable to retrieve user count at this time."
+        };
+      }
+    }
+    
+    return { message: "Ask me for database information!" };
+  }
+}
+```
+
+### Agent Integration
+
+Access external databases from your agent:
+
+```typescript
+// src/agents/ExternalDatabaseAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class ExternalDatabaseAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { EXTERNAL_DB } = this.env;
+    
+    if (message.content.includes('customer info')) {
+      const customerId = this.extractCustomerId(message.content);
+      
+      if (!customerId) {
+        return { message: "Please provide a customer ID." };
+      }
+      
+      try {
+        // Query customer data from external PostgreSQL
+        const customer = await EXTERNAL_DB.prepare(`
+          SELECT 
+            id, 
+            email, 
+            name, 
+            subscription_tier,
+            created_at,
+            last_login
+          FROM customers 
+          WHERE id = ?
+        `).bind(customerId).first();
+        
+        if (!customer) {
+          return { message: `Customer ${customerId} not found.` };
+        }
+        
+        // Get customer orders from external database
+        const orders = await EXTERNAL_DB.prepare(`
+          SELECT 
+            order_id,
+            total_amount,
+            status,
+            created_at
+          FROM orders 
+          WHERE customer_id = ? 
+          ORDER BY created_at DESC 
+          LIMIT 5
+        `).bind(customerId).all();
+        
+        const response = `Customer Information:
+        
+📧 Email: ${customer.email}
+👤 Name: ${customer.name}
+💎 Tier: ${customer.subscription_tier}
+📅 Member since: ${new Date(customer.created_at).toLocaleDateString()}
+🔐 Last login: ${new Date(customer.last_login).toLocaleDateString()}
+
+Recent Orders (${orders.results.length}):
+${orders.results.map(order => 
+  `• Order #${order.order_id}: $${order.total_amount} (${order.status})`
+).join('\n')}`;
+
+        return {
+          message: response,
+          actions: [{
+            type: 'customer_info_retrieved',
+            data: {
+              customer,
+              orders: orders.results
+            }
+          }]
+        };
+        
+      } catch (error) {
+        console.error('External database query failed:', error);
+        return {
+          message: "Unable to retrieve customer information at this time."
+        };
+      }
+    }
+    
+    return { message: "Ask me about customer information!" };
+  }
+  
+  private extractCustomerId(content: string): string | null {
+    const match = content.match(/customer\s+(?:id\s+)?(\d+)/i);
+    return match ? match[1] : null;
+  }
+}
+```
+
+### MCP Integration
+
+External databases are powerful tools for MCP servers to access enterprise data.
+
+```typescript
+// src/mcp/ExternalDatabaseMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class ExternalDatabaseMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'query-customers': async ({ filters }: { filters?: Record<string, any> }) => {
+        const { EXTERNAL_DB } = this.env;
+        
+        try {
+          let query = 'SELECT id, email, name, subscription_tier FROM customers WHERE 1=1';
+          const params = [];
+          
+          if (filters?.tier) {
+            query += ' AND subscription_tier = ?';
+            params.push(filters.tier);
+          }
+          
+          if (filters?.email) {
+            query += ' AND email ILIKE ?';
+            params.push(`%${filters.email}%`);
+          }
+          
+          query += ' ORDER BY created_at DESC LIMIT 100';
+          
+          const result = await EXTERNAL_DB.prepare(query).bind(...params).all();
+          
+          return {
+            success: true,
+            customers: result.results,
+            count: result.results.length,
+            query_executed: query
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message
+          };
+        }
+      },
+      
+      'analytics-dashboard': async ({ timeframe }: { timeframe: string }) => {
+        const { EXTERNAL_DB } = this.env;
+        
+        try {
+          // Calculate date range based on timeframe
+          const timeframeDays = {
+            '7d': 7,
+            '30d': 30,
+            '90d': 90
+          }[timeframe] || 30;
+          
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - timeframeDays);
+          
+          // Run multiple analytics queries in parallel
+          const [revenue, newCustomers, topProducts] = await Promise.all([
+            // Revenue analytics
+            EXTERNAL_DB.prepare(`
+              SELECT 
+                DATE(created_at) as date,
+                SUM(total_amount) as daily_revenue,
+                COUNT(*) as order_count
+              FROM orders 
+              WHERE created_at >= ? AND status = 'completed'
+              GROUP BY DATE(created_at)
+              ORDER BY date DESC
+            `).bind(startDate.toISOString()).all(),
+            
+            // New customer acquisition
+            EXTERNAL_DB.prepare(`
+              SELECT COUNT(*) as new_customers
+              FROM customers 
+              WHERE created_at >= ?
+            `).bind(startDate.toISOString()).first(),
+            
+            // Top selling products
+            EXTERNAL_DB.prepare(`
+              SELECT 
+                p.name,
+                SUM(oi.quantity) as total_sold,
+                SUM(oi.price * oi.quantity) as total_revenue
+              FROM order_items oi
+              JOIN products p ON oi.product_id = p.id
+              JOIN orders o ON oi.order_id = o.id
+              WHERE o.created_at >= ? AND o.status = 'completed'
+              GROUP BY p.id, p.name
+              ORDER BY total_sold DESC
+              LIMIT 10
+            `).bind(startDate.toISOString()).all()
+          ]);
+          
+          const totalRevenue = revenue.results.reduce(
+            (sum, day) => sum + parseFloat(day.daily_revenue), 0
+          );
+          
+          return {
+            success: true,
+            timeframe,
+            analytics: {
+              total_revenue: totalRevenue,
+              new_customers: newCustomers.new_customers,
+              daily_revenue: revenue.results,
+              top_products: topProducts.results
+            },
+            generated_at: Date.now()
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message
+          };
+        }
+      }
+    };
+  }
+}
+
+// Export the Durable Object class
+export { ExternalDatabaseMCPServer };
+
+// Wrangler configuration for the MCP server
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Handle MCP server requests
+    const id = env.EXTERNAL_DB_MCP_SERVER.idFromName('external-db-mcp');
+    const obj = env.EXTERNAL_DB_MCP_SERVER.get(id);
+    return obj.fetch(request);
+  }
+};
+```
+
+## TypeScript API Reference
+
+You can access the external database via the `env` of the **Agent** or **MCP Tool**
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+func example() {
+  // EXTERNAL_DB can be named to anything and equals the "binding" sent in wrangler.json
+  const { EXTERNAL_DB } = this.env;
+}
+```
+
+### Database Connection
+
+**`EXTERNAL_DB.prepare(query: string): PreparedStatement`**  
+Creates a prepared statement for secure parameterized queries. Always use prepared statements to prevent SQL injection attacks.
+
+**`preparedStatement.bind(...params: any[]): PreparedStatement`**  
+Binds parameters to the prepared statement placeholders (?). Parameters are automatically escaped for security.
+
+**`preparedStatement.first(): Promise<Record<string, any> | null>`**  
+Executes the query and returns the first row, or null if no results found.
+
+**`preparedStatement.all(): Promise<{ results: Record<string, any>[], meta: QueryMeta }>`**  
+Executes the query and returns all matching rows with metadata about the query execution.
+
+**`preparedStatement.run(): Promise<{ success: boolean, meta: QueryMeta }>`**  
+Executes INSERT, UPDATE, or DELETE queries and returns execution metadata including affected row count.
+
+### Transaction Support
+
+**`EXTERNAL_DB.batch(statements: PreparedStatement[]): Promise<BatchResult[]>`**  
+Executes multiple prepared statements as a single atomic transaction. All statements succeed or all fail together.
+
+**`EXTERNAL_DB.exec(sql: string): Promise<ExecResult>`**  
+Executes raw SQL for DDL operations like CREATE TABLE. Use sparingly and never with user input.
+
+## Examples
+
+### Customer Relationship Management Agent
+
+```typescript
+// Agent that manages customer data across external systems
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class CRMAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { EXTERNAL_DB } = this.env;
+    
+    if (message.content.includes('create customer')) {
+      const customerData = this.extractCustomerData(message.content);
+      
+      if (!customerData.email || !customerData.name) {
+        return { 
+          message: "Please provide customer name and email address." 
+        };
+      }
+      
+      try {
+        // Check if customer already exists
+        const existing = await EXTERNAL_DB.prepare(
+          'SELECT id FROM customers WHERE email = ?'
+        ).bind(customerData.email).first();
+        
+        if (existing) {
+          return { 
+            message: `Customer with email ${customerData.email} already exists (ID: ${existing.id})` 
+          };
+        }
+        
+        // Create customer in external PostgreSQL database
+        const result = await EXTERNAL_DB.prepare(`
+          INSERT INTO customers (
+            email, 
+            name, 
+            phone, 
+            subscription_tier, 
+            created_at,
+            source
+          ) VALUES (?, ?, ?, ?, NOW(), ?)
+          RETURNING id, email, name
+        `).bind(
+          customerData.email,
+          customerData.name,
+          customerData.phone || null,
+          customerData.tier || 'free',
+          'agent_created'
+        ).first();
+        
+        return {
+          message: `✅ Customer created successfully!
+          
+👤 Name: ${result.name}
+📧 Email: ${result.email}
+🆔 Customer ID: ${result.id}
+💎 Tier: ${customerData.tier || 'free'}`,
+          actions: [{
+            type: 'customer_created',
+            data: {
+              customerId: result.id,
+              email: result.email,
+              name: result.name,
+              tier: customerData.tier || 'free'
+            }
+          }]
+        };
+        
+      } catch (error) {
+        console.error('Customer creation failed:', error);
+        return {
+          message: "Failed to create customer. Please check the provided information and try again."
+        };
+      }
+    }
+    
+    return { message: "I can help you create customers or get customer information!" };
+  }
+  
+  private extractCustomerData(content: string): any {
+    // Simple extraction logic - in practice, use more sophisticated parsing
+    const emailMatch = content.match(/email[:\s]+([^\s]+@[^\s]+)/i);
+    const nameMatch = content.match(/name[:\s]+([^,\n]+)/i);
+    const phoneMatch = content.match(/phone[:\s]+([^\s,\n]+)/i);
+    const tierMatch = content.match(/tier[:\s]+(free|pro|enterprise)/i);
+    
+    return {
+      email: emailMatch ? emailMatch[1] : null,
+      name: nameMatch ? nameMatch[1].trim() : null,
+      phone: phoneMatch ? phoneMatch[1] : null,
+      tier: tierMatch ? tierMatch[1].toLowerCase() : null
+    };
+  }
+}
+```
+
+## Best Practices
+
+### Query Optimization
+
+Use prepared statements and efficient queries to maximize Hyperdrive's caching benefits:
+
+```typescript
+// ✅ Good: Use prepared statements with parameters
+const getCustomerOrders = async (customerId: string, EXTERNAL_DB: any) => {
+  return EXTERNAL_DB.prepare(`
+    SELECT order_id, total_amount, status, created_at
+    FROM orders 
+    WHERE customer_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT 10
+  `).bind(customerId).all();
+};
+
+// ✅ Good: Use indexes and efficient WHERE clauses
+const getRecentActivity = async (days: number, EXTERNAL_DB: any) => {
+  return EXTERNAL_DB.prepare(`
+    SELECT DATE(created_at) as date, COUNT(*) as count
+    FROM orders 
+    WHERE created_at >= CURRENT_DATE - INTERVAL '? days'
+      AND status = 'completed'
+    GROUP BY DATE(created_at)
+    ORDER BY date DESC
+  `).bind(days).all();
+};
+
+// ❌ Bad: Avoid SELECT * and inefficient queries
+const badQuery = async (EXTERNAL_DB: any) => {
+  return EXTERNAL_DB.prepare('SELECT * FROM orders').all(); // Too broad
+};
+```
+
+### Connection Management
+
+Leverage Hyperdrive's automatic connection pooling and caching:
+
+```typescript
+// ✅ Good: Let Hyperdrive handle connections
+const efficientDatabaseAccess = async (EXTERNAL_DB: any) => {
+  // Hyperdrive automatically pools and caches connections
+  const results = await Promise.all([
+    EXTERNAL_DB.prepare('SELECT COUNT(*) FROM customers').first(),
+    EXTERNAL_DB.prepare('SELECT COUNT(*) FROM orders').first(),
+    EXTERNAL_DB.prepare('SELECT COUNT(*) FROM products').first()
+  ]);
+  
+  return results;
+};
+
+// ✅ Good: Use transactions for related operations
+const updateCustomerAndOrders = async (customerId: string, updates: any, EXTERNAL_DB: any) => {
+  const statements = [
+    EXTERNAL_DB.prepare('UPDATE customers SET name = ? WHERE id = ?').bind(updates.name, customerId),
+    EXTERNAL_DB.prepare('UPDATE orders SET customer_name = ? WHERE customer_id = ?').bind(updates.name, customerId)
+  ];
+  
+  return EXTERNAL_DB.batch(statements);
+};
+```
+
+## Limitations & Considerations
+
+- **Database Compatibility**: Supports PostgreSQL, MySQL, and any database with standard connection strings
+- **Query Limits**: Individual queries limited to 1MB result size
+- **Connection Pooling**: Automatic pooling with configurable limits
+- **Caching**: Intelligent caching of frequently accessed data
+- **Geographic Distribution**: Best performance when database and edge locations are geographically close
+
+## Related Services
+
+- **[Databases](/en/developers/platform/databases)** - Serverless SQL databases for primary storage
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Cache frequently accessed external database results
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Track external database query performance
+- **[Queues](/en/developers/platform/queues)** - Queue external database operations for batch processing
+
+---
+
+## Official Documentation
+
+- [Hyperdrive Documentation](https://developers.cloudflare.com/hyperdrive/)
+- [Database Integration Guide](https://developers.cloudflare.com/hyperdrive/get-started/) 

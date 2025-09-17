@@ -1,0 +1,67 @@
+export const metadata = {
+  "title": "Overview",
+  "description": "Planetary-scale infrastructure for AI agents powered by Cloudflare"
+};
+
+**Building AI Agents or MCP Tools that scale globally? You're in the right place.** 
+
+Our platform harnesses Cloudflare's planetary-scale infrastructure to give your AI agents superpowers. Think of it as a AI-first cloud paltform where your agents or MCP tools need to process millions of messages, store terabytes of context, and respond in milliseconds from 330+ cities worldwide.
+
+## Current Platform State
+
+We are currently in **Pre-Alpha** phase and have created a framework that is open source and self hostable. What we have today:
+
+* An Agent and MCP Framework to build services
+* Ability to develop and test locally
+* Ability to deploy services on your own Cloudflare account
+
+**What's under development:**
+
+* Ability to host, share and discover your work on Null Shot.
+* Ability for users to one-click deploy your agents and MCPs locally or in the cloud.
+* Automated builds and deployments from Github repositories (CI/CD)
+* Python / Rust implementations
+
+## Why choose us for for AI Agents or MCP Tools?
+
+Traditional cloud providers weren't built for the unique demands of AI agents:
+
+- **Global Edge Computing**: Your agents run closer to users (sub-20ms latency globally)
+- **Serverless-First**: No cold starts, infinite scale, pay only for what you use
+- **Built-in Intelligence**: Analytics, caching, and optimization happen automatically
+- **Cost Efficiency**: Up to 10x cheaper than traditional cloud providers for AI workloads
+- **Service Mesh**: We have designed a service mesh for MCP Tools to automatically deploy tools locally or in the cloud
+
+## Core Platform Services
+
+Our platform exposes enables you to do anyhting imaginable through simple TypeScript APIs:
+
+### 💾 **Data & Storage**
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Lightning-fast global key-value store for agent memory
+- **[Storage (R2)](/en/developers/platform/storage)** - S3-compatible object storage for files, images/video, and datasets  
+- **[SQL Database](/en/developers/platform/d1-database)** - Serverless SQL databases that scale to zero
+- **[External Database](/en/developers/platform/external-databases)** - Bring your own database to our ecosystem.
+- **[Cache](/en/developers/platform/cache)** - Intelligent global aching layer gets data to your users faster
+
+### 🚀 **Communication & Processing**
+- **[Queues](/en/developers/platform/queues)** - Reliable message queuing for async agent workflows
+- **[Workflows](/en/developers/platform/workflows)** - Orchestrate complex multi-agent processes
+- **[Email Routing](/en/developers/platform/email-routing)** - Handle inbound emails in your agent workflows
+- **[Stream](/en/developers/platform/stream)** - Video processing and live streaming capabilities
+
+### 📊 **Observability & Analytics**
+- **[Analytics Engine](/en/developers/platform/analytics-storage)** - Time-series data for agent and mcp metrics for users or business insights
+- **[Logs](/en/developers/platform/logs)** - Structured logging for debugging and monitoring
+- **[Stream](/en/developers/platform/stream)** - Video/audio processing and live streaming capabilities
+
+### 🔧 **Configuration & Security**
+- **[Environment Variables](/en/developers/platform/environment-variables)** - Secure configuration management
+- **[Secret Manager](/en/developers/platform/secret-manager)** - Encrypted storage for API keys and secrets
+- **[Browser Rendering](/en/developers/platform/web-search)** - Real-time web search and browser capabilities
+
+## Getting Started
+
+Read below on getting started with AI Agents or MCP Tools and then dive into the above services for advanced use cases!
+
+* Agent Starter
+* MCP Tool Starter

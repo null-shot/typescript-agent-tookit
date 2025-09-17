@@ -1,0 +1,777 @@
+export const metadata = {
+  "title": "SQL Database",
+  "description": "Serverless SQL databases with global read replicas and local agent storage"
+};
+
+**Powerful SQL databases that scale with your agents.** Cloudflare D1 provides serverless SQLite databases with automatic scaling, global read replicas, and built-in agent storage capabilities. Perfect for storing structured data, user information, and complex relationships that agents need to track.
+
+## Key Features
+
+- **Global Read Replicas**: Automatically replicated across multiple regions for faster reads
+- **Serverless Scaling**: Scales to zero when not in use, handles thousands of queries per second
+- **ACID Compliance**: Full transaction support with guaranteed data consistency
+- **Agent Storage**: Built-in SQLite storage within Durable Objects for local agent data
+- **Sessions API**: Sequential consistency across distributed replicas
+
+## Wrangler Configuration
+
+First, add D1 databases in your `wrangler.json`:
+
+```json
+{
+  "d1_databases": [
+    {
+      "binding": "USER_DB", 
+      "database_name": "user_data",
+      "database_id": "your-database-id"
+    },
+    {
+      "binding": "ANALYTICS_DB",
+      "database_name": "analytics_data", 
+      "database_id": "your-analytics-db-id"
+    }
+  ]
+}
+```
+
+Generate your database id by using `wrangler d1 create database-name-here` and paste the responding db.
+
+**NOTE: In the future, the platform will automate this for you**
+
+## TypeScript API Reference
+
+You can access D1 databases via the `env` of the **Agent** or **MCP Tool**:
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+function example() {
+  // USER_DB can be named anything and equals the "binding" in wrangler.json
+  const { USER_DB } = this.env;
+}
+```
+
+### Global D1 Database Methods
+
+**`prepare(query: string): D1PreparedStatement`**  
+Creates a prepared statement for SQL queries. Supports parameter binding for security and performance.
+
+**`withSession(bookmark?: string): D1DatabaseSession`**  
+Creates a new session for sequential consistency across read replicas. Essential for maintaining data consistency. Optional if consistency isn't required.
+
+**`batch(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>`**  
+Executes multiple prepared statements in a single transaction for better performance.
+
+**`exec(query: string): Promise<D1ExecResult>`**  
+Executes raw SQL statements. Mainly used for schema changes and bulk operations.
+
+### Agent and MCP Tool Local Storage Methods
+
+**`ctx.storage.sql.exec(query: string): Promise<SqlStorageResult>`**  
+Executes SQL directly on the agent's local SQLite database within the Durable Object.
+
+**`ctx.storage.sql.prepare(query: string): SqlStorageStatement`**  
+Creates prepared statements for the local SQLite database with parameter binding.
+
+## Database Types: Global vs Agent/MCP Tool Storage
+
+### Global D1 Service
+
+```typescript
+// Accessing global D1 database via environment binding
+export class UserDataAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { USER_DB } = this.env;
+    
+    // Use Sessions API for read consistency across replicas
+    const session = USER_DB.withSession('first-unconstrained');
+    
+    const userData = await session
+      .prepare('SELECT * FROM users WHERE id = ?')
+      .bind(message.userId)
+      .first();
+    
+    return { message: `User data: ${JSON.stringify(userData)}` };
+  }
+}
+```
+
+**Pros:**
+- Global read replicas for faster access worldwide (30-75ms typical replication lag)
+- Automatic backups with Time Travel (30-day point-in-time recovery)
+- Multi-region consistency with Sessions API
+- Shared data across multiple agents and services
+- Familiar SQL migration tools
+
+**Cons:**
+- Network latency for write operations (writes always go to primary region)
+- More complex setup for simple agent-local data
+- Additional D1 usage costs based on rows read/written
+
+### Agent Local Storage
+
+```typescript
+// Using local SQLite storage within agent Durable Object
+export class ChatHistoryAgent extends AiAgentSDK {
+  constructor(env: Env, ctx: DurableObjectState) {
+    super(env, ctx);
+    this.initializeLocalDatabase();
+  }
+
+  private async initializeLocalDatabase() {
+    // Create tables in the agent's local SQLite database
+    await this.ctx.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS chat_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        message TEXT NOT NULL,
+        response TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    // Store chat history locally in the agent
+    const stmt = this.ctx.storage.sql.prepare(`
+      INSERT INTO chat_history (user_id, message, response)
+      VALUES (?, ?, ?)
+    `);
+    
+    const response = "Generated response";
+    
+    await stmt.bind(message.userId, message.content, response).run();
+    
+    // Retrieve recent history
+    const history = await this.ctx.storage.sql
+      .prepare('SELECT * FROM chat_history WHERE user_id = ? ORDER BY created_at DESC LIMIT 10')
+      .bind(message.userId)
+      .all();
+    
+    return { 
+      message: response,
+      actions: [{
+        type: 'chat_stored',
+        data: { historyCount: history.length }
+      }]
+    };
+  }
+}
+```
+
+**Pros:**
+- Zero network latency for agent and mcp tool data (sub-millisecond access)
+- No additional D1 usage costs (included in Durable Object pricing)
+- Immediate consistency (no replication lag)
+- Programmatic backup capabilities via Durable Object snapshots
+- Perfect for agent-specific state and temporary data
+
+**Cons:**
+- No global read replicas (data isolated to single region)
+- Storage processing limited by Durable Object constraints (128MB memory limit)
+- Data isolated to individual agent instances
+- Backup/restore requires custom implementation
+- Setup SQL migrations manually in code
+
+## Examples
+
+### User Profile Management Agent
+
+```typescript
+// Agent that manages user profiles with global D1 database
+export class UserProfileAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { USER_DB } = this.env;
+    
+    if (message.content.includes('update profile')) {
+      // Start session for consistency across operations
+      const session = USER_DB.withSession('first-primary');
+      
+      const profileData = this.extractProfileData(message.content);
+      
+      // Upsert user profile
+      await session.prepare(`
+        INSERT INTO user_profiles (user_id, name, email, preferences, updated_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) DO UPDATE SET
+          name = EXCLUDED.name,
+          email = EXCLUDED.email,
+          preferences = EXCLUDED.preferences,
+          updated_at = CURRENT_TIMESTAMP
+      `).bind(
+        message.userId,
+        profileData.name,
+        profileData.email,
+        JSON.stringify(profileData.preferences)
+      ).run();
+      
+      // Log the profile update
+      await session.prepare(`
+        INSERT INTO profile_audit_log (user_id, action, changes, created_at)
+        VALUES (?, 'update', ?, CURRENT_TIMESTAMP)
+      `).bind(
+        message.userId,
+        JSON.stringify(profileData)
+      ).run();
+      
+      return {
+        message: "Profile updated successfully!",
+        actions: [{
+          type: 'profile_updated',
+          data: profileData
+        }]
+      };
+    }
+    
+    if (message.content.includes('get profile')) {
+      const session = USER_DB.withSession('first-unconstrained');
+      
+      // Get user profile with recent activity
+      const userData = await session.prepare(`
+        SELECT 
+          up.name,
+          up.email,
+          up.preferences,
+          up.updated_at,
+          COUNT(al.id) as total_updates,
+          MAX(al.created_at) as last_update
+        FROM user_profiles up
+        LEFT JOIN profile_audit_log al ON up.user_id = al.user_id
+        WHERE up.user_id = ?
+        GROUP BY up.user_id
+      `).bind(message.userId).first();
+      
+      if (!userData) {
+        return { message: "No profile found. Would you like to create one?" };
+      }
+      
+      return {
+        message: `Your profile:\nName: ${userData.name}\nEmail: ${userData.email}\nLast updated: ${userData.last_update}`,
+        actions: [{
+          type: 'profile_retrieved',
+          data: userData
+        }]
+      };
+    }
+  }
+  
+  private extractProfileData(content: string) {
+    // Extract profile data from message content
+    return {
+      name: "John Doe",
+      email: "john@example.com", 
+      preferences: { theme: "dark", notifications: true }
+    };
+  }
+}
+```
+
+### Analytics Data Processing Agent
+
+```typescript
+// Agent using global D1 for analytics aggregation
+export class AnalyticsAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { ANALYTICS_DB } = this.env;
+    
+    if (message.content.includes('daily report')) {
+      const session = ANALYTICS_DB.withSession('first-primary');
+      
+      // Complex aggregation query with multiple JOINs
+      const report = await session.prepare(`
+        WITH daily_stats AS (
+          SELECT 
+            DATE(created_at) as date,
+            COUNT(*) as events,
+            COUNT(DISTINCT user_id) as unique_users,
+            AVG(processing_time_ms) as avg_processing_time
+          FROM events 
+          WHERE created_at >= DATE('now', '-7 days')
+          GROUP BY DATE(created_at)
+        ),
+        user_engagement AS (
+          SELECT 
+            user_id,
+            COUNT(*) as event_count,
+            MAX(created_at) as last_seen
+          FROM events
+          WHERE created_at >= DATE('now', '-7 days')
+          GROUP BY user_id
+          ORDER BY event_count DESC
+          LIMIT 10
+        )
+        SELECT 
+          ds.date,
+          ds.events,
+          ds.unique_users,
+          ds.avg_processing_time,
+          JSON_GROUP_ARRAY(
+            JSON_OBJECT(
+              'user_id', ue.user_id,
+              'event_count', ue.event_count,
+              'last_seen', ue.last_seen
+            )
+          ) as top_users
+        FROM daily_stats ds
+        LEFT JOIN user_engagement ue ON 1=1
+        GROUP BY ds.date, ds.events, ds.unique_users, ds.avg_processing_time
+        ORDER BY ds.date DESC
+      `).all();
+      
+      return {
+        message: `Analytics Report Generated:\n${report.length} days of data processed`,
+        actions: [{
+          type: 'analytics_report',
+          data: { report, generated_at: Date.now() }
+        }]
+      };
+    }
+    
+    if (message.content.includes('track event')) {
+      const session = ANALYTICS_DB.withSession('first-primary');
+      const eventData = this.extractEventData(message.content);
+      
+      // Track user event
+      await session.prepare(`
+        INSERT INTO events (user_id, event_type, event_data, processing_time_ms, created_at)
+        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `).bind(
+        message.userId,
+        eventData.type,
+        JSON.stringify(eventData.data),
+        eventData.processingTime
+      ).run();
+      
+      return {
+        message: `Event tracked: ${eventData.type}`,
+        actions: [{
+          type: 'event_tracked',
+          data: eventData
+        }]
+      };
+    }
+  }
+  
+  private extractEventData(content: string) {
+    return {
+      type: 'user_interaction',
+      data: { action: 'message_sent', content_length: content.length },
+      processingTime: Math.random() * 100
+    };
+  }
+}
+```
+
+### Local Chat Session Agent
+
+```typescript
+// Agent using local storage for session-specific data
+export class ChatSessionAgent extends AiAgentSDK {
+  constructor(env: Env, ctx: DurableObjectState) {
+    super(env, ctx);
+    this.initializeSessionStorage();
+  }
+
+  private async initializeSessionStorage() {
+    await this.ctx.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS session_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        message_text TEXT NOT NULL,
+        response_text TEXT,
+        tokens_used INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE TABLE IF NOT EXISTS session_context (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_session_messages_user_created 
+      ON session_messages(user_id, created_at);
+    `);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    // Get conversation context from local storage
+    const context = await this.getSessionContext();
+    
+    // Store incoming message
+    await this.ctx.storage.sql
+      .prepare(`
+        INSERT INTO session_messages (user_id, message_text, tokens_used)
+        VALUES (?, ?, ?)
+      `)
+      .bind(message.userId, message.content, message.content.length)
+      .run();
+    
+    // Get recent conversation history for context
+    const recentMessages = await this.ctx.storage.sql
+      .prepare(`
+        SELECT message_text, response_text, created_at
+        FROM session_messages 
+        WHERE user_id = ?
+        ORDER BY created_at DESC 
+        LIMIT 10
+      `)
+      .bind(message.userId)
+      .all();
+    
+    // Generate response using conversation history
+    const response = await this.generateContextualResponse(
+      message.content, 
+      recentMessages,
+      context
+    );
+    
+    // Update the stored message with response
+    await this.ctx.storage.sql
+      .prepare(`
+        UPDATE session_messages 
+        SET response_text = ?, tokens_used = tokens_used + ?
+        WHERE user_id = ? AND response_text IS NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+      `)
+      .bind(response, response.length, message.userId)
+      .run();
+    
+    // Update session context
+    await this.updateSessionContext('last_topic', this.extractTopic(message.content));
+    
+    return {
+      message: response,
+      actions: [{
+        type: 'session_updated',
+        data: { 
+          messageCount: recentMessages.length,
+          context: context
+        }
+      }]
+    };
+  }
+  
+  private async getSessionContext(): Promise<Record<string, string>> {
+    const contextRows = await this.ctx.storage.sql
+      .prepare('SELECT key, value FROM session_context')
+      .all();
+    
+    const context: Record<string, string> = {};
+    for (const row of contextRows) {
+      context[row.key as string] = row.value as string;
+    }
+    return context;
+  }
+  
+  private async updateSessionContext(key: string, value: string) {
+    await this.ctx.storage.sql
+      .prepare(`
+        INSERT INTO session_context (key, value, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT (key) DO UPDATE SET
+          value = EXCLUDED.value,
+          updated_at = CURRENT_TIMESTAMP
+      `)
+      .bind(key, value)
+      .run();
+  }
+  
+  private async generateContextualResponse(
+    message: string, 
+    history: any[], 
+    context: Record<string, string>
+  ): Promise<string> {
+    // Generate response using message, history, and context
+    return `Response to: "${message}" (${history.length} messages in context)`;
+  }
+  
+  private extractTopic(message: string): string {
+    // Simple topic extraction logic
+    if (message.includes('weather')) return 'weather';
+    if (message.includes('schedule')) return 'scheduling';
+    return 'general';
+  }
+}
+```
+
+### MCP Tool Integration
+
+```typescript
+// MCP Tool that uses both global and local storage
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class DatabaseMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+    this.initializeLocalStorage();
+  }
+
+  private async initializeLocalStorage() {
+    await this.state.storage.sql.exec(`
+      CREATE TABLE IF NOT EXISTS mcp_operations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        operation_type TEXT NOT NULL,
+        parameters TEXT,
+        result TEXT,
+        execution_time_ms INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
+
+  protected configureServer() {
+    return {
+      'query-global-data': async ({ sql, params }: { sql: string; params?: any[] }) => {
+        const startTime = Date.now();
+        const { USER_DB } = this.env;
+        
+        // Use global D1 database with session consistency
+        const session = USER_DB.withSession('first-unconstrained');
+        const result = await session
+          .prepare(sql)
+          .bind(...(params || []))
+          .all();
+        
+        const executionTime = Date.now() - startTime;
+        
+        // Log operation locally
+        await this.state.storage.sql
+          .prepare(`
+            INSERT INTO mcp_operations 
+            (operation_type, parameters, result, execution_time_ms)
+            VALUES (?, ?, ?, ?)
+          `)
+          .bind(
+            'global_query',
+            JSON.stringify({ sql, params }),
+            JSON.stringify(result),
+            executionTime
+          )
+          .run();
+        
+        return {
+          success: true,
+          data: result,
+          execution_time_ms: executionTime,
+          served_by: result.meta?.served_by_region || 'unknown'
+        };
+      },
+      
+      'query-local-operations': async ({ limit = 10 }: { limit?: number }) => {
+        // Query local operation history
+        const operations = await this.state.storage.sql
+          .prepare(`
+            SELECT operation_type, execution_time_ms, created_at
+            FROM mcp_operations 
+            ORDER BY created_at DESC 
+            LIMIT ?
+          `)
+          .bind(limit)
+          .all();
+        
+        return {
+          success: true,
+          operations,
+          total_operations: operations.length
+        };
+      },
+      
+      'batch-insert': async ({ table, records }: { table: string; records: any[] }) => {
+        const { USER_DB } = this.env;
+        const session = USER_DB.withSession('first-primary');
+        
+        // Create batch of prepared statements
+        const statements = records.map(record => {
+          const keys = Object.keys(record);
+          const placeholders = keys.map(() => '?').join(', ');
+          const sql = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders})`;
+          
+          return session.prepare(sql).bind(...Object.values(record));
+        });
+        
+        // Execute batch transaction
+        const results = await session.batch(statements);
+        
+        // Log batch operation locally
+        await this.state.storage.sql
+          .prepare(`
+            INSERT INTO mcp_operations 
+            (operation_type, parameters, result)
+            VALUES (?, ?, ?)
+          `)
+          .bind(
+            'batch_insert',
+            JSON.stringify({ table, record_count: records.length }),
+            JSON.stringify({ success: true, inserted: results.length })
+          )
+          .run();
+        
+        return {
+          success: true,
+          inserted: results.length,
+          results: results.map(r => ({ 
+            success: r.success, 
+            changes: r.meta?.changes 
+          }))
+        };
+      }
+    };
+  }
+}
+
+// Export the Durable Object class
+export { DatabaseMCPServer };
+```
+
+## Best Practices
+
+### Query Optimization
+
+```typescript
+// ✅ Good: Use Sessions API for read consistency
+const session = USER_DB.withSession('first-unconstrained');
+const userData = await session
+  .prepare('SELECT * FROM users WHERE id = ?')
+  .bind(userId)
+  .first();
+
+// ✅ Good: Use indexes for frequently queried columns
+await USER_DB.exec(`
+  CREATE INDEX CONCURRENTLY idx_users_email 
+  ON users (email)
+`);
+
+// ✅ Good: Use prepared statements for repeated queries
+const getUserStmt = USER_DB.prepare('SELECT * FROM users WHERE id = ?');
+const user = await getUserStmt.bind(userId).first();
+```
+
+### Transaction Management
+
+```typescript
+// ✅ Good: Use batch for multiple related operations
+const session = USER_DB.withSession('first-primary');
+
+const statements = [
+  session.prepare('UPDATE accounts SET balance = balance - ? WHERE id = ?')
+    .bind(amount, fromAccount),
+  session.prepare('UPDATE accounts SET balance = balance + ? WHERE id = ?')
+    .bind(amount, toAccount),
+  session.prepare('INSERT INTO transfers (from_account, to_account, amount) VALUES (?, ?, ?)')
+    .bind(fromAccount, toAccount, amount)
+];
+
+await session.batch(statements);
+```
+
+### Storage Strategy
+
+```typescript
+// ✅ Good: Use global D1 for shared data
+const userProfiles = await USER_DB.withSession('first-unconstrained')
+  .prepare('SELECT * FROM user_profiles WHERE team_id = ?')
+  .bind(teamId)
+  .all();
+
+// ✅ Good: Use agent storage for session-specific data
+const sessionState = await this.ctx.storage.sql
+  .prepare('SELECT * FROM session_state WHERE key = ?')
+  .bind('current_conversation')
+  .first();
+```
+
+## Backup & Recovery
+
+### Global D1 Backup
+
+D1 databases automatically include **Time Travel** - point-in-time recovery for the last 30 days:
+
+```bash
+# Restore database to 1 hour ago
+wrangler d1 time-travel my-database --before-timestamp=$(date -d '1 hour ago' +%s)
+
+# Restore to specific transaction ID
+wrangler d1 time-travel my-database --before-tx-id=01H0FM2XHKACETEFQK2P5T6BWD
+
+# Export current database state
+wrangler d1 export my-database --output=backup-$(date +%Y%m%d).sql
+```
+
+**Restoration Process:**
+1. D1 replays the Write-Ahead Log up to your specified point in time
+2. Creates a new database instance with the restored state
+3. Updates your binding to point to the restored database
+4. Previous database remains available for verification
+
+### Agent Storage Backup
+
+For agent local storage, backups are handled programmatically using Durable Object's Point-in-Time Recovery (PITR) API:
+
+```typescript
+export class BackupAgent extends AiAgentSDK {
+  async restoreToTimestamp(targetTimestamp: number): Promise<void> {
+    // Get bookmark for specific timestamp (within last 30 days)
+    const targetDate = new Date(targetTimestamp);
+    const bookmark = await this.ctx.storage.getBookmarkForTime(targetDate);
+    
+    if (!bookmark) {
+      throw new Error(`No bookmark available for timestamp ${targetTimestamp}`);
+    }
+    
+    // Restore to that point in time
+    const restoredBookmark = await this.ctx.storage.onNextSessionRestoreBookmark(bookmark);
+    
+    console.log(`Restored to timestamp ${targetTimestamp}, bookmark: ${restoredBookmark}`);
+  }
+}
+```
+
+**Point-in-Time Recovery Features:**
+- **`getCurrentBookmark()`**: Gets current state bookmark for backup reference
+- **`getBookmarkForTime(timestamp)`**: Gets bookmark for specific timestamp (last 30 days)
+- **`onNextSessionRestoreBookmark(bookmark)`**: Restores Durable Object to specific bookmark
+- **Automatic backups**: Using Durable Object alarms for scheduled backups
+- **Backup metadata**: Stored externally while leveraging built-in PITR for actual data
+
+## Limitations & Considerations
+
+### Global D1 Service
+- **Database Size**: 10GB maximum per database
+- **Query Timeout**: 30 seconds maximum execution time
+- **Concurrent Connections**: 100 concurrent connections per database
+- **Replica Lag**: 30-75ms typical replication lag between regions
+- **Cold Start**: ~100ms latency on first query after idle period
+
+### Agent Local Storage
+- **Storage Size**: 128MB practical limit per Durable Object
+- **No Global Replicas**: Data isolated to single Durable Object instance
+- **Manual Backups**: Requires custom backup implementation
+- **Limited Concurrency**: Single-threaded SQLite within Durable Object
+
+## Related Services
+
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Fast access to frequently used data
+- **[Cache](/en/developers/platform/cache)** - Cache expensive query results
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Time-series data for metrics
+- **[Workflows](/en/developers/platform/workflows)** - Orchestrate database operations across agents
+
+---
+
+## Official Documentation
+
+- [D1 Database Documentation](https://developers.cloudflare.com/d1/)
+- [D1 Sessions API](https://developers.cloudflare.com/d1/best-practices/read-replication/)
+- [Durable Objects SQL Storage](https://developers.cloudflare.com/durable-objects/api/sql-storage/) 

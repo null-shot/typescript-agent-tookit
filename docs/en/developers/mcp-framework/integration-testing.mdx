@@ -1,0 +1,830 @@
+export const metadata = {
+  "title": "Integration Testing",
+  "description": "Complete guide to testing MCP servers with specialized utilities and frameworks"
+};
+
+Testing MCP servers requires specialized approaches due to the unique challenges of the Cloudflare Workers environment and the Model Context Protocol's real-time communication patterns. This guide covers comprehensive testing strategies, utilities, and real-world examples.
+
+## Why Specialized Testing is Needed
+
+MCP servers running on Cloudflare Workers face unique testing challenges:
+
+- **No Native Node.js Features**: Standard libraries like native `fetch` aren't available
+- **WebSocket & SSE Communication**: Requires specialized transports for testing
+- **Durable Objects State**: Stateful testing across multiple requests
+- **Real-time Protocols**: Async communication patterns need careful testing
+
+## Testing Utilities Overview
+
+Our platform provides specialized testing utilities specifically designed for Cloudflare Workers MCP servers:
+
+### Core Testing Transports
+
+**WorkerSSEClientTransport** - Server-Sent Events testing transport
+- Handles SSE communication patterns in Cloudflare Workers
+- Mock-friendly for unit testing
+- Supports streaming responses
+
+**WorkerWebSocketClientTransport** - WebSocket testing transport  
+- Full WebSocket protocol support for Workers environment
+- Bidirectional communication testing
+- Connection lifecycle management
+
+These utilities are essential because Cloudflare's environment doesn't support standard Node.js features, requiring specialized implementations for testing.
+
+## Testing Architecture
+
+### 1. Unit Testing MCP Tools
+
+Test individual MCP tools in isolation:
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { TodoMCPServer } from '../src/todo-mcp-server';
+import { WorkerSSEClientTransport } from '@nullshot/test-utils';
+
+describe('Todo MCP Tools', () => {
+  let server: TodoMCPServer;
+  let transport: WorkerSSEClientTransport;
+
+  beforeEach(async () => {
+    server = new TodoMCPServer();
+    transport = new WorkerSSEClientTransport({
+      serverUrl: 'http://localhost:8787/sse'
+    });
+    await transport.connect();
+  });
+
+  it('should create a new todo item', async () => {
+    const result = await transport.callTool('create-todo', {
+      title: 'Test Task',
+      description: 'Test Description',
+      priority: 'high'
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data.title).toBe('Test Task');
+    expect(result.data.id).toBeDefined();
+  });
+
+  it('should list all todos', async () => {
+    // Create test data
+    await transport.callTool('create-todo', {
+      title: 'Task 1',
+      description: 'First task'
+    });
+    
+    await transport.callTool('create-todo', {
+      title: 'Task 2', 
+      description: 'Second task'
+    });
+
+    const result = await transport.callTool('list-todos', {});
+    
+    expect(result.success).toBe(true);
+    expect(result.data.todos).toHaveLength(2);
+    expect(result.data.todos[0].title).toBe('Task 1');
+  });
+
+  it('should handle invalid tool parameters', async () => {
+    const result = await transport.callTool('create-todo', {
+      // Missing required title parameter
+      description: 'Test Description'
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Missing required parameter: title');
+  });
+});
+```
+
+### 2. Integration Testing with WebSocket
+
+Test real-time communication patterns:
+
+```typescript
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { WorkerWebSocketClientTransport } from '@nullshot/test-utils';
+import { MCPClient } from '@modelcontextprotocol/sdk/client/index.js';
+
+describe('Todo MCP WebSocket Integration', () => {
+  let client: MCPClient;
+  let transport: WorkerWebSocketClientTransport;
+
+  beforeEach(async () => {
+    transport = new WorkerWebSocketClientTransport({
+      serverUrl: 'ws://localhost:8787/ws'
+    });
+    
+    client = new MCPClient(
+      {
+        name: 'test-client',
+        version: '1.0.0'
+      },
+      {
+        capabilities: {
+          tools: {}
+        }
+      }
+    );
+
+    await client.connect(transport);
+  });
+
+  afterEach(async () => {
+    await client.close();
+  });
+
+  it('should establish WebSocket connection and list tools', async () => {
+    const tools = await client.listTools();
+    
+    expect(tools.tools).toBeDefined();
+    expect(tools.tools.length).toBeGreaterThan(0);
+    
+    const todoTools = tools.tools.filter(tool => 
+      tool.name.startsWith('todo-')
+    );
+    expect(todoTools.length).toBeGreaterThan(0);
+  });
+
+  it('should handle tool calls over WebSocket', async () => {
+    const result = await client.callTool({
+      name: 'create-todo',
+      arguments: {
+        title: 'WebSocket Test Task',
+        description: 'Created via WebSocket'
+      }
+    });
+
+    expect(result.content).toBeDefined();
+    expect(result.content[0].type).toBe('text');
+    
+    const response = JSON.parse(result.content[0].text);
+    expect(response.success).toBe(true);
+    expect(response.data.title).toBe('WebSocket Test Task');
+  });
+});
+```
+
+## Real-World Testing Examples
+
+Based on the comprehensive test suite from the [TypeScript Agent Framework](https://github.com/null-shot/typescript-agent-framework/blob/main/examples/crud-mcp/test/todo-mcp-client.test.ts), here are production-ready testing patterns:
+
+### Complete CRUD Testing
+
+```typescript
+describe('Todo CRUD Operations', () => {
+  let client: MCPClient;
+  let transport: WorkerWebSocketClientTransport;
+
+  beforeEach(async () => {
+    transport = new WorkerWebSocketClientTransport({
+      serverUrl: 'ws://localhost:8787/ws'
+    });
+    
+    client = new MCPClient({
+      name: 'crud-test-client',
+      version: '1.0.0'
+    }, {
+      capabilities: { tools: {} }
+    });
+
+    await client.connect(transport);
+  });
+
+  afterEach(async () => {
+    await client.close();
+  });
+
+  it('should perform complete CRUD lifecycle', async () => {
+    // CREATE
+    const createResult = await client.callTool({
+      name: 'createTodo',
+      arguments: {
+        title: 'Integration Test Todo',
+        description: 'Testing full CRUD cycle',
+        priority: 'high',
+        dueDate: '2024-12-31'
+      }
+    });
+
+    const createdTodo = JSON.parse(createResult.content[0].text);
+    expect(createdTodo.success).toBe(true);
+    expect(createdTodo.todo.id).toBeDefined();
+    
+    const todoId = createdTodo.todo.id;
+
+    // READ
+    const readResult = await client.callTool({
+      name: 'getTodo',
+      arguments: { id: todoId }
+    });
+
+    const retrievedTodo = JSON.parse(readResult.content[0].text);
+    expect(retrievedTodo.success).toBe(true);
+    expect(retrievedTodo.todo.title).toBe('Integration Test Todo');
+
+    // UPDATE
+    const updateResult = await client.callTool({
+      name: 'updateTodo',
+      arguments: {
+        id: todoId,
+        title: 'Updated Test Todo',
+        completed: true
+      }
+    });
+
+    const updatedTodo = JSON.parse(updateResult.content[0].text);
+    expect(updatedTodo.success).toBe(true);
+    expect(updatedTodo.todo.title).toBe('Updated Test Todo');
+    expect(updatedTodo.todo.completed).toBe(true);
+
+    // DELETE
+    const deleteResult = await client.callTool({
+      name: 'deleteTodo',
+      arguments: { id: todoId }
+    });
+
+    const deleteResponse = JSON.parse(deleteResult.content[0].text);
+    expect(deleteResponse.success).toBe(true);
+
+    // VERIFY DELETION
+    const verifyResult = await client.callTool({
+      name: 'getTodo',
+      arguments: { id: todoId }
+    });
+
+    const verifyResponse = JSON.parse(verifyResult.content[0].text);
+    expect(verifyResponse.success).toBe(false);
+    expect(verifyResponse.error).toContain('not found');
+  });
+});
+```
+
+### Error Handling and Edge Cases
+
+```typescript
+describe('Todo Error Handling', () => {
+  let client: MCPClient;
+
+  beforeEach(async () => {
+    const transport = new WorkerWebSocketClientTransport({
+      serverUrl: 'ws://localhost:8787/ws'
+    });
+    client = new MCPClient({
+      name: 'error-test-client',
+      version: '1.0.0'
+    }, { capabilities: { tools: {} } });
+    await client.connect(transport);
+  });
+
+  it('should handle validation errors gracefully', async () => {
+    const result = await client.callTool({
+      name: 'createTodo',
+      arguments: {
+        // Missing required title
+        description: 'Todo without title',
+        priority: 'invalid-priority' // Invalid enum
+      }
+    });
+
+    const response = JSON.parse(result.content[0].text);
+    expect(response.success).toBe(false);
+    expect(response.error).toContain('validation failed');
+    expect(response.details).toBeDefined();
+  });
+
+  it('should handle resource not found errors', async () => {
+    const result = await client.callTool({
+      name: 'getTodo',
+      arguments: { id: 'nonexistent-id' }
+    });
+
+    const response = JSON.parse(result.content[0].text);
+    expect(response.success).toBe(false);
+    expect(response.error).toContain('Todo not found');
+  });
+
+  it('should handle malformed requests', async () => {
+    try {
+      await client.callTool({
+        name: 'createTodo',
+        arguments: 'invalid-json-string' // Should be object
+      });
+      expect.fail('Should have thrown validation error');
+    } catch (error) {
+      expect(error.message).toContain('Invalid arguments');
+    }
+  });
+});
+```
+
+## Testing Utilities Reference
+
+### WorkerSSEClientTransport Usage
+
+The SSE transport is ideal for testing streaming responses and server-sent events:
+
+```typescript
+import { WorkerSSEClientTransport } from '@nullshot/test-utils';
+
+const transport = new WorkerSSEClientTransport({
+  serverUrl: 'http://localhost:8787/sse',
+  headers: {
+    'Authorization': 'Bearer test-token',
+    'X-Test-Session': 'integration-test'
+  },
+  timeout: 30000
+});
+
+// Handle streaming data
+transport.onMessage((data) => {
+  console.log('Received streaming data:', data);
+});
+
+await transport.connect();
+```
+
+### WorkerWebSocketClientTransport Usage
+
+The WebSocket transport handles bidirectional real-time communication:
+
+```typescript
+import { WorkerWebSocketClientTransport } from '@nullshot/test-utils';
+
+const transport = new WorkerWebSocketClientTransport({
+  serverUrl: 'ws://localhost:8787/ws',
+  protocols: ['mcp'],
+  reconnectAttempts: 3,
+  reconnectDelay: 1000
+});
+
+// Handle connection events
+transport.onConnect(() => {
+  console.log('WebSocket connected');
+});
+
+transport.onDisconnect(() => {
+  console.log('WebSocket disconnected');
+});
+
+transport.onError((error) => {
+  console.error('WebSocket error:', error);
+});
+
+await transport.connect();
+```
+
+## Performance and Load Testing
+
+### Concurrent Client Testing
+
+```typescript
+describe('MCP Server Load Testing', () => {
+  it('should handle multiple concurrent clients', async () => {
+    const clientCount = 20;
+    const clients: MCPClient[] = [];
+
+    // Create multiple clients
+    for (let i = 0; i < clientCount; i++) {
+      const transport = new WorkerWebSocketClientTransport({
+        serverUrl: 'ws://localhost:8787/ws',
+        sessionId: `load-test-${i}`
+      });
+
+      const client = new MCPClient({
+        name: `load-test-client-${i}`,
+        version: '1.0.0'
+      }, { capabilities: { tools: {} } });
+
+      await client.connect(transport);
+      clients.push(client);
+    }
+
+    // Perform concurrent operations
+    const operations = clients.map((client, index) => 
+      client.callTool({
+        name: 'createTodo',
+        arguments: {
+          title: `Concurrent Todo ${index}`,
+          description: `Created by client ${index}`
+        }
+      })
+    );
+
+    const results = await Promise.all(operations);
+    
+    // Verify all operations succeeded
+    results.forEach((result, index) => {
+      const response = JSON.parse(result.content[0].text);
+      expect(response.success).toBe(true);
+      expect(response.todo.title).toBe(`Concurrent Todo ${index}`);
+    });
+
+    // Cleanup
+    await Promise.all(clients.map(client => client.close()));
+  }, 60000); // Extended timeout for load test
+});
+```
+
+## Test Configuration
+
+### Vitest Configuration for MCP Servers
+
+Based on the [TypeScript Agent Framework CRUD MCP example](https://github.com/null-shot/typescript-agent-framework/blob/main/examples/crud-mcp/vitest.config.ts), here's the complete Vitest configuration optimized for MCP server testing:
+
+```typescript
+// vitest.config.ts
+import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+
+export default defineWorkersConfig({
+  test: {
+    globals: true,
+    environment: "miniflare",
+    // Configure timeouts for MCP operations
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    teardownTimeout: 5000,
+    
+    poolOptions: {
+      workers: {
+        wrangler: { 
+          configPath: "./wrangler.toml" 
+        },
+        miniflare: {
+          // Enable compatibility date for latest features
+          compatibilityDate: "2024-03-01",
+          compatibilityFlags: ["nodejs_compat"],
+          
+          // Configure bindings for testing
+          bindings: {
+            NODE_ENV: "test"
+          },
+          
+          // Durable Objects configuration for MCP servers
+          durableObjects: {
+            "MCP_SERVER": "McpServerDO"
+          },
+          
+          // Enable live reload for faster development
+          liveReload: true,
+          
+          // Configure KV storage for tests (if needed)
+          kvNamespaces: ["TEST_NAMESPACE"],
+          
+          // Configure D1 databases for tests (if needed)
+          d1Databases: ["TEST_DB"]
+        }
+      }
+    }
+  }
+});
+```
+
+### Essential Dependencies
+
+Install the required testing dependencies for Cloudflare Workers MCP testing:
+
+```bash
+# Core testing framework
+pnpm add -D vitest@~3.1.0
+
+# Cloudflare Workers Vitest integration
+pnpm add -D @cloudflare/vitest-pool-workers
+
+# TypeScript Agent Framework testing utilities
+pnpm add -D @nullshot/test-utils
+
+# Additional testing utilities (optional)
+pnpm add -D @vitest/ui      # For visual test debugging
+pnpm add -D @vitest/coverage-v8  # For coverage reporting
+```
+
+### TypeScript Configuration
+
+Configure TypeScript for testing with proper type definitions:
+
+```typescript
+// test/tsconfig.json
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "types": [
+      "@cloudflare/vitest-pool-workers",
+      "@nullshot/test-utils",
+      "vitest/globals"
+    ]
+  },
+  "include": [
+    "./**/*.ts",
+    "../src/**/*.ts",
+    "../src/env.d.ts"  // Include generated environment types
+  ]
+}
+```
+
+```typescript
+// test/env.d.ts
+declare module "cloudflare:test" {
+  interface ProvidedEnv extends Env {
+    NODE_ENV: "test";
+    // Add any additional test-specific environment variables
+  }
+}
+```
+
+## Testing Best Practices
+
+### 1. Test Environment Setup
+
+Create a dedicated test setup that follows Cloudflare Workers best practices:
+
+```typescript
+// test/setup.ts
+import { beforeAll, afterAll, beforeEach } from 'vitest';
+import { env, SELF } from 'cloudflare:test';
+
+// Global test configuration
+beforeAll(async () => {
+  // Set test environment
+  console.log('🧪 Setting up MCP test environment...');
+  
+  // Wait for MCP server to be ready
+  const healthCheck = await SELF.fetch('/health');
+  if (!healthCheck.ok) {
+    throw new Error('MCP server failed health check');
+  }
+  
+  console.log('✅ MCP server ready for testing');
+});
+
+// Clean state between tests
+beforeEach(async () => {
+  // Clear any test data between tests
+  if (env.TEST_NAMESPACE) {
+    // Clear KV data if using KV storage
+    const keys = await env.TEST_NAMESPACE.list();
+    await Promise.all(
+      keys.keys.map(key => env.TEST_NAMESPACE.delete(key.name))
+    );
+  }
+});
+
+afterAll(() => {
+  console.log('🧹 Test cleanup completed');
+});
+```
+
+### 2. Data Isolation
+
+Ensure tests don't interfere with each other:
+
+```typescript
+describe('Todo Tests with Clean State', () => {
+  beforeEach(async () => {
+    // Clear all test data before each test
+    const transport = new WorkerWebSocketClientTransport({
+      serverUrl: 'ws://localhost:8787/ws'
+    });
+    const client = new MCPClient({
+      name: 'cleanup-client',
+      version: '1.0.0'
+    }, { capabilities: { tools: {} } });
+    
+    await client.connect(transport);
+    await client.callTool({
+      name: 'clearAllTodos',
+      arguments: {}
+    });
+    await client.close();
+  });
+});
+```
+
+### 3. Mock External Dependencies
+
+```typescript
+// Mock external services during testing
+vi.mock('@external/notification-service', () => ({
+  sendNotification: vi.fn().mockResolvedValue({ sent: true }),
+  validateApiKey: vi.fn().mockReturnValue(true)
+}));
+```
+
+### 2. Wrangler Configuration for Testing
+
+Configure your `wrangler.toml` to support testing with proper environment separation:
+
+```toml
+# wrangler.toml
+name = "my-mcp-server"
+main = "src/index.ts"
+compatibility_date = "2024-03-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.test]
+name = "my-mcp-server-test"
+account_id = "your-test-account-id"
+
+# Durable Objects configuration for MCP server
+[[durable_objects.bindings]]
+name = "MCP_SERVER"
+class_name = "McpServerDO"
+
+# Test environment variables
+[env.test.vars]
+NODE_ENV = "test"
+LOG_LEVEL = "debug"
+
+# Test KV namespaces (if needed)
+[[env.test.kv_namespaces]]
+binding = "TEST_NAMESPACE"
+id = "test-namespace-id"
+
+# Test D1 databases (if needed)
+[[env.test.d1_databases]]
+binding = "TEST_DB"
+database_name = "test-database"
+database_id = "test-database-id"
+```
+
+### 3. Advanced Testing Patterns
+
+#### Testing MCP Tool Registration
+
+```typescript
+// test/mcp-registration.test.ts
+import { describe, it, expect } from 'vitest';
+import { env, SELF } from 'cloudflare:test';
+
+describe('MCP Tool Registration', () => {
+  it('should register all required MCP tools', async () => {
+    const response = await SELF.fetch('/mcp/tools', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list'
+      })
+    });
+
+    const result = await response.json();
+    expect(result.result.tools).toBeDefined();
+    
+    const toolNames = result.result.tools.map(tool => tool.name);
+    expect(toolNames).toContain('create-todo');
+    expect(toolNames).toContain('list-todos');
+    expect(toolNames).toContain('update-todo');
+    expect(toolNames).toContain('delete-todo');
+  });
+
+  it('should validate tool schemas correctly', async () => {
+    const response = await SELF.fetch('/mcp/tools/create-todo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'create-todo',
+          arguments: {
+            title: 'Test Todo',
+            description: 'A test todo item'
+          }
+        }
+      })
+    });
+
+    const result = await response.json();
+    expect(result.result).toBeDefined();
+    expect(result.error).toBeUndefined();
+  });
+});
+```
+
+#### Testing Durable Objects State
+
+```typescript
+// test/durable-objects.test.ts
+import { describe, it, expect, beforeEach } from 'vitest';
+import { env, runInDurableObject } from 'cloudflare:test';
+
+describe('MCP Server Durable Object', () => {
+  let mcpServerStub: DurableObjectStub;
+
+  beforeEach(() => {
+    const id = env.MCP_SERVER.newUniqueId();
+    mcpServerStub = env.MCP_SERVER.get(id);
+  });
+
+  it('should maintain state across requests', async () => {
+    // Create a todo via the Durable Object
+    const createResponse = await mcpServerStub.fetch('/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Persistent Todo',
+        description: 'This should persist'
+      })
+    });
+
+    const createdTodo = await createResponse.json();
+    expect(createdTodo.id).toBeDefined();
+
+    // Retrieve the todo to verify persistence
+    const getResponse = await mcpServerStub.fetch(`/todos/${createdTodo.id}`);
+    const retrievedTodo = await getResponse.json();
+    
+    expect(retrievedTodo.title).toBe('Persistent Todo');
+    expect(retrievedTodo.description).toBe('This should persist');
+  });
+
+  it('should handle concurrent operations safely', async () => {
+    // Test concurrent creates
+    const promises = Array(5).fill(0).map((_, i) => 
+      mcpServerStub.fetch('/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Concurrent Todo ${i}`,
+          description: `Created concurrently ${i}`
+        })
+      })
+    );
+
+    const responses = await Promise.all(promises);
+    const todos = await Promise.all(
+      responses.map(response => response.json())
+    );
+
+    // All todos should be created successfully
+    todos.forEach((todo, i) => {
+      expect(todo.title).toBe(`Concurrent Todo ${i}`);
+      expect(todo.id).toBeDefined();
+    });
+
+    // Verify all todos are stored
+    const listResponse = await mcpServerStub.fetch('/todos');
+    const allTodos = await listResponse.json();
+    expect(allTodos.length).toBe(5);
+  });
+});
+```
+
+## Running the Test Suite
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests with UI for visual debugging
+pnpm test:ui
+
+# Run specific test files
+pnpm test todo-crud
+pnpm test mcp-registration
+
+# Run tests with coverage
+pnpm test:coverage
+
+# Run tests in watch mode for development
+pnpm test:watch
+
+# Run only integration tests
+pnpm test:integration
+
+# Run performance tests
+pnpm test:perf
+```
+
+### Package.json Scripts
+
+Add these testing scripts to your `package.json`:
+
+```json
+{
+  "scripts": {
+    "test": "vitest run",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run test/integration",
+    "test:perf": "vitest run test/performance",
+    "test:setup": "wrangler d1 create test-database"
+  }
+}
+```
+
+## Resources
+
+- **[TypeScript Agent Framework Test Utils](https://github.com/null-shot/typescript-agent-framework/tree/main/packages/test-utils)** - Essential testing utilities for Cloudflare Workers
+- **[Complete Test Examples](https://github.com/null-shot/typescript-agent-framework/blob/main/examples/crud-mcp/test/todo-mcp-client.test.ts)** - Real-world MCP testing patterns
+- **[MCP Inspector](/en/developers/mcp-framework/getting-started#using-mcp-inspector)** - Visual testing interface
+- **[Vitest Documentation](https://vitest.dev/)** - Modern testing framework
+
+---
+
+🧪 **Ready to test!** With these specialized utilities and comprehensive examples, you can build robust test suites that ensure your MCP servers work correctly in the Cloudflare Workers environment. 

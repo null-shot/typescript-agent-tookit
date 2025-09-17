@@ -1,0 +1,394 @@
+export const metadata = {
+  "title": "Vectorize",
+  "description": "High-performance vector database for AI embeddings, semantic search, and similarity matching"
+};
+
+**Power your AI agents with lightning-fast vector search.** Cloudflare Vectorize is a globally distributed vector database that enables your AI agents to perform semantic search, similarity matching, and retrieval-augmented generation (RAG) at massive scale with sub-millisecond latency.
+
+## Key Features
+
+- **Global Distribution**: Vector indexes replicated across Cloudflare's edge network
+- **High Performance**: High performant vector similarity search
+- **Massive Scale**: Billions of vectors with automatic sharding
+- **Multiple Metrics**: Cosine similarity, Euclidean distance, and dot product
+- **Real-time Updates**: Insert, update, and delete vectors instantly
+- **Embedding Support**: Compatible with OpenAI, Cohere, Google, and custom embeddings
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add vectorize indexes in your `wrangler.json`:
+
+```json
+{
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "semantic-search"
+    }
+  ]
+}
+```
+
+### Hello World Vector Search
+
+Create a simple agent that performs semantic search:
+
+```typescript
+// src/agents/VectorSearchAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class VectorSearchAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { VECTORIZE } = this.env;
+    
+    if (message.content.includes('search')) {
+      const query = this.extractSearchQuery(message.content);
+      
+      // Generate embedding for the search query
+      const queryEmbedding = await this.generateEmbedding(query);
+      
+      // Search for similar vectors
+      const results = await VECTORIZE.query(queryEmbedding, {
+        topK: 5,
+        returnMetadata: true
+      });
+      
+      const formattedResults = results.matches.map(match => 
+        `${match.metadata.title} (similarity: ${match.score.toFixed(3)})`
+      ).join('\n');
+      
+      return {
+        message: `Found ${results.matches.length} similar items:\n${formattedResults}`,
+        actions: [{
+          type: 'vector_search_complete',
+          data: { query, results: results.matches }
+        }]
+      };
+    }
+    
+    return { message: "Ask me to search for something!" };
+  }
+}
+```
+
+### MCP Integration
+
+Expose vector search capabilities through MCP tools:
+
+```typescript
+// src/mcp/VectorizeMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class VectorizeMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'vector-search': async ({ query, limit = 5 }: { 
+        query: string; 
+        limit?: number 
+      }) => {
+        const { VECTORIZE } = this.env;
+        
+        const embedding = await this.generateEmbedding(query);
+        const results = await VECTORIZE.query(embedding, {
+          topK: limit,
+          returnMetadata: true
+        });
+        
+        return {
+          success: true,
+          query,
+          results: results.matches.map(match => ({
+            id: match.id,
+            score: match.score,
+            metadata: match.metadata
+          }))
+        };
+      },
+      
+      'add-vectors': async ({ items }: { 
+        items: Array<{ id: string; text: string; metadata?: any }> 
+      }) => {
+        const { VECTORIZE } = this.env;
+        
+        const vectors = await Promise.all(
+          items.map(async item => ({
+            id: item.id,
+            values: await this.generateEmbedding(item.text),
+            metadata: { text: item.text, ...item.metadata }
+          }))
+        );
+        
+        await VECTORIZE.upsert(vectors);
+        
+        return {
+          success: true,
+          message: `Added ${vectors.length} vectors to index`,
+          vectorIds: vectors.map(v => v.id)
+        };
+      }
+    };
+  }
+}
+```
+
+## TypeScript API Reference
+
+### Vector Operations
+
+**`VECTORIZE.query(vector: number[], options?: QueryOptions): Promise<QueryResult>`**  
+Search for similar vectors using cosine similarity, Euclidean distance, or dot product.
+
+**`VECTORIZE.upsert(vectors: Vector[]): Promise<UpsertResult>`**  
+Insert or update vectors in the index with automatic batching.
+
+**`VECTORIZE.deleteById(ids: string[]): Promise<DeleteResult>`**  
+Remove vectors from the index by their IDs.
+
+**`VECTORIZE.getByIds(ids: string[]): Promise<Vector[]>`**  
+Retrieve specific vectors by their IDs with metadata.
+
+### Index Management
+
+**`VECTORIZE.describe(): Promise<IndexInfo>`**  
+Get information about the index including dimensions and vector count.
+
+**`VECTORIZE.getStats(): Promise<IndexStats>`**  
+Retrieve index statistics and performance metrics.
+
+## Examples
+
+### Knowledge Base Agent
+
+```typescript
+// Agent that builds and searches a knowledge base using vectors
+export class KnowledgeBaseAgent extends AiAgentSDK {
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { VECTORIZE, memoryStore } = this.env;
+    
+    if (message.content.includes('add knowledge')) {
+      const knowledge = this.extractKnowledge(message.content);
+      
+      // Generate embedding for the knowledge
+      const embedding = await this.generateEmbedding(knowledge.text);
+      
+      // Store in vector database
+      await VECTORIZE.upsert([{
+        id: `kb_${Date.now()}`,
+        values: embedding,
+        metadata: {
+          text: knowledge.text,
+          category: knowledge.category,
+          source: 'user',
+          addedBy: message.userId,
+          addedAt: Date.now()
+        }
+      }]);
+      
+      return {
+        message: `Knowledge added: "${knowledge.text.substring(0, 100)}..."`,
+        actions: [{ type: 'knowledge_added', data: knowledge }]
+      };
+    }
+    
+    if (message.content.includes('find knowledge')) {
+      const query = this.extractQuery(message.content);
+      const queryEmbedding = await this.generateEmbedding(query);
+      
+      const results = await VECTORIZE.query(queryEmbedding, {
+        topK: 3,
+        returnMetadata: true,
+        filter: { category: { $ne: 'archived' } }
+      });
+      
+      const knowledge = results.matches
+        .filter(match => match.score > 0.8)
+        .map(match => match.metadata.text)
+        .join('\n\n');
+      
+      return {
+        message: knowledge || 'No relevant knowledge found.',
+        actions: [{ type: 'knowledge_retrieved', data: results.matches }]
+      };
+    }
+    
+    return { message: "I can help you add or find knowledge!" };
+  }
+}
+```
+
+### Document Similarity Agent
+
+```typescript
+// Agent that finds similar documents using vector embeddings
+export class DocumentSimilarityAgent extends AiAgentSDK {
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { VECTORIZE, storage } = this.env;
+    
+    if (message.content.includes('analyze document')) {
+      const documentUrl = this.extractDocumentUrl(message.content);
+      
+      // Download and process document
+      const document = await this.processDocument(documentUrl);
+      
+      // Generate embeddings for document chunks
+      const chunks = this.chunkDocument(document.text, 512);
+      const vectors = await Promise.all(
+        chunks.map(async (chunk, index) => ({
+          id: `doc_${document.id}_chunk_${index}`,
+          values: await this.generateEmbedding(chunk),
+          metadata: {
+            documentId: document.id,
+            chunkIndex: index,
+            text: chunk,
+            title: document.title,
+            url: documentUrl
+          }
+        }))
+      );
+      
+      // Store vectors
+      await VECTORIZE.upsert(vectors);
+      
+      return {
+        message: `Document "${document.title}" processed into ${chunks.length} searchable chunks.`,
+        actions: [{ type: 'document_vectorized', data: { documentId: document.id, chunks: chunks.length } }]
+      };
+    }
+    
+    if (message.content.includes('find similar')) {
+      const documentId = this.extractDocumentId(message.content);
+      
+      // Get document embedding
+      const docResults = await VECTORIZE.query([], {
+        filter: { documentId },
+        topK: 1,
+        returnMetadata: true
+      });
+      
+      if (docResults.matches.length === 0) {
+        return { message: "Document not found in vector index." };
+      }
+      
+      // Find similar documents
+      const similar = await VECTORIZE.query(docResults.matches[0].values, {
+        topK: 10,
+        returnMetadata: true,
+        filter: { documentId: { $ne: documentId } }
+      });
+      
+      const recommendations = similar.matches
+        .slice(0, 5)
+        .map(match => `${match.metadata.title} (${Math.round(match.score * 100)}% similar)`)
+        .join('\n');
+      
+      return {
+        message: `Similar documents:\n${recommendations}`,
+        actions: [{ type: 'similar_documents_found', data: similar.matches }]
+      };
+    }
+    
+    return { message: "Send me a document to analyze or ask me to find similar documents!" };
+  }
+}
+```
+
+## Best Practices
+
+### Vector Dimensions
+
+```typescript
+// ✅ Good: Use consistent embedding dimensions
+const EMBEDDING_DIMENSIONS = 1536; // OpenAI ada-002
+
+async function generateEmbedding(text: string): Promise<number[]> {
+  const response = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'text-embedding-ada-002',
+      input: text
+    })
+  });
+  
+  const data = await response.json();
+  return data.data[0].embedding;
+}
+```
+
+### Batch Operations
+
+```typescript
+// ✅ Good: Batch vector operations for better performance
+async function batchUpsertVectors(vectorize: any, texts: string[]) {
+  const BATCH_SIZE = 100;
+  
+  for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+    const batch = texts.slice(i, i + BATCH_SIZE);
+    const vectors = await Promise.all(
+      batch.map(async (text, index) => ({
+        id: `batch_${i + index}`,
+        values: await generateEmbedding(text),
+        metadata: { text, batchIndex: i + index }
+      }))
+    );
+    
+    await vectorize.upsert(vectors);
+  }
+}
+```
+
+## Limitations
+
+- **Vector Dimensions**: Maximum 1536 dimensions per vector
+- **Index Size**: Maximum 5 million vectors per index
+- **Metadata Size**: Maximum 1KB metadata per vector
+- **Query Rate**: 1,000 queries per second per index
+- **Batch Size**: Maximum 1,000 vectors per upsert operation
+
+## Supported Embeddings
+
+Vectorize works with embeddings from popular AI providers and custom models:
+
+### OpenAI Embeddings
+- **text-embedding-ada-002**: 1536 dimensions (recommended)
+- **text-embedding-3-small**: 1536 dimensions
+- **text-embedding-3-large**: 3072 dimensions (requires custom configuration)
+
+### Cohere Embeddings
+- **embed-english-v3.0**: 1024 dimensions
+- **embed-multilingual-v3.0**: 1024 dimensions
+- **embed-english-light-v3.0**: 384 dimensions
+
+### Google Embeddings
+- **text-embedding-gecko**: 768 dimensions
+- **textembedding-gecko-multilingual**: 768 dimensions
+
+### Custom Embeddings
+- **Sentence Transformers**: 384-1536 dimensions
+- **Hugging Face Models**: Variable dimensions (up to 1536)
+- **Custom Models**: Any model outputting vectors ≤ 1536 dimensions
+
+## Related Services
+
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Cache frequently accessed vectors
+- **[Storage (R2)](/en/developers/platform/storage)** - Store original documents and large embeddings
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Track search performance metrics
+
+---
+
+## Official Documentation
+
+- [Vectorize Documentation](https://developers.cloudflare.com/vectorize/) 

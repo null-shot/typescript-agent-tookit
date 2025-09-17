@@ -1,0 +1,780 @@
+export const metadata = {
+  "title": "Logs",
+  "description": "Structured logging and real-time debugging for agent monitoring and troubleshooting"
+};
+
+# Logs
+
+**Debug and monitor your agents like a pro.** Cloudflare Logs provides structured, searchable logging capabilities that help you understand agent behavior, debug issues, and monitor performance across your entire agent fleet. With real-time streaming, structured data, and powerful filtering, you'll never lose track of what your agents are doing.
+
+## Key Features
+
+- **Structured Logging**: JSON-formatted logs with searchable fields and metadata
+- **Real-Time Streaming**: Live log streaming for immediate debugging and monitoring
+- **Global Collection**: Logs from all edge locations aggregated in real-time
+- **Retention Control**: Configurable log retention periods and storage policies
+- **Integration Ready**: Works seamlessly with external monitoring and alerting systems
+
+## TypeScript API Reference
+
+### Basic Logging Methods
+
+**`info(message: string, metadata?: LogMetadata): void`**  
+Logs informational messages about normal agent operations. Use for tracking user interactions, successful operations, and general agent activity.
+
+**`warn(message: string, metadata?: LogMetadata): void`**  
+Logs warning messages for recoverable issues or unexpected conditions. Use when agents encounter problems but can continue operating.
+
+**`error(message: string, error?: Error, metadata?: LogMetadata): void`**  
+Logs error messages for failures and exceptions. Automatically captures stack traces when an Error object is provided.
+
+**`debug(message: string, metadata?: LogMetadata): void`**  
+Logs detailed debugging information. Only appears in development/debug environments unless explicitly enabled in production.
+
+### Advanced Logging
+
+**`trace(operationName: string, duration: number, metadata?: LogMetadata): void`**  
+Logs performance traces for timing operations. Useful for tracking agent response times and identifying bottlenecks.
+
+**`audit(action: string, userId: string, metadata?: LogMetadata): void`**  
+Logs audit events for compliance and security monitoring. Tracks important user actions and system changes.
+
+**`metric(name: string, value: number, tags?: Record<string, string>): void`**  
+Logs custom metrics that can be used for monitoring and alerting. Integrates with analytics dashboards.
+
+### Structured Logging
+
+**`withContext(context: LogContext): Logger`**  
+Creates a logger instance with persistent context that's added to all subsequent log entries. Useful for request tracking and user context.
+
+**`withTags(tags: Record<string, string>): Logger`**  
+Creates a logger with persistent tags for categorizing and filtering log entries. Perfect for environment, feature, or team-based filtering.
+
+## Agent Examples
+
+### Request Tracing Agent
+
+```typescript
+// Agent that logs detailed request traces for debugging
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { logs, memoryStore, analytics } = platform;
+  
+  // Create a logger with request context
+  const requestLogger = logs.withContext({
+    requestId: generateRequestId(),
+    userId: message.userId,
+    timestamp: Date.now(),
+    messageLength: message.content.length
+  });
+  
+  requestLogger.info('Processing new message', {
+    operation: 'message_processing',
+    contentPreview: message.content.substring(0, 100),
+    hasMetadata: !!message.metadata
+  });
+  
+  const startTime = Date.now();
+  
+  try {
+    // Log each major operation
+    requestLogger.debug('Retrieving user context');
+    const contextKey = `context:${message.userId}`;
+    const existingContext = await memoryStore.get(contextKey);
+    const contextRetrievalTime = Date.now() - startTime;
+    
+    requestLogger.trace('context_retrieval', contextRetrievalTime, {
+      contextExists: !!existingContext,
+      contextSize: existingContext ? existingContext.length : 0
+    });
+    
+    const context = existingContext ? JSON.parse(existingContext) : [];
+    context.push({
+      role: 'user',
+      content: message.content,
+      timestamp: Date.now()
+    });
+    
+    // Log AI processing
+    requestLogger.debug('Generating AI response', {
+      contextMessages: context.length,
+      operation: 'ai_generation'
+    });
+    
+    const aiStartTime = Date.now();
+    const response = await generateResponse(context);
+    const aiProcessingTime = Date.now() - aiStartTime;
+    
+    requestLogger.trace('ai_generation', aiProcessingTime, {
+      contextLength: context.length,
+      responseLength: response.length,
+      model: 'claude-3.5-sonnet'
+    });
+    
+    // Add response to context
+    requestLogger.debug('Storing updated context');
+    const storageStartTime = Date.now();
+    await memoryStore.put(contextKey, JSON.stringify(context));
+    const storageTime = Date.now() - storageStartTime;
+    
+    requestLogger.trace('context_storage', storageTime, {
+      totalMessages: context.length,
+      storageSize: JSON.stringify(context).length
+    });
+    
+    // Log successful completion
+    const totalTime = Date.now() - startTime;
+    requestLogger.info('Message processed successfully', {
+      operation: 'message_completion',
+      totalDuration: totalTime,
+      responseLength: response.length,
+      breakdown: {
+        contextRetrieval: contextRetrievalTime,
+        aiProcessing: aiProcessingTime,
+        contextStorage: storageTime
+      }
+    });
+    
+    // Log performance metrics
+    requestLogger.metric('message_processing_time', totalTime, {
+      userId: message.userId,
+      messageType: 'text',
+      hasContext: String(!!existingContext)
+    });
+    
+    return { message: response };
+    
+  } catch (error) {
+    const errorTime = Date.now() - startTime;
+    
+    requestLogger.error('Message processing failed', error, {
+      operation: 'message_processing',
+      duration: errorTime,
+      errorType: error.name,
+      errorMessage: error.message
+    });
+    
+    // Log error metrics
+    requestLogger.metric('message_error_count', 1, {
+      errorType: error.name,
+      userId: message.userId
+    });
+    
+    return {
+      message: "I'm sorry, I encountered an error processing your message. Please try again."
+    };
+  }
+}
+```
+
+### User Activity Monitoring Agent
+
+```typescript
+// Agent that logs detailed user activity for analytics
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { logs, memoryStore, analytics } = platform;
+  
+  // Create user-specific logger
+  const userLogger = logs.withTags({
+    userId: message.userId,
+    environment: platform.env.getEnvironment(),
+    agentVersion: '1.0.0'
+  });
+  
+  // Extract user intent
+  const intent = await detectIntent(message.content);
+  
+  userLogger.audit('user_interaction', message.userId, {
+    intent: intent.type,
+    confidence: intent.confidence,
+    messageLength: message.content.length,
+    timestamp: message.timestamp,
+    sessionId: message.metadata?.sessionId,
+    deviceType: message.metadata?.deviceType
+  });
+  
+  // Log feature usage
+  if (intent.type === 'file_upload') {
+    userLogger.info('File upload requested', {
+      feature: 'file_upload',
+      fileType: intent.metadata?.fileType,
+      expectedSize: intent.metadata?.fileSize
+    });
+    
+    // Handle file upload
+    const uploadResult = await handleFileUpload(message, platform);
+    
+    if (uploadResult.success) {
+      userLogger.info('File upload completed', {
+        feature: 'file_upload',
+        fileId: uploadResult.fileId,
+        actualSize: uploadResult.fileSize,
+        processingTime: uploadResult.processingTime
+      });
+      
+      userLogger.metric('file_upload_size', uploadResult.fileSize, {
+        fileType: uploadResult.fileType,
+        userId: message.userId
+      });
+    } else {
+      userLogger.warn('File upload failed', {
+        feature: 'file_upload',
+        reason: uploadResult.error,
+        retryable: uploadResult.retryable
+      });
+    }
+    
+    return uploadResult.response;
+  }
+  
+  if (intent.type === 'search') {
+    const searchQuery = intent.metadata?.query;
+    
+    userLogger.info('Search initiated', {
+      feature: 'search',
+      query: searchQuery,
+      queryLength: searchQuery?.length
+    });
+    
+    // Perform search
+    const searchStartTime = Date.now();
+    const searchResults = await performSearch(searchQuery);
+    const searchDuration = Date.now() - searchStartTime;
+    
+    userLogger.info('Search completed', {
+      feature: 'search',
+      resultCount: searchResults.length,
+      searchDuration,
+      hasResults: searchResults.length > 0
+    });
+    
+    userLogger.trace('search_operation', searchDuration, {
+      query: searchQuery,
+      resultCount: searchResults.length,
+      dataSource: 'web_search'
+    });
+    
+    // Log search metrics
+    userLogger.metric('search_response_time', searchDuration, {
+      hasResults: String(searchResults.length > 0),
+      userId: message.userId
+    });
+    
+    const response = formatSearchResults(searchResults);
+    return { message: response };
+  }
+  
+  // Default conversation
+  userLogger.info('Conversation message', {
+    feature: 'conversation',
+    intent: intent.type,
+    confidence: intent.confidence
+  });
+  
+  const response = await generateConversationResponse(message.content);
+  
+  userLogger.debug('Conversation response generated', {
+    feature: 'conversation',
+    responseLength: response.length,
+    intent: intent.type
+  });
+  
+  return { message: response };
+}
+```
+
+### Error Tracking and Recovery Agent
+
+```typescript
+// Agent with comprehensive error tracking and recovery
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { logs, memoryStore, databases } = platform;
+  
+  // Create logger with error tracking context
+  const errorLogger = logs.withContext({
+    requestId: generateRequestId(),
+    userId: message.userId,
+    agentId: 'error-tracker-v1',
+    timestamp: Date.now()
+  });
+  
+  try {
+    if (message.content.includes('analyze errors')) {
+      errorLogger.info('Error analysis requested', {
+        operation: 'error_analysis',
+        timeframe: 'last_24h'
+      });
+      
+      // Query recent errors from logs (this would integrate with log aggregation)
+      const errors = await getRecentErrors(message.userId, 24 * 60 * 60 * 1000);
+      
+      errorLogger.debug('Retrieved error history', {
+        errorCount: errors.length,
+        uniqueErrors: new Set(errors.map(e => e.type)).size
+      });
+      
+      if (errors.length === 0) {
+        errorLogger.info('No errors found in timeframe', {
+          operation: 'error_analysis',
+          result: 'clean'
+        });
+        
+        return {
+          message: "Great news! No errors detected in the last 24 hours."
+        };
+      }
+      
+      // Analyze error patterns
+      const errorStats = analyzeErrorPatterns(errors);
+      
+      errorLogger.info('Error analysis completed', {
+        operation: 'error_analysis',
+        totalErrors: errorStats.total,
+        criticalErrors: errorStats.critical,
+        mostCommonError: errorStats.mostCommon,
+        errorRate: errorStats.rate
+      });
+      
+      const report = generateErrorReport(errorStats);
+      return { message: report };
+    }
+    
+    if (message.content.includes('database')) {
+      errorLogger.debug('Database operation requested');
+      
+      try {
+        const result = await databases.query(
+          'SELECT * FROM user_data WHERE user_id = ?',
+          [message.userId]
+        );
+        
+        errorLogger.info('Database query successful', {
+          operation: 'database_query',
+          resultCount: result.length
+        });
+        
+        return {
+          message: `Found ${result.length} records for your account.`
+        };
+        
+      } catch (dbError) {
+        errorLogger.error('Database query failed', dbError, {
+          operation: 'database_query',
+          query: 'user_data_lookup',
+          userId: message.userId,
+          errorCode: dbError.code,
+          retryable: isRetryableError(dbError)
+        });
+        
+        // Attempt recovery
+        if (isRetryableError(dbError)) {
+          errorLogger.info('Attempting database retry', {
+            operation: 'database_retry',
+            attempt: 1
+          });
+          
+          try {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const retryResult = await databases.query(
+              'SELECT * FROM user_data WHERE user_id = ?',
+              [message.userId]
+            );
+            
+            errorLogger.info('Database retry successful', {
+              operation: 'database_retry',
+              resultCount: retryResult.length,
+              recoveryTime: 1000
+            });
+            
+            return {
+              message: `Found ${retryResult.length} records for your account (after retry).`
+            };
+            
+          } catch (retryError) {
+            errorLogger.error('Database retry failed', retryError, {
+              operation: 'database_retry',
+              finalAttempt: true
+            });
+            
+            // Store error for pattern analysis
+            await storeErrorEvent({
+              type: 'database_failure',
+              userId: message.userId,
+              error: retryError,
+              timestamp: Date.now(),
+              attempts: 2
+            });
+            
+            return {
+              message: "I'm having trouble accessing your data right now. Please try again later."
+            };
+          }
+        } else {
+          // Non-retryable error
+          errorLogger.warn('Non-retryable database error', {
+            operation: 'database_error',
+            errorType: 'permanent',
+            action: 'escalation_required'
+          });
+          
+          return {
+            message: "There's an issue with the database. Our team has been notified."
+          };
+        }
+      }
+    }
+    
+    // Default response
+    errorLogger.debug('Processing default conversation');
+    const response = await generateResponse(message.content);
+    
+    errorLogger.info('Default response generated', {
+      operation: 'conversation',
+      responseLength: response.length
+    });
+    
+    return { message: response };
+    
+  } catch (error) {
+    // Top-level error handler
+    errorLogger.error('Agent processing failed', error, {
+      operation: 'agent_processing',
+      messageContent: message.content.substring(0, 100),
+      stack: error.stack,
+      critical: true
+    });
+    
+    // Log critical error metric
+    errorLogger.metric('critical_error_count', 1, {
+      errorType: error.name,
+      agentId: 'error-tracker-v1'
+    });
+    
+    // Store critical error for immediate attention
+    await storeCriticalError({
+      error,
+      message,
+      timestamp: Date.now(),
+      agentId: 'error-tracker-v1'
+    });
+    
+    return {
+      message: "I encountered an unexpected error. The issue has been logged and our team will investigate."
+    };
+  }
+}
+```
+
+### Performance Monitoring Agent
+
+```typescript
+// Agent that tracks performance metrics and optimization opportunities
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { logs, analytics, memoryStore } = platform;
+  
+  // Performance monitoring logger
+  const perfLogger = logs.withTags({
+    monitoring: 'performance',
+    environment: platform.env.getEnvironment(),
+    region: message.metadata?.region || 'unknown'
+  });
+  
+  const startTime = Date.now();
+  const memoryUsage = process.memoryUsage();
+  
+  perfLogger.debug('Request started', {
+    operation: 'performance_monitoring',
+    initialMemory: {
+      heapUsed: memoryUsage.heapUsed,
+      heapTotal: memoryUsage.heapTotal,
+      external: memoryUsage.external
+    },
+    messageSize: message.content.length
+  });
+  
+  if (message.content.includes('performance report')) {
+    perfLogger.info('Performance report requested');
+    
+    // Collect recent performance metrics
+    const metrics = await collectPerformanceMetrics();
+    
+    perfLogger.info('Performance metrics collected', {
+      operation: 'metrics_collection',
+      metricCount: Object.keys(metrics).length,
+      avgResponseTime: metrics.avgResponseTime,
+      errorRate: metrics.errorRate
+    });
+    
+    // Analyze performance trends
+    const trends = analyzePerformanceTrends(metrics);
+    
+    perfLogger.info('Performance analysis completed', {
+      operation: 'performance_analysis',
+      trendDirection: trends.direction,
+      significantChanges: trends.significantChanges.length,
+      recommendations: trends.recommendations.length
+    });
+    
+    // Log performance insights
+    for (const recommendation of trends.recommendations) {
+      perfLogger.warn('Performance recommendation', {
+        type: 'optimization',
+        category: recommendation.category,
+        impact: recommendation.impact,
+        description: recommendation.description
+      });
+    }
+    
+    const report = generatePerformanceReport(metrics, trends);
+    
+    const processingTime = Date.now() - startTime;
+    perfLogger.trace('performance_report_generation', processingTime, {
+      reportLength: report.length,
+      includesRecommendations: trends.recommendations.length > 0
+    });
+    
+    return { message: report };
+  }
+  
+  // Monitor regular message processing
+  try {
+    // Stage 1: Context retrieval
+    const stage1Start = Date.now();
+    const context = await getMessageContext(message.userId);
+    const stage1Time = Date.now() - stage1Start;
+    
+    perfLogger.trace('context_retrieval', stage1Time, {
+      contextSize: context?.length || 0,
+      cached: !!context
+    });
+    
+    // Stage 2: Intent detection
+    const stage2Start = Date.now();
+    const intent = await detectIntent(message.content);
+    const stage2Time = Date.now() - stage2Start;
+    
+    perfLogger.trace('intent_detection', stage2Time, {
+      intentType: intent.type,
+      confidence: intent.confidence
+    });
+    
+    // Stage 3: Response generation
+    const stage3Start = Date.now();
+    const response = await generateResponse(message.content, context);
+    const stage3Time = Date.now() - stage3Start;
+    
+    perfLogger.trace('response_generation', stage3Time, {
+      responseLength: response.length,
+      inputLength: message.content.length
+    });
+    
+    // Stage 4: Context storage
+    const stage4Start = Date.now();
+    await storeUpdatedContext(message.userId, context, response);
+    const stage4Time = Date.now() - stage4Start;
+    
+    perfLogger.trace('context_storage', stage4Time, {
+      totalContextSize: (context?.length || 0) + 1
+    });
+    
+    // Overall performance logging
+    const totalTime = Date.now() - startTime;
+    const finalMemoryUsage = process.memoryUsage();
+    const memoryDelta = finalMemoryUsage.heapUsed - memoryUsage.heapUsed;
+    
+    perfLogger.info('Message processing completed', {
+      operation: 'message_processing',
+      totalDuration: totalTime,
+      memoryDelta,
+      stages: {
+        contextRetrieval: stage1Time,
+        intentDetection: stage2Time,
+        responseGeneration: stage3Time,
+        contextStorage: stage4Time
+      },
+      efficiency: {
+        responsePerByte: response.length / Math.max(message.content.length, 1),
+        memoryPerChar: memoryDelta / Math.max(response.length, 1)
+      }
+    });
+    
+    // Performance metrics
+    perfLogger.metric('total_processing_time', totalTime, {
+      stage: 'complete',
+      hasContext: String(!!context)
+    });
+    
+    perfLogger.metric('memory_usage_delta', memoryDelta, {
+      operation: 'message_processing'
+    });
+    
+    // Alert on performance degradation
+    if (totalTime > 5000) { // 5 seconds
+      perfLogger.warn('Slow response detected', {
+        alert: 'performance_degradation',
+        duration: totalTime,
+        threshold: 5000,
+        requiresInvestigation: true
+      });
+    }
+    
+    if (memoryDelta > 10 * 1024 * 1024) { // 10MB
+      perfLogger.warn('High memory usage detected', {
+        alert: 'memory_usage',
+        memoryDelta,
+        threshold: 10 * 1024 * 1024,
+        requiresInvestigation: true
+      });
+    }
+    
+    return { message: response };
+    
+  } catch (error) {
+    const errorTime = Date.now() - startTime;
+    
+    perfLogger.error('Performance monitoring failed', error, {
+      operation: 'performance_monitoring',
+      duration: errorTime,
+      stage: 'unknown'
+    });
+    
+    return {
+      message: "I'm having performance issues right now. Please try again."
+    };
+  }
+}
+```
+
+## Best Practices
+
+### Structured Logging
+
+```typescript
+// ✅ Good: Structured logs with consistent fields
+logs.info('User action completed', {
+  action: 'file_upload',
+  userId: '12345',
+  fileSize: 1024000,
+  duration: 2500,
+  success: true
+});
+
+// ❌ Bad: Unstructured log messages
+logs.info('User 12345 uploaded file of size 1024000 in 2500ms successfully');
+```
+
+### Log Levels
+
+```typescript
+// ✅ Good: Appropriate log levels
+logs.debug('Processing started', { operation: 'complex_analysis' }); // Development only
+logs.info('User logged in', { userId: '123' }); // Normal operations
+logs.warn('API rate limit approaching', { remaining: 10 }); // Potential issues
+logs.error('Database connection failed', error); // Actual problems
+```
+
+### Performance Logging
+
+```typescript
+// ✅ Good: Consistent performance tracking
+const startTime = Date.now();
+const result = await performOperation();
+const duration = Date.now() - startTime;
+
+logs.trace('operation_completed', duration, {
+  operation: 'data_processing',
+  resultSize: result.length
+});
+```
+
+### Context and Tags
+
+```typescript
+// ✅ Good: Use context for related operations
+const requestLogger = logs.withContext({
+  requestId: 'req_123',
+  userId: 'user_456',
+  sessionId: 'session_789'
+});
+
+// All subsequent logs will include this context
+requestLogger.info('Starting request processing');
+requestLogger.debug('Validating input');
+requestLogger.info('Request completed successfully');
+```
+
+## Configuration
+
+### Wrangler Configuration
+
+```json
+{
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.01
+  },
+  "vars": {
+    "LOG_LEVEL": "info",
+    "ENABLE_PERFORMANCE_LOGGING": "true",
+    "LOG_STRUCTURED_OUTPUT": "true"
+  }
+}
+```
+
+### Log Levels
+
+- **debug**: Detailed information for development and troubleshooting
+- **info**: General information about agent operations
+- **warn**: Warning messages for potential issues
+- **error**: Error conditions that need attention
+- **audit**: Security and compliance events
+
+## Integration
+
+### External Monitoring
+
+```typescript
+// Integration with external monitoring systems
+const externalLogger = logs.withTags({
+  service: 'ai-agent',
+  version: '1.0.0',
+  deployment: 'production'
+});
+
+// Logs can be streamed to:
+// - Datadog
+// - New Relic  
+// - Splunk
+// - Custom monitoring solutions
+```
+
+## Limitations
+
+- **Log Size**: Maximum 1MB per log entry
+- **Rate Limits**: 1,000 log entries per second per worker
+- **Retention**: Default 30-day retention (configurable)
+- **Structured Data**: Maximum 100 fields per log entry
+
+## Related Services
+
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Metrics and time-series data
+- **[Memory Store](/en/developers/platform/memory-store)** - Temporary state storage
+- **[Environment Variables](/en/developers/platform/environment-variables)** - Configuration management
+
+---
+
+## Official Documentation
+
+- [Real-time Logs](https://developers.cloudflare.com/logs/)
+- [Logpush](https://developers.cloudflare.com/logs/logpush/) 

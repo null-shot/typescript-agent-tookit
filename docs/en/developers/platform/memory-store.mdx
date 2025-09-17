@@ -1,0 +1,663 @@
+export const metadata = {
+  "title": "Memory Store (KV)",
+  "description": "Lightning-fast global key-value cache for agent performance optimization"
+};
+
+# Memory Store (KV)
+
+**Supercharge your agents with lightning-fast global memory store.** Cloudflare KV is an eventually consistent key-value store that provides sub-10ms read latency across 330+ cities worldwide. Perfect for caching API responses, user preferences, and frequently accessed data to dramatically improve agent response times.
+
+## Key Features
+
+- **Global Replication**: Data is automatically replicated to edge locations worldwide
+- **Eventually Consistent**: Writes propagate globally within 60 seconds
+- **Low Latency**: Sub-10ms reads from the nearest edge location
+- **High Availability**: 99.9% uptime SLA with automatic failover
+- **Cost Effective**: Pay only for operations, not storage time
+- **Expiration Support**: Automatic cleanup of cached data with TTL
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add KV namespaces in your `wrangler.json`:
+
+```json
+{
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "your-cache-namespace-id",
+      "preview_id": "your-preview-namespace-id" // optional for preview urls
+  ]
+}
+```
+
+### Agent Example
+
+```typescript
+// src/agents/CachingAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+
+export class CachingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const sessionId = message.metadata?.sessionId || 'default';
+    
+    // Use cached responses to improve performance
+    const cachedResponse = await this.getCachedResponse(message.content);
+    if (cachedResponse) {
+      return {
+        message: cachedResponse,
+        actions: [{
+          type: 'cache_hit',
+          data: { cached: true }
+        }]
+      };
+    }
+    
+    // Generate new response and cache it
+    const result = await this.streamText(sessionId, {
+      model: this.model,
+      system: 'You are a helpful assistant that provides informative responses.',
+      messages: [{ role: 'user', content: message.content }],
+      maxSteps: 5,
+    });
+
+    const response = result.text;
+    
+    // Cache the response for similar questions
+    await this.cacheResponse(message.content, response);
+    
+    return result.toDataStreamResponse();
+  }
+  
+  private async getCachedResponse(question: string): Promise<string | null> {
+    try {
+      const { CACHE } = this.env;
+      const cacheKey = this.generateCacheKey(question);
+      
+      const cached = await CACHE.get(cacheKey);
+      if (cached) {
+        console.log(`Cache hit for question: ${question.substring(0, 50)}...`);
+        return cached;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Cache read failed:', error);
+      return null;
+    }
+  }
+  
+  private async cacheResponse(question: string, response: string): Promise<void> {
+    try {
+      const { CACHE } = this.env;
+      const cacheKey = this.generateCacheKey(question);
+      
+      // Cache for 1 hour
+      await CACHE.put(cacheKey, response, {
+        expirationTtl: 3600
+      });
+      
+      console.log(`Cached response for: ${question.substring(0, 50)}...`);
+    } catch (error) {
+      console.error('Cache write failed:', error);
+    }
+  }
+  
+  private generateCacheKey(question: string): string {
+    // Simple hash of the question for cache key
+    const hash = question.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 50);
+    return `response:${hash}`;
+  }
+}
+```
+
+### MCP Tool Integration
+
+Integrate KV caching capabilities with MCP tools:
+
+```typescript
+// src/mcp/CachingMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class CachingMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'cache-set': async ({ key, value, ttl }: { 
+        key: string; 
+        value: string;
+        ttl?: number;
+      }) => {
+        try {
+          const { CACHE } = this.env;
+          
+          const options: any = {};
+          if (ttl) {
+            options.expirationTtl = ttl;
+          }
+          
+          await CACHE.put(key, value, options);
+          
+          return {
+            success: true,
+            key,
+            cached: true,
+            ttl: ttl || 'indefinite',
+            cachedAt: Date.now()
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            key
+          };
+        }
+      },
+      
+      'cache-get': async ({ key }: { key: string }) => {
+        try {
+          const { CACHE } = this.env;
+          
+          const value = await CACHE.get(key);
+          
+          return {
+            success: true,
+            key,
+            value,
+            found: !!value,
+            retrievedAt: Date.now()
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            key
+          };
+        }
+      },
+      
+      'cache-delete': async ({ key }: { key: string }) => {
+        try {
+          const { CACHE } = this.env;
+          
+          await CACHE.delete(key);
+          
+          return {
+            success: true,
+            key,
+            deleted: true,
+            deletedAt: Date.now()
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: error.message,
+            key
+          };
+        }
+      }
+    };
+  }
+}
+```
+
+## TypeScript API Reference
+
+You can access the KV API via the `env` of the **Agent** or **MCP Tool**
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+function example() {
+  // CACHE can be named to anything and equals the "binding" sent in wrangler.json
+  const { CACHE } = this.env;
+}
+```
+
+### Basic Operations
+
+**`CACHE.get(key: string): Promise<string | null>`**  
+Retrieve a value from the cache by key. Returns null if the key doesn't exist.
+
+**`CACHE.put(key: string, value: string, options?: KVPutOptions): Promise<void>`**  
+Store a value in the cache with optional expiration and metadata.
+
+**`CACHE.delete(key: string): Promise<void>`**  
+Remove a key-value pair from the cache.
+
+### Advanced Operations
+
+**`CACHE.list(options?: KVListOptions): Promise<KVListResult>`**  
+List keys in the cache with optional filtering and pagination.
+
+**`CACHE.getWithMetadata(key: string): Promise<KVValueWithMetadata>`**  
+Retrieve a value along with its metadata and expiration information.
+
+### Batch Operations
+
+**`CACHE.getMultiple(keys: string[]): Promise<Record<string, string | null>>`**  
+Retrieve multiple values in a single operation for better performance.
+
+**`CACHE.putMultiple(entries: Array<{key: string, value: string, options?: KVPutOptions}>): Promise<void>`**  
+Store multiple key-value pairs in a single operation.
+
+### KV Options
+
+```typescript
+interface KVPutOptions {
+  expiration?: number;          // Unix timestamp when key expires
+  expirationTtl?: number;       // Seconds until key expires
+  metadata?: Record<string, any>; // Additional metadata (max 1024 bytes)
+}
+
+interface KVListOptions {
+  prefix?: string;              // List keys with this prefix
+  limit?: number;               // Max keys to return (default: 1000)
+  cursor?: string;              // Pagination cursor
+}
+
+interface KVValueWithMetadata {
+  value: string | null;
+  metadata: Record<string, any> | null;
+}
+```
+
+## Examples
+
+Learn how to integrate KV caching into your agents and MCP tools for optimal performance through practical implementations.
+
+### Session State Management
+
+Use KV to maintain session state across multiple agent interactions with automatic cleanup.
+
+```typescript
+// src/agents/SessionManager.ts
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+
+export class SessionManagerAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const sessionId = message.metadata?.sessionId || `session_${Date.now()}`;
+    
+    // Get or create session state
+    const sessionState = await this.getSessionState(sessionId);
+    
+    // Process message in context of session
+    const updatedState = await this.processWithSession(message, sessionState);
+    
+    // Save updated session state
+    await this.saveSessionState(sessionId, updatedState);
+    
+    return {
+      message: updatedState.lastResponse,
+      actions: [{
+        type: 'session_updated',
+        data: {
+          sessionId,
+          stepCount: updatedState.steps.length,
+          currentFlow: updatedState.currentFlow
+        }
+      }]
+    };
+  }
+
+  private async getSessionState(sessionId: string) {
+    const { CACHE } = this.env;
+    const sessionKey = `session:${sessionId}`;
+    
+    try {
+      const cached = await CACHE.get(sessionKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+      
+      // Create new session
+      return {
+        id: sessionId,
+        createdAt: Date.now(),
+        steps: [],
+        currentFlow: null,
+        context: {},
+        lastResponse: null
+      };
+    } catch (error) {
+      console.error('Failed to get session state:', error);
+      throw new Error('Session state unavailable');
+    }
+  }
+
+  private async processWithSession(sessionId: string, messages: AIUISDKMessage, sessionState: any) {
+    // Add current message to session
+    sessionState.steps.push({
+      type: 'user_message',
+      content: message.content,
+      timestamp: Date.now()
+    });
+    
+    // Detect conversation flow
+    if (message.content.toLowerCase().includes('booking')) {
+      sessionState.currentFlow = 'booking';
+      sessionState.context.booking = sessionState.context.booking || {};
+    }
+    
+    // Generate contextual response
+    let response = '';
+    if (sessionState.currentFlow === 'booking') {
+      response = await this.handleBookingFlow(message, sessionState);
+    } else {
+      response = `I understand. This is step ${sessionState.steps.length} of our conversation.`;
+    }
+    
+    // Update session with response
+    sessionState.steps.push({
+      type: 'agent_response',
+      content: response,
+      timestamp: Date.now()
+    });
+    sessionState.lastResponse = response;
+    sessionState.lastActivity = Date.now();
+    
+    return sessionState;
+  }
+
+  private async saveSessionState(sessionId: string, state: any) {
+    const { CACHE } = this.env;
+    const sessionKey = `session:${sessionId}`;
+    
+    try {
+      // Cache session for 2 hours
+      await CACHE.put(sessionKey, JSON.stringify(state), {
+        expirationTtl: 7200
+      });
+      
+      console.log(`Session ${sessionId} saved with ${state.steps.length} steps`);
+    } catch (error) {
+      console.error('Failed to save session state:', error);
+    }
+  }
+
+  private async handleBookingFlow(sessionId: string, messages: AIUISDKMessage, sessionState: any): Promise<string> {
+    // Simple booking flow logic
+    const booking = sessionState.context.booking;
+    
+    if (!booking.service) {
+      booking.service = 'consultation';
+      return 'Great! I\'ll help you book a consultation. What date works for you?';
+    }
+    
+    if (!booking.date) {
+      booking.date = 'pending';
+      return 'Perfect! What time would you prefer?';
+    }
+    
+    if (!booking.time) {
+      booking.time = 'pending';
+      sessionState.currentFlow = null; // Complete flow
+      return 'Excellent! Your booking is confirmed. You\'ll receive a confirmation email shortly.';
+    }
+    
+    return 'Let me help you with your booking.';
+  }
+}
+```
+
+### Configuration and Feature Flags
+
+Cache configuration values and feature flags for instant access without database queries.
+
+```typescript
+// src/agents/ConfigCacheAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+
+export class ConfigCacheAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    // Get feature flags and config
+    const config = await this.getConfig();
+    const features = await this.getFeatureFlags();
+    
+    // Check if feature is enabled
+    if (!features.chatEnabled) {
+      return {
+        message: 'Chat is currently disabled for maintenance.',
+        actions: [{ type: 'feature_disabled', data: { feature: 'chat' } }]
+      };
+    }
+    
+    const sessionId = message.metadata?.sessionId || 'default';
+    
+    // Use configuration in response generation
+    const result = await this.streamText(sessionId, {
+      model: config.defaultModel || this.model,
+      system: config.systemPrompt || 'You are a helpful assistant.',
+      messages: [{ role: 'user', content: message.content }],
+      maxSteps: config.maxSteps || 5,
+    });
+
+    return result.toDataStreamResponse();
+  }
+
+  private async getConfig() {
+    const { CACHE } = this.env;
+    const configKey = 'app:config';
+    
+    try {
+      const cached = await CACHE.get(configKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+      
+      // Load fresh config from database
+      const config = await this.loadConfigFromDB();
+      
+      // Cache for 5 minutes
+      await CACHE.put(configKey, JSON.stringify(config), {
+        expirationTtl: 300
+      });
+      
+      return config;
+    } catch (error) {
+      console.error('Failed to get config:', error);
+      return this.getDefaultConfig();
+    }
+  }
+
+  private async getFeatureFlags() {
+    const { CACHE } = this.env;
+    const flagsKey = 'app:features';
+    
+    try {
+      const cached = await CACHE.get(flagsKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+      
+      // Load fresh flags
+      const flags = await this.loadFeatureFlagsFromDB();
+      
+      // Cache for 1 minute (short TTL for quick updates)
+      await CACHE.put(flagsKey, JSON.stringify(flags), {
+        expirationTtl: 60
+      });
+      
+      return flags;
+    } catch (error) {
+      console.error('Failed to get feature flags:', error);
+      return this.getDefaultFeatureFlags();
+    }
+  }
+}
+```
+
+## Best Practices
+
+Essential patterns and techniques for optimal KV cache performance and reliability.
+
+### Cache Key Strategy
+
+Use hierarchical, predictable keys for better organization and batch operations.
+
+```typescript
+// ✅ Good: Hierarchical cache keys
+const cacheKeys = {
+  userPrefs: (userId: string) => `user:${userId}:prefs`,
+  apiResponse: (endpoint: string, params: string) => `api:${endpoint}:${params}`,
+  sessionState: (sessionId: string) => `session:${sessionId}:state`,
+  featureFlags: () => 'config:features',
+  config: (version: string) => `config:app:${version}`
+};
+
+// ❌ Avoid: Inconsistent or unpredictable keys
+const badKeys = [
+  'user_prefs_12345',
+  'api-weather-response',
+  'sessionState:abc123',
+  'features',
+  'appconfig'
+];
+```
+
+### Error Handling and Fallbacks
+
+Always provide fallbacks when cache operations fail to ensure reliability.
+
+```typescript
+// ✅ Good: Graceful cache failure handling
+async function getCachedDataWithFallback<T>(
+  cache: KVNamespace,
+  key: string,
+  fallbackFn: () => Promise<T>,
+  ttl: number = 3600
+): Promise<T> {
+  try {
+    // Try cache first
+    const cached = await cache.get(key);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+    
+    // Fallback to original source
+    const fresh = await fallbackFn();
+    
+    // Cache the result (fire and forget)
+    cache.put(key, JSON.stringify(fresh), { expirationTtl: ttl })
+      .catch(error => console.error('Cache write failed:', error));
+    
+    return fresh;
+  } catch (error) {
+    console.error('Cache operation failed:', error);
+    return fallbackFn();
+  }
+}
+```
+
+### Batch Operations for Performance
+
+Use batch operations to reduce latency when working with multiple keys.
+
+```typescript
+// ✅ Good: Batch multiple cache operations
+async function getUserDashboardData(userId: string, cache: KVNamespace) {
+  const keys = [
+    `user:${userId}:profile`,
+    `user:${userId}:preferences`,
+    `user:${userId}:recent_activity`,
+    `user:${userId}:notifications`
+  ];
+  
+  // Get all data in one operation
+  const cachedData = await cache.getMultiple(keys);
+  
+  return {
+    profile: cachedData[keys[0]] ? JSON.parse(cachedData[keys[0]]) : null,
+    preferences: cachedData[keys[1]] ? JSON.parse(cachedData[keys[1]]) : null,
+    recentActivity: cachedData[keys[2]] ? JSON.parse(cachedData[keys[2]]) : null,
+    notifications: cachedData[keys[3]] ? JSON.parse(cachedData[keys[3]]) : null
+  };
+}
+
+// ❌ Bad: Multiple individual requests
+async function getBadUserData(userId: string, cache: KVNamespace) {
+  const profile = await cache.get(`user:${userId}:profile`);
+  const preferences = await cache.get(`user:${userId}:preferences`);
+  const activity = await cache.get(`user:${userId}:recent_activity`);
+  const notifications = await cache.get(`user:${userId}:notifications`);
+  
+  return { profile, preferences, activity, notifications };
+}
+```
+
+### TTL Strategy
+
+Choose appropriate expiration times based on data characteristics and update frequency.
+
+```typescript
+// ✅ Good: Strategic TTL based on data type
+const TTL_STRATEGY = {
+  // Frequently changing data
+  featureFlags: 60,           // 1 minute
+  systemStatus: 30,           // 30 seconds
+  
+  // Moderately changing data  
+  userPreferences: 3600,      // 1 hour
+  apiResponses: 600,          // 10 minutes
+  
+  // Rarely changing data
+  staticConfig: 86400,        // 24 hours
+  userProfiles: 7200,         // 2 hours
+  
+  // Session data
+  activeSession: 1800,        // 30 minutes
+  temporaryData: 300          // 5 minutes
+};
+
+async function cacheWithAppropriatedTTL(
+  cache: KVNamespace,
+  key: string,
+  value: any,
+  dataType: keyof typeof TTL_STRATEGY
+) {
+  const ttl = TTL_STRATEGY[dataType];
+  await cache.put(key, JSON.stringify(value), { expirationTtl: ttl });
+}
+```
+
+## Limitations & Considerations
+
+Important constraints and guidelines when using KV for caching at scale.
+
+- **Value Size**: Maximum 25 MB per value (use compression for large data)
+- **Key Size**: Maximum 512 bytes per key
+- **List Operations**: Maximum 1,000 keys per list operation
+- **Eventual Consistency**: Writes may take up to 60 seconds to propagate globally
+- **Rate Limits**: 1,000 operations per second per key
+- **No Transactions**: KV doesn't support atomic multi-key operations
+
+## Related Services
+
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Track cache hit rates and performance metrics
+- **[Cache](/en/developers/platform/cache)** - HTTP response caching at the edge
+- **[Databases](/en/developers/platform/databases)** - Primary data storage for complex queries
+- **[Workflows](/en/developers/platform/workflows)** - Orchestrate cache warming and cleanup
+
+---
+
+## Official Documentation
+
+- [KV Documentation](https://developers.cloudflare.com/kv/)
+- [KV API Reference](https://developers.cloudflare.com/kv/api/)
+- [Workers KV Bindings](https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces) 

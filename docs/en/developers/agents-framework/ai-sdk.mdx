@@ -1,0 +1,840 @@
+export const metadata = {
+  "title": "Vercel AI SDK",
+  "description": "Building AI agents with the Vercel AI SDK integration and platform services"
+};
+
+# Vercel AI SDK
+
+The Vercel AI SDK integration provides a streamlined way to build AI agents that leverage Vercel's AI SDK for text generation while integrating seamlessly with our platform services. This guide shows you how to set up models, process messages via streaming, and configure workers for agent access.
+
+## Quick Start
+
+### 1. Install Dependencies
+
+```bash
+npm install @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google
+npm install @nullshot/agent hono
+```
+
+### 2. Set Up Your Environment
+
+Add your API keys and provider configuration to your `.dev.vars` file:
+
+```bash
+# AI Provider Configuration
+AI_PROVIDER=anthropic
+AI_PROVIDER_API_KEY=sk-ant-your-anthropic-key
+MODEL_ID=claude-3-5-sonnet-20241022
+
+# Alternative providers:
+# AI_PROVIDER=openai
+# AI_PROVIDER_API_KEY=sk-your-openai-key
+# MODEL_ID=gpt-4o
+
+# AI_PROVIDER=google
+# AI_PROVIDER_API_KEY=your-google-key
+# MODEL_ID=gemini-pro
+```
+
+### 3. Create Your First Agent
+
+```typescript
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
+import { LanguageModel, Provider, stepCountIs } from "ai";
+import { AiSdkAgent, type AIUISDKMessage, ToolboxService, type MCPConfig } from "@nullshot/agent";
+import mcpConfig from "../mcp.json";
+
+const app = new Hono<{ Bindings: Env }>();
+
+app.use(
+  "*",
+  cors({
+    origin: "*", // Allow any origin for development; restrict this in production
+    allowMethods: ["POST", "GET", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+    exposeHeaders: ["X-Session-Id"],
+    maxAge: 86400, // 24 hours
+  })
+);
+
+// Route all requests to the durable object instance based on session
+app.all("/agent/chat/:sessionId?", async (c) => {
+  const { AGENT } = c.env;
+  var sessionIdStr = c.req.param("sessionId");
+  if (!sessionIdStr || sessionIdStr == "") {
+    sessionIdStr = AGENT.newUniqueId().toString();
+  }
+  const id = AGENT.idFromName(sessionIdStr);
+  const forwardRequest = new Request(
+    "https://internal.com/agent/chat/" + sessionIdStr,
+    {
+      method: c.req.method,
+      body: c.req.raw.body,
+    }
+  );
+  // Forward to Durable Object and get response
+  return await AGENT.get(id).fetch(forwardRequest);
+});
+
+export class SimpleAgent extends AiSdkAgent {
+  constructor(state: DurableObjectState, env: Env) {
+    // Configure AI provider based on environment
+    let provider: Provider;
+    let model: LanguageModel;
+    
+    switch (env.AI_PROVIDER) {
+      case "anthropic":
+        provider = createAnthropic({
+          apiKey: env.AI_PROVIDER_API_KEY,
+        });
+        model = provider.languageModel(env.MODEL_ID);
+        break;
+      case "openai":
+        provider = createOpenAI({
+          apiKey: env.AI_PROVIDER_API_KEY,
+        });
+        model = provider.languageModel(env.MODEL_ID);
+        break;
+      default:
+        throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
+    }
+
+    super(state, env, model, [new ToolboxService(env, mcpConfig)]);
+  }
+
+  async processMessage(
+    sessionId: string,
+    messages: AIUISDKMessage
+  ): Promise<Response> {
+    // Use the protected streamTextWithMessages method
+    const result = await this.streamTextWithMessages(
+      sessionId,
+      messages.messages,
+      {
+        system: "You are a helpful assistant.",
+        maxSteps: 10,
+        stopWhen: stepCountIs(10),
+        experimental_toolCallStreaming: true,
+        onError: (error: unknown) => {
+          console.error("Error processing message", error);
+        },
+      }
+    );
+
+    return result.toTextStreamResponse();
+  }
+}
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    return app.fetch(request, env, ctx);
+  },
+};
+```
+
+## Advanced Configuration
+
+### Dynamic Model Selection
+
+You can implement dynamic model selection based on message content or user preferences:
+
+```typescript
+export class MultiModelAgent extends AiSdkAgent {
+  constructor(state: DurableObjectState, env: Env) {
+    // Start with default model - can be switched dynamically
+    const defaultModel = this.createModel(env, env.MODEL_ID || "claude-3-5-sonnet-20241022");
+    super(state, env, defaultModel, [new ToolboxService(env, mcpConfig)]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    // Analyze message to determine best model
+    const selectedModelId = this.selectModelId(messages.messages);
+    
+    // Create model instance for this request
+    const model = this.createModel(this.env, selectedModelId);
+    
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      model, // Use dynamically selected model
+      system: this.getSystemPrompt(messages.messages),
+      maxSteps: 10,
+      stopWhen: stepCountIs(10),
+      experimental_toolCallStreaming: true,
+    });
+
+    return result.toTextStreamResponse();
+  }
+
+  private selectModelId(messages: any[]): string {
+    const lastMessage = messages[messages.length - 1]?.content || "";
+    
+    // Use faster model for simple queries
+    if (lastMessage.length < 100) {
+      return "claude-3-haiku-20240307";
+    }
+    
+    // Use advanced model for complex tasks
+    if (lastMessage.includes("analyze") || lastMessage.includes("complex")) {
+      return "claude-3-5-sonnet-20241022";
+    }
+    
+    return this.env.MODEL_ID || "claude-3-5-sonnet-20241022";
+  }
+
+  private createModel(env: Env, modelId: string): LanguageModel {
+    switch (env.AI_PROVIDER) {
+      case "anthropic":
+        return createAnthropic({ apiKey: env.AI_PROVIDER_API_KEY })
+          .languageModel(modelId);
+      case "openai":
+        return createOpenAI({ apiKey: env.AI_PROVIDER_API_KEY })
+          .languageModel(modelId);
+      default:
+        throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
+    }
+  }
+
+  private getSystemPrompt(messages: any[]): string {
+    // Customize system prompt based on conversation context
+    const hasCodeQuestions = messages.some(m => 
+      m.content?.includes("code") || m.content?.includes("programming")
+    );
+    
+    if (hasCodeQuestions) {
+      return "You are an expert programming assistant with deep knowledge of software development.";
+    }
+    
+    return "You are a helpful, knowledgeable assistant.";
+  }
+}
+```
+
+## Streaming Responses
+
+### Basic Streaming with Platform Services
+
+```typescript
+export class StreamingAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel) {
+    super(state, env, model);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const { MEMORY_STORE, ANALYTICS } = this.env;
+    
+    // Track request metrics
+    await ANALYTICS.writeDataPoint('agent_metrics', {
+      dimensions: {
+        agentId: 'streaming-agent',
+        userId: messages.metadata?.userId,
+        sessionId
+      },
+      metrics: {
+        requests: 1,
+        message_length: JSON.stringify(messages.messages).length
+      }
+    });
+
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      system: 'You are a helpful assistant with access to platform services.',
+      maxSteps: 5,
+      stopWhen: stepCountIs(5),
+      experimental_toolCallStreaming: true,
+      onFinish: async (result) => {
+        // Track completion metrics
+        await ANALYTICS.writeDataPoint('agent_metrics', {
+          dimensions: {
+            agentId: 'streaming-agent',
+            userId: messages.metadata?.userId,
+            sessionId
+          },
+          metrics: {
+            completions: 1,
+            tokens_used: result.usage?.totalTokens || 0,
+            response_length: result.text?.length || 0
+          }
+        });
+      }
+    });
+
+    return result.toTextStreamResponse();
+  }
+}
+```
+
+### Advanced Streaming with Tools
+
+```typescript
+import { tool } from 'ai';
+import { z } from 'zod';
+
+export class ToolEnabledAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel, services?: Service[]) {
+    super(state, env, model, services);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      system: 'You are an assistant with access to file storage, memory, and external tools.',
+      maxSteps: 10,
+      stopWhen: stepCountIs(10),
+      experimental_toolCallStreaming: true, // Enable tool streaming
+    });
+
+    return result.toTextStreamResponse();
+  }
+
+  // Tools are now automatically injected via ToolboxService
+  // No need for manual tool building - the framework handles this
+}
+```
+
+### MCP Integration Example
+
+The framework provides built-in MCP integration through the `ToolboxService`. Configure your MCP servers in an `mcp.json` file using the standard `url` format for public MCPs and `source` format for GitHub-based MCPs:
+
+```json
+{
+  "mcpServers": {
+    "linear": {
+      "url": "https://mcp.linear.app/sse",
+    },
+    "custom-worker": {
+      "source": "github:null-shot/typescript-mcp-template"
+    },
+    "your-custom-mcp": {
+      "source": "github:your-org/your-mcp-server"
+    }
+  }
+}
+```
+
+**Configuration Options:**
+- **`url`**: Use for standard public MCP servers with the `mcp://` protocol
+- **`source`**: Use for GitHub-based MCPs, especially Cloudflare Worker MCPs with format `github:owner/repo`
+
+```typescript
+import { AiSdkAgent, ToolboxService } from "@nullshot/agent";
+import mcpConfig from "../mcp.json";
+
+export class MCPEnabledAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    // Configure AI provider
+    let provider: Provider;
+    let model: LanguageModel;
+    
+    switch (env.AI_PROVIDER) {
+      case "anthropic":
+        provider = createAnthropic({
+          apiKey: env.AI_PROVIDER_API_KEY,
+        });
+        model = provider.languageModel(env.MODEL_ID);
+        break;
+      default:
+        throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
+    }
+
+    // Initialize with ToolboxService for MCP integration
+    super(state, env, model, [new ToolboxService(env, mcpConfig)]);
+  }
+
+  async processMessage(
+    sessionId: string,
+    messages: AIUISDKMessage
+  ): Promise<Response> {
+    const result = await this.streamTextWithMessages(
+      sessionId,
+      messages.messages,
+      {
+        system: "You are an assistant with access to MCP tools and services.",
+        maxSteps: 10,
+        stopWhen: stepCountIs(10),
+        // MCP tools are automatically available through ToolboxService
+        experimental_toolCallStreaming: true,
+        onError: (error: unknown) => {
+          console.error("Error processing message", error);
+        },
+      }
+    );
+
+    return result.toTextStreamResponse();
+  }
+}
+```
+
+### Durable Objects for Session Management
+
+The framework leverages Cloudflare Durable Objects for persistent session management. Each agent instance maintains its own state and can handle multiple concurrent conversations:
+
+```typescript
+// wrangler.toml configuration
+[[durable_objects.bindings]]
+name = "AGENT"
+class_name = "SimpleAgent"
+
+[env.development.vars]
+AI_PROVIDER = "anthropic"
+AI_PROVIDER_API_KEY = "your-key-here"
+MODEL_ID = "claude-3-5-sonnet-20241022"
+```
+
+The Durable Object pattern ensures:
+- **Session Isolation**: Each conversation maintains separate state
+- **Automatic Scaling**: Sessions are created on-demand
+- **Persistence**: Conversation history and context are preserved
+- **Global Distribution**: Sessions can be accessed from any region
+
+## Worker Setup
+
+### Complete Worker with Durable Object Routing
+
+The modern pattern uses Hono for routing with automatic session management through Durable Objects:
+
+```typescript
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { LanguageModel, Provider, stepCountIs } from "ai";
+import { AiSdkAgent, type AIUISDKMessage, ToolboxService, type MCPConfig } from "@nullshot/agent";
+import mcpConfig from "../mcp.json";
+
+const app = new Hono<{ Bindings: Env }>();
+
+// CORS configuration for web clients
+app.use(
+  "*",
+  cors({
+    origin: "*", // Restrict this in production
+    allowMethods: ["POST", "GET", "OPTIONS"],
+    allowHeaders: ["Content-Type"],
+    exposeHeaders: ["X-Session-Id"],
+    maxAge: 86400,
+  })
+);
+
+// Session-based routing to Durable Objects
+app.all("/agent/chat/:sessionId?", async (c) => {
+  const { AGENT } = c.env;
+  
+  // Generate session ID if not provided
+  let sessionIdStr = c.req.param("sessionId");
+  if (!sessionIdStr || sessionIdStr === "") {
+    sessionIdStr = AGENT.newUniqueId().toString();
+  }
+  
+  // Route to specific Durable Object instance
+  const id = AGENT.idFromName(sessionIdStr);
+  const forwardRequest = new Request(
+    "https://internal.com/agent/chat/" + sessionIdStr,
+    {
+      method: c.req.method,
+      body: c.req.raw.body,
+    }
+  );
+  
+  return await AGENT.get(id).fetch(forwardRequest);
+});
+
+// Health check endpoint
+app.get("/health", (c) => c.json({ status: "healthy" }));
+
+export default {
+  async fetch(
+    request: Request,
+    env: Env,
+    ctx: ExecutionContext
+  ): Promise<Response> {
+    return app.fetch(request, env, ctx);
+  },
+};
+```
+
+### Environment Variables Configuration
+
+Add these environment variables to your `wrangler.toml`:
+
+```toml
+name = "my-ai-agent"
+
+[[durable_objects.bindings]]
+name = "AGENT"
+class_name = "MyAgent"
+
+[env.development.vars]
+AI_PROVIDER = "anthropic"
+AI_PROVIDER_API_KEY = "sk-ant-your-key"
+MODEL_ID = "claude-3-5-sonnet-20241022"
+
+[env.production.vars]
+AI_PROVIDER = "anthropic"
+AI_PROVIDER_API_KEY = "your-production-key"
+MODEL_ID = "claude-3-5-sonnet-20241022"
+```
+
+### Multiple Agent Types
+
+You can create different agent classes for different use cases:
+
+```typescript
+// Conversational agent
+export class ConversationalAgent extends AiSdkAgent {
+  constructor(state: DurableObjectState, env: Env) {
+    const model = this.createModel(env);
+    super(state, env, model, [new ToolboxService(env, mcpConfig)]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      system: "You are a conversational expert, enjoying deep, intellectual conversations.",
+      maxSteps: 10,
+      stopWhen: stepCountIs(10),
+      experimental_toolCallStreaming: true,
+    });
+    return result.toTextStreamResponse();
+  }
+
+  private createModel(env: Env): LanguageModel {
+    switch (env.AI_PROVIDER) {
+      case "anthropic":
+        return createAnthropic({ apiKey: env.AI_PROVIDER_API_KEY })
+          .languageModel(env.MODEL_ID);
+      case "openai":
+        return createOpenAI({ apiKey: env.AI_PROVIDER_API_KEY })
+          .languageModel(env.MODEL_ID);
+      default:
+        throw new Error(`Unsupported AI provider: ${env.AI_PROVIDER}`);
+    }
+  }
+}
+```
+
+## Platform Service Integration
+
+### Document Processing Agent
+
+```typescript
+export class DocumentProcessingAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel) {
+    super(state, env, model);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const { STORAGE, MEMORY_STORE, DOCUMENT_QUEUE } = this.env;
+    
+    // Check if message contains a document upload
+    const lastMessage = messages.messages[messages.messages.length - 1];
+    const documentUrl = this.extractDocumentUrl(lastMessage?.content || '');
+    if (!documentUrl) {
+      const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+        system: 'You are a document processing assistant. Ask users to provide document URLs.',
+        maxSteps: 3,
+        stopWhen: stepCountIs(3),
+      });
+      return result.toTextStreamResponse();
+    }
+    
+    try {
+      // Download the document
+      const documentResponse = await fetch(documentUrl);
+      const documentData = await documentResponse.arrayBuffer();
+      
+      // Generate unique key for the document
+      const documentKey = `documents/${message.userId}/${Date.now()}-${this.generateId()}.pdf`;
+      
+      // Store original document in R2 Storage
+      await STORAGE.put(documentKey, documentData, {
+        contentType: 'application/pdf',
+        metadata: {
+          userId: message.userId,
+          originalName: this.extractFileName(documentUrl),
+          uploadedAt: new Date().toISOString()
+        }
+      });
+      
+      // Queue document for processing
+      await DOCUMENT_QUEUE.send({
+        body: {
+          documentKey,
+          userId: message.userId,
+          taskId: crypto.randomUUID(),
+          priority: 'normal',
+          createdAt: Date.now()
+        }
+      });
+      
+      // Store reference in memory for quick access
+      await MEMORY_STORE.put(
+        `user:${message.userId}:last_document`,
+        JSON.stringify({
+          documentKey,
+          status: 'processing',
+          uploadedAt: Date.now()
+        })
+      );
+      
+      // Use AI to generate response about the document
+      const result = await this.streamTextWithMessages(sessionId, [{
+        role: 'user',
+        content: `I've uploaded a document: ${this.extractFileName(documentUrl)}. What happens next?`
+      }], {
+        system: 'You are a document processing assistant. Inform users about document upload status.',
+        maxSteps: 3,
+        stopWhen: stepCountIs(3),
+      });
+      
+      return result.toTextStreamResponse();
+      
+    } catch (error) {
+      console.error('Document processing error:', error);
+      const result = await this.streamTextWithMessages(sessionId, [{
+        role: 'user',
+        content: "I had an error processing a document."
+      }], {
+        system: 'You are a document processing assistant. Help users with document processing errors.',
+        maxSteps: 3,
+        stopWhen: stepCountIs(3),
+      });
+      return result.toTextStreamResponse();
+    }
+  }
+  
+  private extractDocumentUrl(content: string): string | null {
+    const urlMatch = content.match(/https?:\/\/[^\s]+\.pdf/i);
+    return urlMatch ? urlMatch[0] : null;
+  }
+  
+  private extractFileName(url: string): string {
+    return url.split('/').pop() || 'document.pdf';
+  }
+  
+  private generateId(): string {
+    return Math.random().toString(36).substring(2, 15);
+  }
+}
+```
+
+### Video Analysis Agent
+
+```typescript
+export class VideoAnalysisAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel) {
+    super(state, env, model);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const { STREAM, MEMORY_STORE, ANALYTICS } = this.env;
+    
+    const lastMessage = messages.messages[messages.messages.length - 1];
+    if (lastMessage?.content?.includes('analyze video')) {
+      const videoUrl = this.extractVideoUrl(lastMessage.content);
+      
+      if (!videoUrl) {
+        const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+          system: 'You are a video analysis assistant. Ask users to provide video URLs.',
+          maxSteps: 3,
+          stopWhen: stepCountIs(3),
+        });
+        return result.toTextStreamResponse();
+      }
+      
+      try {
+        // Upload video to Cloudflare Stream
+        const videoData = await fetch(videoUrl).then(r => r.arrayBuffer());
+        const upload = await STREAM.upload(videoData, {
+          metadata: { 
+            purpose: 'analysis',
+            userId: message.userId,
+            uploadedAt: new Date().toISOString()
+          }
+        });
+        
+        // Track upload metrics
+        await ANALYTICS.writeDataPoint('video_metrics', {
+          dimensions: {
+            userId: message.userId,
+            operation: 'upload'
+          },
+          metrics: {
+            video_uploads: 1,
+            video_size_mb: videoData.byteLength / (1024 * 1024)
+          }
+        });
+        
+        // Store video reference
+        await MEMORY_STORE.put(
+          `user:${message.userId}:video:${upload.id}`,
+          JSON.stringify({
+            videoId: upload.id,
+            originalUrl: videoUrl,
+            status: 'processing',
+            uploadedAt: Date.now()
+          })
+        );
+        
+        // Generate AI response about video processing
+        const result = await this.streamTextWithMessages(sessionId, [{
+          role: 'user',
+          content: `I've uploaded a video for analysis. Video ID: ${upload.id}. What can you tell me about the processing?`
+        }], {
+          system: 'You are a video analysis assistant. Explain video processing status to users.',
+          maxSteps: 5,
+          stopWhen: stepCountIs(5),
+        });
+        
+        return result.toTextStreamResponse();
+        
+      } catch (error) {
+        console.error('Video processing error:', error);
+        const result = await this.streamTextWithMessages(sessionId, [{
+          role: 'user',
+          content: `I had an error processing a video: ${error.message}`
+        }], {
+          system: 'You are a video analysis assistant. Help users with video processing errors.',
+          maxSteps: 3,
+          stopWhen: stepCountIs(3),
+        });
+        return result.toTextStreamResponse();
+      }
+    }
+    
+    // Default response for non-video messages
+    const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+      system: 'You are a video analysis assistant. Help users analyze and process videos.',
+      maxSteps: 5,
+      stopWhen: stepCountIs(5),
+    });
+    
+    return result.toTextStreamResponse();
+  }
+  
+  private extractVideoUrl(content: string): string | null {
+    const urlMatch = content.match(/https?:\/\/[^\s]+\.(mp4|mov|avi|mkv|webm)/i);
+    return urlMatch ? urlMatch[0] : null;
+  }
+}
+```
+
+## Best Practices
+
+### Error Handling and Resilience
+
+```typescript
+export class ResilientAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel) {
+    super(state, env, model);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const { LOGS } = this.env;
+    
+    try {
+      const result = await this.streamTextWithMessages(sessionId, messages.messages, {
+        system: 'You are a helpful assistant.',
+        maxSteps: 5,
+        stopWhen: stepCountIs(5),
+        onStepFinish: (step) => {
+          // Log each step for debugging
+          LOGS.info('AI step completed', {
+            stepType: step.stepType,
+            usage: step.usage,
+            duration: step.duration
+          });
+        }
+      });
+
+      return result.toTextStreamResponse();
+      
+    } catch (error) {
+      // Log error details
+      LOGS.error('Agent processing failed', {
+        error: error.message,
+        userId: messages.metadata?.userId,
+        sessionId,
+        messageLength: JSON.stringify(messages.messages).length
+      });
+      
+      // Return graceful error response
+      const errorResult = await this.streamTextWithMessages(sessionId, [{
+        role: 'user',
+        content: "I'm having an error processing your request."
+      }], {
+        system: 'You are a helpful assistant. Apologize for the error and suggest trying again.',
+        maxSteps: 2,
+        stopWhen: stepCountIs(2),
+      });
+      return errorResult.toTextStreamResponse();
+    }
+  }
+}
+```
+
+### Performance Optimization
+
+```typescript
+export class OptimizedAgent extends AiSdkAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: LanguageModel) {
+    super(state, env, model);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const { CACHE, MEMORY_STORE } = this.env;
+    
+    // Check cache for similar responses
+    const lastMessage = messages.messages[messages.messages.length - 1];
+    const cacheKey = this.generateCacheKey(lastMessage?.content || '');
+    const cachedResponse = await CACHE.get(cacheKey);
+    
+    if (cachedResponse) {
+      // Return cached response as streaming response
+      const cached = JSON.parse(cachedResponse);
+      const result = await this.streamTextWithMessages(sessionId, [{
+        role: 'user',
+        content: cached.message
+      }], {
+        system: 'Return this exact cached response.',
+        maxSteps: 1,
+        stopWhen: stepCountIs(1),
+      });
+      return result.toTextStreamResponse();
+    }
+    
+    // Limit context window to last 10 messages for performance
+    const recentMessages = messages.messages.slice(-10);
+    
+    const result = await this.streamTextWithMessages(sessionId, recentMessages, {
+      system: 'You are a helpful assistant.',
+      maxSteps: 5,
+      stopWhen: stepCountIs(5),
+      onFinish: async (result) => {
+        // Cache response for 5 minutes
+        await CACHE.put(cacheKey, JSON.stringify({
+          message: result.text,
+          cached: true
+        }), { expirationTtl: 300 });
+      }
+    });
+
+    return result.toTextStreamResponse();
+  }
+  
+  private generateCacheKey(content: string): string {
+    // Simple hash for cache key
+    return `response:${content.substring(0, 100)}:${content.length}`;
+  }
+}
+```
+
+## Next Steps
+
+- **Session Router**: Learn how to implement session routing for multi-user conversations
+- **Tool Integration**: Add custom tools for specific business logic
+- **Platform Services**: Explore all available platform services (Storage, Queues, Analytics, etc.)
+- **Advanced Patterns**: Implement multi-agent workflows and complex orchestration
+
+The Vercel AI SDK integration provides a powerful foundation for building intelligent agents that can leverage the full capabilities of our platform while maintaining excellent performance and user experience. 

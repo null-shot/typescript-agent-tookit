@@ -1,0 +1,161 @@
+export const metadata = {
+  "title": "Overview",
+  "description": "Supportive functionality and microservices for AI Agents and MCP Tools"
+};
+
+**Build supportive "microservice-like" functionality that live within AI Agents and MCP Tools.** Services provide additional capabilities, APIs for custom interaction, admin functionality, and specialized processing that enhances your agent's core abilities.
+
+## What are Services?
+
+Services are modular components that provide supportive functionality or microservices within the TypeScript Agent Framework. They can:
+
+- **Expose APIs** for custom interaction or admin functionality
+- **Provide specialized processing** capabilities
+- **Manage resources** and handle complex operations
+- **Integrate with external systems** seamlessly
+- **Offer reusable functionality and state** across multiple agents
+
+Services live within AI Agents or MCP Tools and can be enabled or disabled as needed for different use cases.
+
+## Default Service Types
+
+### Toolbox Service
+
+Toolbox Service bootstraps `mcp.json` files into usable tools for the agent.
+
+## Service Architecture
+
+Services in the TypeScript Agent Framework extend the base `Service` class and are registered within the agent class constructor. Once registered, they get bootstrapped as middleware, external services or generic services.
+
+
+### Creating a Hello World Service
+
+```typescript
+// src/services/hello-world-service.ts
+import { Service } from '@typescript-agent-framework/core';
+
+export class HelloWorldService extends Service {
+  private greetingCount: number = 0;
+
+  constructor(env: Env) {
+    super(env);
+  }
+
+  greet(name?: string): string {
+    this.greetingCount++;
+    const target = name || 'World';
+    return `Hello ${target}! (Greeting #${this.greetingCount})`;
+  }
+}
+```
+
+### Agent Implementation with Service
+
+```typescript
+// src/agents/test-agent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+import { HelloWorldService } from '../services/hello-world-service';
+
+export class TestAgent extends AiAgentSDK {
+  private helloService: HelloWorldService;
+
+  constructor(env: Env) {
+    // Initialize service with env
+    this.helloService = new HelloWorldService(this.env);
+    super(env, ..., [this.helloService]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    // Unrealistic example, but you can that you may want some business logic here!
+    if (message.content.includes('hello')) {
+      const greeting = this.helloService.greet(message.user?.name);
+      return { message: greeting };
+    }
+    
+    return { message: 'Say hello to get a greeting!' };
+  }
+}
+```
+
+## Service Configuration
+
+Services need access to environment variables and can be configured in two ways:
+
+### Option 1: Using this.env (Recommended)
+
+```typescript
+// src/agents/test-agent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+import { HelloWorldService, ToolboxService } from '@typescript-agent-framework/services';
+
+export class TestAgent extends AiAgentSDK {
+  private helloService: HelloWorldService;
+
+  constructor(env: Env) {
+    const { DATABASE } = this.env;
+    // Example of injecting database into the service
+    this.helloService = new HelloWorldService(DATABASE);
+    super(env, ..., [this.helloService]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const greeting = this.helloService.greet(message.user?.name);
+    const processedData = await this.toolboxService.processData(message.content);
+    
+    return {
+      message: `${greeting} Processed: ${processedData}`
+    };
+  }
+}
+```
+
+### Option 2: Using process.env
+
+If you need to use `process.env` instead of `this.env`, you must enable the `nodejs_compat` flag. See **[Environment Variables](/en/developers/platform/environment-variables)** documentation for setup instructions.
+
+```typescript
+// wrangler.toml - Enable nodejs_compat flag first
+// [compatibility_flags]
+// nodejs_compat = true
+
+// src/services/hello-world-service.ts
+import { Service } from '@typescript-agent-framework/core';
+
+export class HelloWorldService extends Service {
+  private greetingCount: number = 0;
+  private defaultName: string;
+
+  constructor(env: Env) {
+    super(env);
+    // Option 2: Using process.env (requires nodejs_compat flag)
+    this.defaultName = process.env.DEFAULT_GREETING_NAME || 'World';
+  }
+
+  greet(name?: string): string {
+    this.greetingCount++;
+    const target = name || this.defaultName;
+    return `Hello ${target}! (Greeting #${this.greetingCount})`;
+  }
+}
+```
+
+## MCP Tools Integration
+
+**Service support for MCP Tools is coming soon!** 
+
+## Default Available Services
+
+- **[Toolbox Service](/en/developers/services/toolbox)** - Manages bootstrapping MCP Tools for your AI Agent.
+
+## Related Documentation
+
+- **[Platform Services](/en/developers/platform)** - Core platform functionality
+- **[Workflows](/en/developers/platform/workflows)** - Durable workflow orchestration
+- **[MCP Framework](/en/developers/mcp-framework)** - Model Context Protocol integration
+
+---
+
+## Official Documentation
+
+- [TypeScript Agent Framework](https://github.com/null-shot/typescript-agent-framework)
+- [Service Architecture Guide](https://github.com/null-shot/typescript-agent-framework/tree/main/packages/agent) 

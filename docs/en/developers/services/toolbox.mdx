@@ -1,0 +1,86 @@
+export const metadata = {
+  "title": "Toolbox Service",
+  "description": "Add MCP tools to your AI Agent with simple configuration"
+};
+
+**Give your AI Agent superpowers with MCP tools.** The Toolbox Service connects your agent to Model Context Protocol (MCP) servers, enabling file operations, web browsing, code execution, and custom tool integrations.
+
+## Key Features
+
+- **MCP Integration**: Connect to any MCP server with simple configuration
+- **Built-in Tools**: File system, web browsing, Git operations, and more
+- **Custom Tools**: Add your own MCP servers for domain-specific functionality
+- **Auto-discovery**: Automatically exposes MCP tools to your AI model
+- **Type Safety**: Full TypeScript support for tool parameters and responses
+
+## Quick Start
+
+### 1. Add ToolboxService to Your Agent
+
+```typescript
+// src/index.ts
+import { SimplePromptAgent } from "@xava-labs/agent-sdk/agents";
+import { ToolboxService } from "@xava-labs/agent-sdk/services";
+import { anthropic } from "@ai-sdk/anthropic";
+
+class MyAgent extends SimplePromptAgent {
+  constructor(state: DurableObjectState, env: Env) {
+    super(
+      state, 
+      env, 
+      anthropic('claude-3-5-sonnet-20241022'),
+      [new ToolboxService()] // Add toolbox here
+    );
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const result = await this.streamText(sessionId, {
+      model: this.model,
+      system: 'You are a helpful AI assistant with access to tools.',
+      messages: messages.messages,
+      maxSteps: 10,
+      experimental_toolCallStreaming: true, // Enable tool streaming
+    });
+
+    return result.toDataStreamResponse();
+  }
+}
+```
+
+### 2. Configure MCP Servers
+
+Create an `mcp.json` file in your project root. If you want these to work in the cloud, then you will need to post these to use SSE configuration.
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"],
+      "env": {}
+    },
+    "web": {
+      "url": "http://coolmcpserver.com/sse", 
+      "headers": {}
+    }
+  }
+}
+```
+
+### 3. Test and iterate!
+
+You're now set. Launch your project locally and call the agent chat endpoint! The agent, when relevant, pickup tools from the MCPs you have registered in the toolbox.
+
+## Related Documentation
+
+- **[MCP Framework](/en/developers/mcp-framework)** - Learn more about Model Context Protocol
+- **[Agent SDK](/en/developers/agents-framework/agent-sdk)** - Advanced agent patterns
+- **[Platform Services](/en/developers/platform)** - Backend services for agents
+
+---
+
+## Official Documentation
+
+- [MCP Server Registry](https://github.com/modelcontextprotocol/servers)
+- [Creating MCP Servers](https://modelcontextprotocol.io/tutorials/building-a-server)
+- [TypeScript Agent Framework](https://github.com/null-shot/typescript-agent-framework) 
