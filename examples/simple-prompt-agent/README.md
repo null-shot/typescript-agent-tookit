@@ -6,7 +6,7 @@ A Cloudflare Workers-based AI agent implementation that uses the @nullshot/agent
 
 This project demonstrates:
 
-- Integration with AI providers (OpenAI, Anthropic, or DeepSeek)
+- Integration with AI providers (OpenAI, Anthropic, DeepSeek, Workers AI, Gemini, or Grok)
 - Tool-based interactions using the Model Context Protocol (MCP)
 - Durable Object-based state management
 - Streaming responses for real-time interactions
@@ -54,10 +54,15 @@ cp .dev.vars.example .dev.vars
 3. Configure your `.dev.vars` with the following variables:
 
 ```
-AI_PROVIDER=[anthropic || openai || deepseek]
+AI_PROVIDER=[anthropic || openai || deepseek || workers-ai || gemini || grok]
 ANTHROPIC_API_KEY=[your_anthropic_key]
 OPEN_AI_API_KEY=[your_openai_key]
 DEEPSEEK_API_KEY=[your_deepseek_key]
+WORKERS_AI_MODEL=[optional_workers_ai_model_override]
+GOOGLE_API_KEY=[your_google_api_key]
+GEMINI_MODEL=[optional_gemini_model_override]
+GROK_API_KEY=[your_grok_api_key]
+GROK_MODEL=[optional_grok_model_override]
 ```
 
 ### Development
@@ -126,8 +131,13 @@ The `SimplePromptAgent` class:
                                                                │            │
                                                                ▼            ▼
                                                    ┌────────────────┐ ┌────────────────┐
-                                                   │   3rd Party    │ │   AI Provider  │
-                                                   │  MCP Services  │ │OpenAI/Anthropic/DeepSeek│
+                                                   │   3rd Party    │ │  AI Provider   │
+                                                   │  MCP Services  │ │  • OpenAI      │
+                                                   │                │ │  • Anthropic   │
+                                                   │                │ │  • DeepSeek    │
+                                                   │                │ │  • Workers AI  │
+                                                   │                │ │  • Gemini      │
+                                                   │                │ │  • Grok        │
                                                    └────────────────┘ └────────────────┘
 ```
 
@@ -163,11 +173,39 @@ pnpm dev
 
 Required variables in `.dev.vars`:
 
-- `AI_PROVIDER`: Choose between 'anthropic', 'openai', or 'deepseek'
+- `AI_PROVIDER`: Choose between 'anthropic', 'openai', 'deepseek', 'workers-ai', 'gemini', or 'grok'
 - `ANTHROPIC_API_KEY`: Your Anthropic API key (if using Anthropic)
 - `OPEN_AI_API_KEY`: Your OpenAI API key (if using OpenAI)
 - `DEEPSEEK_API_KEY`: Your DeepSeek API key (if using DeepSeek)
+- `WORKERS_AI_MODEL`: Workers AI model to use (defaults to '@cf/meta/llama-3.1-8b-instruct')
+- `GOOGLE_API_KEY`: Your Google API key (if using Gemini)
+- `GEMINI_MODEL`: Gemini model to use (defaults to 'gemini-1.5-pro')
+- `GROK_API_KEY`: Your Grok API key (if using Grok)
+- `GROK_MODEL`: Grok model to use (defaults to 'grok-1')
 - `TOOLS_REGISTRY`: Automatically populated during build from mcp.json
+
+### Workers AI Provider
+
+When using `AI_PROVIDER=workers-ai`, the agent uses Cloudflare's Workers AI platform directly through the AI binding. This provides:
+
+- **70+ Available Models**: Access to Llama, Gemma, Mistral, Qwen, and other models
+- **No External API Keys**: Uses Cloudflare's AI binding (no additional costs beyond Workers AI usage)
+- **Low Latency**: Models run on Cloudflare's edge network
+- **Cost Effective**: Pay only for actual AI inference usage
+
+**Popular Workers AI Models:**
+- `@cf/meta/llama-3.1-8b-instruct` (default)
+- `@cf/meta/llama-3.2-3b-instruct`
+- `@cf/google/gemma-2b-it-lora`
+- `@cf/mistral/mistral-7b-instruct-v0.1`
+- `@cf/qwen/qwen1.5-7b-chat-awq`
+
+To use Workers AI, simply set:
+```bash
+AI_PROVIDER=workers-ai
+# Optionally specify a different model:
+WORKERS_AI_MODEL=@cf/meta/llama-3.2-3b-instruct
+```
 
 ## Testing
 

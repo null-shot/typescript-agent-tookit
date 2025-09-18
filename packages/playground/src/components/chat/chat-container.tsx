@@ -25,7 +25,7 @@ import { MessageSquare, Settings2 } from "lucide-react";
 import { DockerInstallModal } from "../docker-install-modal";
 
 interface ModelConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok';
   apiKey: string;
   model: string;
   temperature?: number;
@@ -114,9 +114,9 @@ export function ChatContainer({
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelOption>({
-    id: "claude-3-5-sonnet-20241022",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic"
+    id: "@cf/meta/llama-3.1-8b-instruct", // Default to Workers AI model
+    name: "Llama 3.1 8B Instruct",
+    provider: "Workers AI"
   });
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
 
@@ -278,7 +278,7 @@ export function ChatContainer({
   } = useChat({
     api: modelConfig ? '/api/chat' : undefined,
     id: enableSessionManagement ? 'session-chat' : 'chat-session',
-    streamProtocol: 'data' as const,
+    streamProtocol: 'text' as const,
     initialMessages: (enableSessionManagement && sessionId && !isNewChat(sessionId) ? loadChat(sessionId) : []) as UIMessage[],
     headers: modelConfig ? {
       'Authorization': `Bearer ${modelConfig.apiKey}`,
@@ -387,15 +387,34 @@ export function ChatContainer({
   // Load existing configuration on mount
   useEffect(() => {
     const existingConfig = loadAIModelConfig();
-    if (existingConfig && existingConfig.apiKey && existingConfig.model) {
+    // Workers AI can work without API key, others need it
+    const hasRequiredAuth = existingConfig.provider === 'workers-ai' || existingConfig.apiKey;
+    
+    if (existingConfig && hasRequiredAuth && existingConfig.model) {
       const modelConfig: ModelConfig = {
         provider: existingConfig.provider,
-        apiKey: existingConfig.apiKey,
+        apiKey: existingConfig.apiKey || 'no-key', // Workers AI doesn't need API key
         model: existingConfig.model,
         temperature: existingConfig.temperature || 0.7,
         maxTokens: existingConfig.maxTokens || 2000,
       };
       setModelConfig(modelConfig);
+      
+      // Update selected model to match configuration
+      const providerName = existingConfig.provider === 'openai' ? 'OpenAI' : 
+                          existingConfig.provider === 'anthropic' ? 'Anthropic' : 
+                          existingConfig.provider === 'workers-ai' ? 'Workers AI' :
+                          existingConfig.provider === 'deepseek' ? 'DeepSeek' :
+                          existingConfig.provider === 'gemini' ? 'Google Gemini' :
+                          existingConfig.provider === 'grok' ? 'xAI Grok' :
+                          'Workers AI';
+      
+      setSelectedModel({
+        id: existingConfig.model,
+        name: existingConfig.model, // Will be improved with proper model names
+        provider: providerName
+      });
+      
       onModelConfigChange?.(modelConfig);
     }
   }, [onModelConfigChange]);

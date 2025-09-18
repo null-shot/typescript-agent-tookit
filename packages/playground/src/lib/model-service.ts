@@ -1,7 +1,9 @@
 export interface AIModel {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok';
+  category?: string;
+  description?: string;
 }
 
 export interface ModelCacheEntry {
@@ -26,7 +28,7 @@ function hashApiKey(apiKey: string): string {
 }
 
 // Get cache key for provider
-function getCacheKey(provider: 'openai' | 'anthropic'): string {
+function getCacheKey(provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok'): string {
   return `${MODEL_CACHE_PREFIX}${provider}`;
 }
 
@@ -39,7 +41,7 @@ function isCacheValid(cacheEntry: ModelCacheEntry, apiKey: string): boolean {
 }
 
 // Get models from cache
-function getModelsFromCache(provider: 'openai' | 'anthropic', apiKey: string): AIModel[] | null {
+function getModelsFromCache(provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok', apiKey: string): AIModel[] | null {
   try {
     if (typeof window === 'undefined') return null;
     
@@ -63,7 +65,7 @@ function getModelsFromCache(provider: 'openai' | 'anthropic', apiKey: string): A
 }
 
 // Save models to cache
-function saveModelsToCache(provider: 'openai' | 'anthropic', models: AIModel[], apiKey: string): void {
+function saveModelsToCache(provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok', models: AIModel[], apiKey: string): void {
   try {
     if (typeof window === 'undefined') return;
     
@@ -143,9 +145,107 @@ async function fetchAnthropicModels(apiKey: string): Promise<AIModel[]> {
   }));
 }
 
+// Workers AI models - dynamic with fallback
+async function fetchWorkersAIModels(apiKey?: string): Promise<AIModel[]> {
+  try {
+    // Try to fetch from the API route which handles dynamic fetching
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Only add API key header if we have a valid key
+    if (apiKey && apiKey.trim()) {
+      headers['x-api-key'] = apiKey;
+    }
+    
+    const response = await fetch('/api/models/workers-ai', {
+      headers,
+    });
+
+    if (response.ok) {
+      const data = await response.json() as { data: Array<{ id: string; name: string; category?: string; description?: string }> };
+      return data.data.map(model => ({
+        id: model.id,
+        name: model.name,
+        category: model.category,
+        description: model.description,
+        provider: 'workers-ai' as const
+      }));
+    }
+  } catch (error) {
+    console.warn('Failed to fetch dynamic Workers AI models, using fallback:', error);
+  }
+
+  // Fallback to static list with categories
+  const fallbackModels = [
+    { id: '@cf/meta/llama-3.1-8b-instruct', name: 'Llama 3.1 8B Instruct', category: 'Meta Llama' },
+    { id: '@cf/meta/llama-3.2-3b-instruct', name: 'Llama 3.2 3B Instruct', category: 'Meta Llama' },
+    { id: '@cf/google/gemma-2b-it-lora', name: 'Gemma 2B IT LoRA', category: 'Google Gemma' },
+    { id: '@cf/mistral/mistral-7b-instruct-v0.1', name: 'Mistral 7B Instruct', category: 'Mistral AI' },
+    { id: '@cf/qwen/qwen1.5-7b-chat-awq', name: 'Qwen 1.5 7B Chat', category: 'Alibaba Qwen' },
+  ];
+
+  return fallbackModels.map(model => ({
+    id: model.id,
+    name: model.name,
+    category: model.category,
+    provider: 'workers-ai' as const
+  }));
+}
+
+// DeepSeek models - static list with API validation
+async function fetchDeepSeekModels(apiKey: string): Promise<AIModel[]> {
+  // DeepSeek doesn't have a public models API, return known models
+  const deepseekModels = [
+    { id: 'deepseek-chat', name: 'DeepSeek Chat', category: 'DeepSeek' },
+    { id: 'deepseek-coder', name: 'DeepSeek Coder', category: 'DeepSeek' },
+  ];
+
+  return deepseekModels.map(model => ({
+    id: model.id,
+    name: model.name,
+    category: model.category,
+    provider: 'deepseek' as const
+  }));
+}
+
+// Gemini models - static list with API validation
+async function fetchGeminiModels(apiKey: string): Promise<AIModel[]> {
+  // Google doesn't provide a models API for Gemini, return known models
+  const geminiModels = [
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', category: 'Google Gemini' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', category: 'Google Gemini' },
+    { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro', category: 'Google Gemini' },
+  ];
+
+  return geminiModels.map(model => ({
+    id: model.id,
+    name: model.name,
+    category: model.category,
+    provider: 'gemini' as const
+  }));
+}
+
+// Grok models - static list with API validation
+async function fetchGrokModels(apiKey: string): Promise<AIModel[]> {
+  // xAI doesn't provide a models API for Grok, return known models
+  const grokModels = [
+    { id: 'grok-1', name: 'Grok 1', category: 'xAI' },
+    { id: 'grok-1.5', name: 'Grok 1.5', category: 'xAI' },
+  ];
+
+  return grokModels.map(model => ({
+    id: model.id,
+    name: model.name,
+    category: model.category,
+    provider: 'grok' as const
+  }));
+}
+
 // Main function to get models (with caching)
-export async function getModels(provider: 'openai' | 'anthropic', apiKey: string, forceRefresh = false): Promise<AIModel[]> {
-  if (!apiKey.trim()) {
+export async function getModels(provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok', apiKey: string, forceRefresh = false): Promise<AIModel[]> {
+  // Workers AI doesn't need an API key
+  if (provider !== 'workers-ai' && !apiKey.trim()) {
     throw new Error('API key is required');
   }
 
@@ -164,8 +264,18 @@ export async function getModels(provider: 'openai' | 'anthropic', apiKey: string
   try {
     if (provider === 'openai') {
       models = await fetchOpenAIModels(apiKey);
-    } else {
+    } else if (provider === 'anthropic') {
       models = await fetchAnthropicModels(apiKey);
+    } else if (provider === 'workers-ai') {
+      models = await fetchWorkersAIModels(apiKey);
+    } else if (provider === 'deepseek') {
+      models = await fetchDeepSeekModels(apiKey);
+    } else if (provider === 'gemini') {
+      models = await fetchGeminiModels(apiKey);
+    } else if (provider === 'grok') {
+      models = await fetchGrokModels(apiKey);
+    } else {
+      throw new Error(`Unsupported provider: ${provider}`);
     }
     
     // Cache the results

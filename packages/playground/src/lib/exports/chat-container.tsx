@@ -28,7 +28,7 @@ import { MessageSquare, Settings2 } from "lucide-react";
 import { DockerInstallModal } from "../../components/docker-install-modal";
 
 interface ModelConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok';
   apiKey: string;
   model: string;
   temperature?: number;
@@ -119,9 +119,9 @@ export function ChatContainer({
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelOption>({
-    id: "claude-3-5-sonnet-20241022",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic"
+    id: "@cf/meta/llama-3.1-8b-instruct", // Default to Workers AI model  
+    name: "Llama 3.1 8B Instruct",
+    provider: "Workers AI"
   });
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
 
@@ -288,7 +288,7 @@ export function ChatContainer({
   } = useChat({
     api: modelConfig && config.apiBaseUrl ? `${config.apiBaseUrl}/chat` : undefined,
     id: enableSessionManagement ? 'session-chat' : 'chat-session',
-    streamProtocol: 'data' as const,
+    streamProtocol: 'text' as const,
     initialMessages: (enableSessionManagement && sessionId && !isNewChat(sessionId) && config.enableLocalStorage ? loadChat(sessionId) : []) as UIMessage[],
     headers: modelConfig ? {
       'Authorization': `Bearer ${modelConfig.apiKey}`,
