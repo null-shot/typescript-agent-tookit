@@ -702,7 +702,7 @@ export function ChatContainer({
                   content={message.content}
                   timestamp={message.timestamp}
                   variant={message.sender}
-                  avatar={userAvatar || 'defaultAvatar'}
+                  avatar={userAvatar || '/images/default-avatar.png'}
                   isThinking={message.isThinking}
                   showTaskList={message.showTaskList}
                   taskSteps={message.taskSteps}
