@@ -114,9 +114,9 @@ export function ChatContainer({
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelOption>({
-    id: "@cf/meta/llama-3.1-8b-instruct", // Default to Workers AI model
-    name: "Llama 3.1 8B Instruct",
-    provider: "Workers AI"
+    id: "", // Will be set dynamically based on provider
+    name: "Select Model", 
+    provider: "Anthropic"
   });
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
 
@@ -419,16 +419,23 @@ export function ChatContainer({
     }
   }, [onModelConfigChange]);
 
-  // Load available models when app starts
+  // Load available models when app starts or modelConfig changes
   useEffect(() => {
     const loadAvailableModels = async () => {
       try {
         const models = await getAllAvailableModels();
         setAvailableModels(models);
         
-        // If we have models and no selected model, pick the first one
-        if (models.length > 0 && !selectedModel.id) {
-          const firstModel = models[0];
+        // Filter models by current provider if we have modelConfig
+        const currentProvider = modelConfig?.provider;
+        const providerModels = currentProvider 
+          ? models.filter(m => m.provider.toLowerCase() === currentProvider.toLowerCase())
+          : models;
+        
+        // Auto-select first model from current provider if no model selected or current model doesn't match provider
+        const currentModelValid = selectedModel.id && providerModels.some(m => m.id === selectedModel.id);
+        if (providerModels.length > 0 && (!selectedModel.id || !currentModelValid)) {
+          const firstModel = providerModels[0];
           setSelectedModel({
             id: firstModel.id,
             name: firstModel.name,
@@ -441,7 +448,7 @@ export function ChatContainer({
     };
 
     loadAvailableModels();
-  }, [selectedModel.id]);
+  }, [selectedModel.id, modelConfig?.provider]);
 
   // Session management effects (only if enabled)
   useEffect(() => {

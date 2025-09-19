@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     const finalTemperature = body.temperature || headerTemperature;
     const finalMaxTokens = body.maxTokens || headerMaxTokens;
     
+    
     // MCP integration parameters
     const mcpProxyId = body.mcpProxyId;
     const mcpSessionId = body.mcpSessionId;

@@ -14,56 +14,59 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // DeepSeek doesn't have a public models API endpoint,
-    // so we return the known available models
-    const deepseekModels = [
+    // Try to fetch dynamic models from DeepSeek API
+    try {
+      console.log('🔄 Fetching dynamic DeepSeek models from API...');
+      
+      const modelsResponse = await fetch('https://api.deepseek.com/models', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (modelsResponse.ok) {
+        const modelsData = await modelsResponse.json();
+        const dynamicModels = modelsData.data.map((model: any) => ({
+          id: model.id,
+          name: model.id.split('-').map((word: string) => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' '),
+          provider: 'deepseek'
+        }));
+        
+        console.log(`✅ Successfully fetched ${dynamicModels.length} dynamic DeepSeek models`);
+        return NextResponse.json({ data: dynamicModels });
+      }
+      
+      // If API call fails, fall back to static models
+      console.log('⚠️ DeepSeek API request failed, falling back to static models');
+    } catch (error) {
+      console.log('⚠️ DeepSeek API request failed, falling back to static models');
+    }
+
+    // Updated fallback models with latest available models (as of our testing)
+    console.log('📋 Using fallback DeepSeek models');
+    const fallbackModels = [
       {
         id: 'deepseek-chat',
         name: 'DeepSeek Chat',
         provider: 'deepseek'
       },
       {
-        id: 'deepseek-coder',
-        name: 'DeepSeek Coder',
+        id: 'deepseek-reasoner',
+        name: 'DeepSeek Reasoner',
         provider: 'deepseek'
       },
       {
-        id: 'deepseek-reasoner',
-        name: 'DeepSeek Reasoner',
+        id: 'deepseek-coder',
+        name: 'DeepSeek Coder',
         provider: 'deepseek'
       }
     ];
 
-    // Validate the API key by making a simple request to DeepSeek
-    try {
-      const validationResponse = await fetch('https://api.deepseek.com/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [{ role: 'user', content: 'test' }],
-          max_tokens: 1
-        })
-      });
-
-      // If we get a 401, the API key is invalid
-      if (validationResponse.status === 401) {
-        return NextResponse.json(
-          { error: 'Invalid DeepSeek API key' },
-          { status: 401 }
-        );
-      }
-
-      // Even if the request fails for other reasons (like quota), 
-      // we still return the models if the key is valid
-    } catch (validationError) {
-      console.warn('Could not validate DeepSeek API key, returning models anyway:', validationError);
-    }
-
-    return NextResponse.json({ data: deepseekModels });
+    return NextResponse.json({ data: fallbackModels });
   } catch (error) {
     console.error('Error fetching DeepSeek models:', error);
     return NextResponse.json(
