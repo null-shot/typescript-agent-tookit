@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
       
       // Transform xAI models to our format
       const grokModels = modelsData.data
-        ?.filter((model: any) => {
+        ?.filter((model: { id?: string; deprecated?: boolean }) => {
           // Only include models that are available and not deprecated
           return model.id && !model.deprecated;
         })
-        ?.map((model: any) => ({
+        ?.map((model: { id: string }) => ({
           id: model.id,
           name: model.id.split('-').map((word: string) => 
             word.charAt(0).toUpperCase() + word.slice(1)

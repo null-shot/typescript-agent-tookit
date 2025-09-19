@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
       if (modelsResponse.ok) {
         const modelsData = await modelsResponse.json();
-        const dynamicModels = modelsData.data.map((model: any) => ({
+        const dynamicModels = modelsData.data.map((model: { id: string; display_name: string }) => ({
           id: model.id,
           name: model.display_name,
           provider: 'anthropic'
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
       
       // If API call fails, fall back to static models
       console.log('⚠️ Anthropic API request failed, falling back to static models');
-    } catch (error) {
+    } catch {
       console.log('⚠️ Anthropic API request failed, falling back to static models');
     }
 

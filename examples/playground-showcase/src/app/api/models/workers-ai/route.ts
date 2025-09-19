@@ -112,8 +112,8 @@ export async function GET(request: NextRequest) {
             
             // Transform and categorize dynamic models
             const dynamicModels = data.result
-              .filter((model: any) => model.task?.name === 'Text Generation')
-              .map((model: any) => {
+              .filter((model: { task?: { name?: string }; name?: string; id?: string }) => model.task?.name === 'Text Generation')
+              .map((model: { name?: string; id?: string; description?: string }) => {
                 const modelName = model.name || model.id;
                 const category = getCategoryFromModelName(modelName);
                 
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
                   provider: 'workers-ai'
                 };
               })
-              .sort((a: any, b: any) => a.name.localeCompare(b.name));
+              .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
 
             return NextResponse.json({ data: dynamicModels });
           }

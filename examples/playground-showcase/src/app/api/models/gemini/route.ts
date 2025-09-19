@@ -44,12 +44,12 @@ export async function GET(request: NextRequest) {
       
       // Filter and transform Google AI models to our format
       const geminiModels = modelsData.models
-        ?.filter((model: any) => {
+        ?.filter((model: { name?: string; supportedGenerationMethods?: string[] }) => {
           // Only include Gemini models that support generateContent
           return model.name?.includes('gemini') && 
                  model.supportedGenerationMethods?.includes('generateContent');
         })
-        ?.map((model: any) => ({
+        ?.map((model: { name: string; displayName?: string }) => ({
           id: model.name.replace('models/', ''), // Remove 'models/' prefix
           name: model.displayName || model.name.replace('models/', ''),
           provider: 'gemini'
