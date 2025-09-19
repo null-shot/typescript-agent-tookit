@@ -43,17 +43,17 @@ export async function GET(request: NextRequest) {
     
     // Filter and format models for chat completions
     const chatModels = data.data
-      .filter((model: any) => 
+      .filter((model: { id: string }) => 
         model.id.includes('gpt') || 
         model.id.includes('o1') ||
         model.id.includes('o3')
       )
-      .map((model: any) => ({
+      .map((model: { id: string }) => ({
         id: model.id,
         name: model.id,
         provider: 'openai'
       }))
-      .sort((a: any, b: any) => a.name.localeCompare(b.name));
+      .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name));
 
     return NextResponse.json({ data: chatModels });
   } catch (error) {

@@ -113,12 +113,13 @@ export async function GET(request: NextRequest) {
             // Transform and categorize dynamic models
             const dynamicModels = data.result
               .filter((model: { task?: { name?: string }; name?: string; id?: string }) => model.task?.name === 'Text Generation')
+              .filter((model: { name?: string; id?: string }) => model.name || model.id) // Ensure we have a valid identifier
               .map((model: { name?: string; id?: string; description?: string }) => {
-                const modelName = model.name || model.id;
+                const modelName = model.name || model.id || 'unknown-model';
                 const category = getCategoryFromModelName(modelName);
                 
                 return {
-                  id: model.name || model.id,
+                  id: model.name || model.id || 'unknown-model',
                   name: formatModelName(modelName),
                   category,
                   description: model.description || 'AI text generation model',
