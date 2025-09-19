@@ -57,11 +57,8 @@
 		"CLOUDFLARE_ACCOUNT_ID": "",
 		"CLOUDFLARE_API_KEY": "",
 		"DEEPSEEK_API_KEY": "",
-		"WORKERS_AI_MODEL": "@cf/meta/llama-3.1-8b-instruct",
 		"GOOGLE_API_KEY": "",
-		"GEMINI_MODEL": "gemini-1.5-pro",
 		"GROK_API_KEY": "",
-		"GROK_MODEL": "grok-1",
 	},
 	/**
 	 * Note: Use secrets to store sensitive data.

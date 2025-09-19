@@ -7,9 +7,6 @@
 		"dev": "concurrently \"wrangler dev\" \"cd ../crud-mcp && npm run start -- --port 8788\" \"cd ../playground-showcase && npm run dev\"",
 		"start": "wrangler dev",
 		"test": "echo 'Tests temporarily excluded'",
-		"test:workers-ai": "node test-workers-ai.js",
-		"test:dev": "node test-dev.js",
-		"test:curl": "./test-curl.sh",
 		"cf-typegen": "wrangler types",
 		"build": "wrangler build"
 	},

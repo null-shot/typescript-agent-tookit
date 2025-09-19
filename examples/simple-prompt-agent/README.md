@@ -58,11 +58,10 @@ AI_PROVIDER=[anthropic || openai || deepseek || workers-ai || gemini || grok]
 ANTHROPIC_API_KEY=[your_anthropic_key]
 OPEN_AI_API_KEY=[your_openai_key]
 DEEPSEEK_API_KEY=[your_deepseek_key]
-WORKERS_AI_MODEL=[optional_workers_ai_model_override]
+CLOUDFLARE_ACCOUNT_ID=[your_cloudflare_account_id]
+CLOUDFLARE_API_KEY=[your_cloudflare_api_key]
 GOOGLE_API_KEY=[your_google_api_key]
-GEMINI_MODEL=[optional_gemini_model_override]
 GROK_API_KEY=[your_grok_api_key]
-GROK_MODEL=[optional_grok_model_override]
 ```
 
 ### Development
@@ -179,18 +178,15 @@ Required variables in `.dev.vars`:
 - `DEEPSEEK_API_KEY`: Your DeepSeek API key (if using DeepSeek)
 - `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID (if using Workers AI)
 - `CLOUDFLARE_API_KEY`: Your Cloudflare API key (if using Workers AI)
-- `WORKERS_AI_MODEL`: Workers AI model to use (defaults to '@cf/meta/llama-3.1-8b-instruct')
 - `GOOGLE_API_KEY`: Your Google API key (if using Gemini)
-- `GEMINI_MODEL`: Gemini model to use (defaults to 'gemini-1.5-pro')
 - `GROK_API_KEY`: Your Grok API key (if using Grok)
-- `GROK_MODEL`: Grok model to use (defaults to 'grok-1')
 - `TOOLS_REGISTRY`: Automatically populated during build from mcp.json
 
 ### Workers AI Provider
 
 When using `AI_PROVIDER=workers-ai`, the agent uses Cloudflare's Workers AI platform directly through the AI binding. This provides:
 
-- **70+ Available Models**: Access to Llama, Gemma, Mistral, Qwen, and other models
+- **70+ Available Models**: Access to Llama, Gemma, Mistral, Qwen, and other models (filtered to ~49 text generation models in the UI)
 - **No External API Keys**: Uses Cloudflare's AI binding (no additional costs beyond Workers AI usage)
 - **Low Latency**: Models run on Cloudflare's edge network
 - **Cost Effective**: Pay only for actual AI inference usage

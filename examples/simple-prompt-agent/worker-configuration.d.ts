@@ -10,11 +10,8 @@ declare namespace Cloudflare {
 		CLOUDFLARE_AI_GATEWAY_ID: string;
 		CLOUDFLARE_API_KEY: string;
 		DEEPSEEK_API_KEY: string;
-		WORKERS_AI_MODEL: string;
 		GOOGLE_API_KEY: string;
-		GEMINI_MODEL: string;
 		GROK_API_KEY: string;
-		GROK_MODEL: string;
 		AI: Ai;
 		AGENT: DurableObjectNamespace<import("./src/index").SimplePromptAgent>;
 	}
@@ -24,7 +21,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "AI_PROVIDER" | "ANTHROPIC_API_KEY" | "OPEN_AI_API_KEY" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_AI_GATEWAY_ID" | "DEEPSEEK_API_KEY" | "WORKERS_AI_MODEL">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "AI_PROVIDER" | "ANTHROPIC_API_KEY" | "OPEN_AI_API_KEY" | "CLOUDFLARE_ACCOUNT_ID" | "CLOUDFLARE_AI_GATEWAY_ID" | "DEEPSEEK_API_KEY" | "GOOGLE_API_KEY" | "GROK_API_KEY">> {}
 }
 
 // Begin runtime types

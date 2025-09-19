@@ -181,46 +181,32 @@ export class SimplePromptAgent extends AiSdkAgent<Env> {
 				model = provider.languageModel('gpt-3.5-turbo');
 				break;
 			case 'deepseek':
-				if (!env.DEEPSEEK_API_KEY) {
-					throw new Error('DeepSeek requires DEEPSEEK_API_KEY. Please set this environment variable.');
-				}
 				provider = createDeepSeek({
 					apiKey: env.DEEPSEEK_API_KEY,
 				});
 				model = provider.languageModel('deepseek-chat');
-				console.log(`✅ Using DeepSeek with model: deepseek-chat (official provider)`);
 				break;
 		case 'workers-ai':
 			// Workers AI integration using official workers-ai-provider with binding
 			if (!env.AI) {
 				throw new Error('Workers AI binding not available. Make sure AI binding is configured in wrangler.jsonc');
 			}
-			const workersAiModel = env.WORKERS_AI_MODEL || '@cf/meta/llama-3.1-8b-instruct';
+			const workersAiModel = '@cf/meta/llama-3.1-8b-instruct';
 			const workersai = createWorkersAI({ binding: env.AI });
 			model = workersai(workersAiModel as any); // Direct model creation with type assertion
 			console.log(`✅ Using Workers AI with model: ${workersAiModel} (official provider)`);
 			break;
 		case 'gemini':
-			// Google Gemini integration using official @ai-sdk/google
-			if (!env.GOOGLE_API_KEY) {
-				throw new Error('Gemini requires GOOGLE_API_KEY. Please set this environment variable.');
-			}
 			provider = createGoogleGenerativeAI({
 				apiKey: env.GOOGLE_API_KEY,
 			});
-			model = provider.languageModel(env.GEMINI_MODEL || 'gemini-1.5-pro');
-			console.log(`✅ Using Gemini with model: ${env.GEMINI_MODEL || 'gemini-1.5-pro'}`);
+			model = provider.languageModel('gemini-1.5-pro');
 			break;
 		case 'grok':
-			// xAI Grok integration using official @ai-sdk/xai
-			if (!env.GROK_API_KEY) {
-				throw new Error('Grok requires GROK_API_KEY. Please set this environment variable.');
-			}
 			provider = createXai({
 				apiKey: env.GROK_API_KEY,
 			});
-			model = provider.languageModel(env.GROK_MODEL || 'grok-1');
-			console.log(`✅ Using Grok with model: ${env.GROK_MODEL || 'grok-1'} (official xAI provider)`);
+			model = provider.languageModel('grok-1');
 			break;
 			default:
 				// This should never happen due to validation above, but TypeScript requires this
