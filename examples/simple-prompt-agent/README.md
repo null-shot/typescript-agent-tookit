@@ -177,6 +177,8 @@ Required variables in `.dev.vars`:
 - `ANTHROPIC_API_KEY`: Your Anthropic API key (if using Anthropic)
 - `OPEN_AI_API_KEY`: Your OpenAI API key (if using OpenAI)
 - `DEEPSEEK_API_KEY`: Your DeepSeek API key (if using DeepSeek)
+- `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID (if using Workers AI)
+- `CLOUDFLARE_API_KEY`: Your Cloudflare API key (if using Workers AI)
 - `WORKERS_AI_MODEL`: Workers AI model to use (defaults to '@cf/meta/llama-3.1-8b-instruct')
 - `GOOGLE_API_KEY`: Your Google API key (if using Gemini)
 - `GEMINI_MODEL`: Gemini model to use (defaults to 'gemini-1.5-pro')
