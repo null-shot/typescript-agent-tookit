@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
       });
 
       if (modelsResponse.ok) {
-        const modelsData = await modelsResponse.json();
-        const dynamicModels = modelsData.data.map((model: any) => ({
+        const modelsData = await modelsResponse.json() as { data: { id: string; object: string }[] };
+        const dynamicModels = modelsData.data.map((model: { id: string; object: string }) => ({
           id: model.id,
           name: model.id.split('-').map((word: string) => 
             word.charAt(0).toUpperCase() + word.slice(1)
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       
       // If API call fails, fall back to static models
       console.log('⚠️ DeepSeek API request failed, falling back to static models');
-    } catch (error) {
+    } catch {
       console.log('⚠️ DeepSeek API request failed, falling back to static models');
     }
 
