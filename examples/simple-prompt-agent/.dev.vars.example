@@ -1,4 +1,8 @@
-AI_PROVIDER=anthropic|openai|deepseek
+AI_PROVIDER=anthropic|openai|deepseek|workers-ai|gemini|grok
 ANTHROPIC_API_KEY=sk-ant-key-here
 OPEN_AI_API_KEY=sk-proj-key-here
 DEEPSEEK_API_KEY=sk-deepseek-key-here
+CLOUDFLARE_ACCOUNT_ID=your-cloudflare-account-id
+CLOUDFLARE_API_KEY=your-cloudflare-api-key
+GOOGLE_API_KEY=your-google-api-key-here
+GROK_API_KEY=your-grok-api-key-here

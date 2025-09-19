@@ -39,13 +39,26 @@
 	 */
 
 	/**
+	 * Workers AI Binding
+	 * https://developers.cloudflare.com/workers-ai/get-started/workers-wrangler/
+	 */
+	"ai": {
+		"binding": "AI"
+	},
+
+	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
 	"vars": {
-		"AI_PROVIDER": "anthropic",
+		"AI_PROVIDER": "workers-ai",
 		"OPEN_AI_API_KEY": "",
 		"ANTHROPIC_API_KEY": "",
+		"CLOUDFLARE_ACCOUNT_ID": "",
+		"CLOUDFLARE_API_KEY": "",
+		"DEEPSEEK_API_KEY": "",
+		"GOOGLE_API_KEY": "",
+		"GROK_API_KEY": "",
 	},
 	/**
 	 * Note: Use secrets to store sensitive data.

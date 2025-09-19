@@ -86,6 +86,36 @@ nullshot install
 nullshot dev
 ```
 
+## 🤖 AI Provider Support
+
+This framework supports 6 major AI providers with dynamic model fetching and official SDK integration:
+
+### Supported Providers
+
+| Provider        | Latest Models                                    | SDK                   | Dynamic | API Key    |
+|:----------------|:-------------------------------------------------|:----------------------|:--------|:-----------|
+| **OpenAI**      | GPT-4o, GPT-4o-mini, GPT-3.5-turbo             | `@ai-sdk/openai`     | ✅      | ✅         |
+| **Anthropic**   | Claude Opus 4.1, Claude Sonnet 4, Claude 3.7   | `@ai-sdk/anthropic`  | ✅      | ✅         |
+| **DeepSeek**    | DeepSeek-Chat, DeepSeek-Coder                   | `@ai-sdk/deepseek`   | ✅      | ✅         |
+| **Workers AI**  | Llama 3.1/3.2, Gemma 2, Mistral 7B (~49 models) | `workers-ai-provider` | ✅      | Cloudflare |
+| **Gemini**      | Gemini 1.5 Pro Latest, Gemini 1.5 Flash Latest | `@ai-sdk/google`     | ✅      | ✅         |
+| **Grok**        | Grok-4, Grok-3, Grok-3-mini, Grok-2-1212       | `@ai-sdk/xai`        | ✅      | ✅         |
+
+### Key Features
+
+- **🔄 Dynamic Model Fetching**: Real-time model lists from provider APIs with intelligent fallbacks
+- **🎯 Official SDK Integration**: Uses official AI SDK providers for consistent, reliable integration
+- **💾 Smart Caching**: Model lists cached for 30 minutes with API key validation
+- **🔧 Provider-Aware UI**: Auto-loading saved API keys and intelligent model selection
+- **📡 Streaming Support**: Real-time responses across all providers
+- **⚡ Fallback Handling**: Graceful degradation when APIs are unavailable
+
+### Implementation Examples
+
+- **Next.js Web App**: [`examples/playground-showcase`](examples/playground-showcase) - Full-featured chat interface
+- **Cloudflare Workers Agent**: [`examples/simple-prompt-agent`](examples/simple-prompt-agent) - Server-side AI agent
+- **React Components**: [`packages/playground`](packages/playground) - Reusable UI components
+
 ## Documentation
 
 Comprehensive documentation is available at [Null Shot Docs](https://nullshot.ai/docs):

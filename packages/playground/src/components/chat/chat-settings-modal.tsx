@@ -37,7 +37,7 @@ interface ChatSettingsModalProps {
 }
 
 interface FormData {
-  provider: "openai" | "anthropic";
+  provider: "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok";
   apiKey: string;
   model: string;
   systemPrompt: string;
@@ -48,6 +48,10 @@ interface FormData {
 const PROVIDER_OPTIONS = [
   { id: "openai", name: "OpenAI" },
   { id: "anthropic", name: "Anthropic" },
+  { id: "workers-ai", name: "Workers AI" },
+  { id: "deepseek", name: "DeepSeek" },
+  { id: "gemini", name: "Google Gemini" },
+  { id: "grok", name: "xAI Grok" },
 ];
 
 const MODEL_OPTIONS = {
@@ -65,7 +69,32 @@ const MODEL_OPTIONS = {
     { id: "claude-3-haiku-20240307", name: "Claude 3 Haiku" },
     { id: "claude-3-sonnet-20240229", name: "Claude 3 Sonnet" },
   ],
-};
+  "workers-ai": [
+    { id: "@cf/meta/llama-3.1-8b-instruct", name: "Llama 3.1 8B Instruct", category: "Meta Llama" },
+    { id: "@cf/meta/llama-3.2-3b-instruct", name: "Llama 3.2 3B Instruct", category: "Meta Llama" },
+    { id: "@cf/meta/llama-3.3-70b-instruct-fp8-fast", name: "Llama 3.3 70B Instruct (Fast)", category: "Meta Llama" },
+    { id: "@cf/google/gemma-2b-it-lora", name: "Gemma 2B IT LoRA", category: "Google Gemma" },
+    { id: "@cf/google/gemma-7b-it-lora", name: "Gemma 7B IT LoRA", category: "Google Gemma" },
+    { id: "@cf/mistral/mistral-7b-instruct-v0.1", name: "Mistral 7B Instruct", category: "Mistral AI" },
+    { id: "@cf/mistralai/mistral-small-3.1-24b-instruct", name: "Mistral Small 3.1 24B", category: "Mistral AI" },
+    { id: "@cf/qwen/qwen1.5-7b-chat-awq", name: "Qwen 1.5 7B Chat", category: "Alibaba Qwen" },
+    { id: "@cf/qwen/qwen2.5-coder-32b-instruct", name: "Qwen 2.5 Coder 32B", category: "Alibaba Qwen" },
+    { id: "@cf/microsoft/phi-2", name: "Microsoft Phi-2", category: "Microsoft" },
+  ],
+  "deepseek": [
+    { id: "deepseek-chat", name: "DeepSeek Chat", category: "DeepSeek" },
+    { id: "deepseek-coder", name: "DeepSeek Coder", category: "DeepSeek" },
+  ],
+  "gemini": [
+    { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", category: "Google Gemini" },
+    { id: "gemini-1.5-flash", name: "Gemini 1.5 Flash", category: "Google Gemini" },
+    { id: "gemini-1.0-pro", name: "Gemini 1.0 Pro", category: "Google Gemini" },
+  ],
+  "grok": [
+    { id: "grok-1", name: "Grok 1", category: "xAI" },
+    { id: "grok-1.5", name: "Grok 1.5", category: "xAI" },
+  ],
+} as any;
 
 export function ChatSettingsModal({
   isOpen,
@@ -137,27 +166,63 @@ export function ChatSettingsModal({
   // Fetch available models when provider or API key changes
   useEffect(() => {
     const fetchModels = async () => {
-      if (!formData.apiKey || !formData.provider) {
-        setAvailableModels(MODEL_OPTIONS[formData.provider] || []);
+      // Workers AI works without API key, others require API key
+      const requiresApiKey = !['workers-ai'].includes(formData.provider);
+      if ((requiresApiKey && !formData.apiKey) || !formData.provider) {
+        const fallbackModels = MODEL_OPTIONS[formData.provider] || [];
+        setAvailableModels(fallbackModels);
+        
+        // Auto-select first model if no model is currently selected OR if current model doesn't belong to this provider
+        const currentModelValid = formData.model && fallbackModels.some(m => m.id === formData.model);
+        if ((!formData.model || !currentModelValid) && fallbackModels.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            model: fallbackModels[0].id,
+          }));
+        }
+        
         return;
       }
 
       setLoadingModels(true);
       try {
-        const models = await getModels(formData.provider, formData.apiKey);
-        setAvailableModels(
-          models.map((model) => ({
-            id: model.id,
-            name: model.name,
-          }))
-        );
+        const models = await getModels(formData.provider, formData.apiKey || 'no-key');
+        const modelOptions = models.map((model) => ({
+          id: model.id,
+          name: model.name,
+        }));
+        
+        setAvailableModels(modelOptions);
+        
+        // Auto-select first model if no model is currently selected OR if current model doesn't belong to this provider
+        const currentModelValid = formData.model && modelOptions.some(m => m.id === formData.model);
+        if ((!formData.model || !currentModelValid) && modelOptions.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            model: modelOptions[0].id,
+          }));
+        }
+        
         setErrors((prev) => ({ ...prev, apiKey: "" }));
       } catch (error) {
         console.error("Error fetching models:", error);
-        setAvailableModels(MODEL_OPTIONS[formData.provider] || []);
+        const fallbackModels = MODEL_OPTIONS[formData.provider] || [];
+        setAvailableModels(fallbackModels);
+        
+        // Auto-select first fallback model if no model is currently selected OR if current model doesn't belong to this provider
+        const currentModelValid = formData.model && fallbackModels.some(m => m.id === formData.model);
+        if ((!formData.model || !currentModelValid) && fallbackModels.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            model: fallbackModels[0].id,
+          }));
+        }
+        
         setErrors((prev) => ({
           ...prev,
-          apiKey: "Failed to connect to API. Please check your key.",
+          apiKey: formData.provider === 'workers-ai' ? 
+            "Using fallback models. Add API key for more models." :
+            "Failed to connect to API. Please check your key.",
         }));
       } finally {
         setLoadingModels(false);
@@ -168,11 +233,12 @@ export function ChatSettingsModal({
     return () => clearTimeout(timeoutId);
   }, [formData.provider, formData.apiKey]);
 
-  const handleProviderChange = (provider: "openai" | "anthropic") => {
+  const handleProviderChange = (provider: "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok") => {
     setFormData((prev) => ({
       ...prev,
       provider,
       model: "", // Reset model when provider changes
+      apiKey: provider === 'workers-ai' ? prev.apiKey : "", // Keep API key for Workers AI, clear for others
     }));
     setShowProviderDropdown(false);
   };
@@ -195,8 +261,10 @@ export function ChatSettingsModal({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.apiKey.trim()) {
-      newErrors.apiKey = "API key is required";
+    // API key validation - Workers AI can work without API key (fallback models)
+    if (formData.provider !== 'workers-ai' && !formData.apiKey.trim()) {
+      const providerName = formData.provider.charAt(0).toUpperCase() + formData.provider.slice(1);
+      newErrors.apiKey = `${providerName} API key is required`;
     }
 
     if (!formData.model) {
@@ -226,6 +294,12 @@ export function ChatSettingsModal({
 
     saveAIModelConfig(config);
     onConfigUpdate?.(config);
+    
+    // Dispatch custom event to notify other components of config change
+    window.dispatchEvent(new CustomEvent('ai-config-updated', { 
+      detail: config 
+    }));
+    
     onClose();
   };
 
@@ -478,7 +552,7 @@ export function ChatSettingsModal({
                               key={provider.id}
                               onClick={() =>
                                 handleProviderChange(
-                                  provider.id as "openai" | "anthropic"
+                                  provider.id as "openai" | "anthropic" | "workers-ai"
                                 )
                               }
                               className="w-full px-3 py-2 text-left text-white/80 hover:bg-white/10 first:rounded-t-lg last:rounded-b-lg transition-colors"
@@ -558,12 +632,13 @@ export function ChatSettingsModal({
                       </button>
 
                       {showModelDropdown && !loadingModels && (
-                        <div className="absolute top-full left-0 right-0 mt-1 bg-[#323546] border border-white/20 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                        <div className="absolute top-full left-0 mt-1 bg-[#323546] border border-white/20 rounded-lg shadow-lg z-10 min-w-[400px] max-w-[500px]" style={{ maxHeight: '300px', overflowY: 'auto' }}>
                           {availableModels.map((model) => (
                             <button
                               key={model.id}
                               onClick={() => handleModelChange(model.id)}
-                              className="w-full px-3 py-2 text-left text-white/80 hover:bg-white/10 first:rounded-t-lg last:rounded-b-lg transition-colors"
+                              className="w-full px-4 py-3 text-left text-white/80 hover:bg-white/10 first:rounded-t-lg last:rounded-b-lg transition-colors text-sm whitespace-nowrap overflow-hidden text-ellipsis"
+                              title={model.name} // Show full name on hover
                             >
                               {model.name}
                             </button>

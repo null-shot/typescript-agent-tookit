@@ -46,8 +46,9 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Validate API key and fetch models
-  const validateAndFetchModels = useCallback(async (provider: 'openai' | 'anthropic', apiKey: string) => {
-    if (!apiKey.trim()) {
+  const validateAndFetchModels = useCallback(async (provider: 'openai' | 'anthropic' | 'workers-ai', apiKey: string) => {
+    // Only OpenAI and Anthropic strictly require API keys, Workers AI can work without but gets more models with key
+    if ((provider === 'openai' || provider === 'anthropic') && !apiKey.trim()) {
       setAvailableModels([]);
       setValidationError(null);
       return;
@@ -90,6 +91,21 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
         
         const data = await response.json() as { data: APIModel[] };
         models = data.data;
+      } else if (provider === 'workers-ai') {
+        // Workers AI - pass API key for dynamic model fetching
+        const response = await fetch('/api/models/workers-ai', {
+          headers: {
+            'x-api-key': apiKey || 'no-key', // Pass API key for dynamic fetching
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Workers AI API error: ${response.status}`);
+        }
+        
+        const data = await response.json() as { data: APIModel[] };
+        models = data.data;
       }
       
       setAvailableModels(models);
@@ -121,7 +137,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
   // Debounced validation effect
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      validateAndFetchModels(config.provider, config.apiKey);
+      validateAndFetchModels(config.provider as any, config.apiKey);
     }, 500);
 
     return () => clearTimeout(timeoutId);
@@ -145,7 +161,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
     onModelChange?.(configToSave);
   }, [config, availableModels, validationError, onModelChange]); // Added validationError to dependencies
 
-  const handleProviderChange = (provider: 'openai' | 'anthropic') => {
+  const handleProviderChange = (provider: 'openai' | 'anthropic' | 'workers-ai') => {
     // Load the saved config for this provider, or use empty values if none exists
     const savedProviderConfig = loadProviderConfig(provider);
     const newConfig: AIModelConfig = { 
@@ -224,11 +240,12 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
             <label className="text-xs text-white/60 mb-2 block">Provider</label>
             <select
               value={config.provider}
-              onChange={(e) => handleProviderChange(e.target.value as 'openai' | 'anthropic')}
+              onChange={(e) => handleProviderChange(e.target.value as 'openai' | 'anthropic' | 'workers-ai')}
               className="w-full bg-[#09090B] border border-[rgba(255,255,255,0.2)] rounded-md px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-[rgba(255,255,255,0.4)]"
             >
               <option value="openai">OpenAI</option>
               <option value="anthropic">Anthropic</option>
+              <option value="workers-ai">Workers AI</option>
             </select>
           </div>
 
@@ -240,7 +257,7 @@ export function ModelSelector({ className, onModelChange }: ModelSelectorProps) 
                 type={showApiKey ? "text" : "password"}
                 value={config.apiKey}
                 onChange={(e) => handleApiKeyChange(e.target.value)}
-                placeholder={`Enter ${config.provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key`}
+                placeholder={`Enter ${config.provider === 'openai' ? 'OpenAI' : config.provider === 'anthropic' ? 'Anthropic' : config.provider === 'workers-ai' ? 'Workers AI (no key needed)' : 'API'} key`}
                 className="w-full bg-[#09090B] border border-[rgba(255,255,255,0.2)] rounded-md px-3 py-2 pr-10 text-sm text-white/80 focus:outline-none focus:border-[rgba(255,255,255,0.4)]"
               />
               <button

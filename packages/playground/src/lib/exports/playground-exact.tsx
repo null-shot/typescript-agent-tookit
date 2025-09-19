@@ -10,7 +10,7 @@ import { LocalToolboxStatus } from "../../components/ui/local-toolbox-status";
 import { useMcpServerManager } from "../../hooks/use-mcp-server-manager";
 
 interface ModelConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok';
   apiKey: string;
   model: string;
   temperature?: number;

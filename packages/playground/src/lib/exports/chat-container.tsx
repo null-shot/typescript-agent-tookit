@@ -28,7 +28,7 @@ import { MessageSquare, Settings2 } from "lucide-react";
 import { DockerInstallModal } from "../../components/docker-install-modal";
 
 interface ModelConfig {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'workers-ai' | 'deepseek' | 'gemini' | 'grok';
   apiKey: string;
   model: string;
   temperature?: number;
@@ -119,8 +119,8 @@ export function ChatContainer({
   const [currentError, setCurrentError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<Message | null>(null);
   const [selectedModel, setSelectedModel] = useState<ModelOption>({
-    id: "claude-3-5-sonnet-20241022",
-    name: "Claude 3.5 Sonnet",
+    id: "", // Will be set dynamically based on provider
+    name: "Select Model",
     provider: "Anthropic"
   });
   const [availableModels, setAvailableModels] = useState<AIModel[]>([]);
@@ -288,7 +288,7 @@ export function ChatContainer({
   } = useChat({
     api: modelConfig && config.apiBaseUrl ? `${config.apiBaseUrl}/chat` : undefined,
     id: enableSessionManagement ? 'session-chat' : 'chat-session',
-    streamProtocol: 'data' as const,
+    streamProtocol: 'text' as const,
     initialMessages: (enableSessionManagement && sessionId && !isNewChat(sessionId) && config.enableLocalStorage ? loadChat(sessionId) : []) as UIMessage[],
     headers: modelConfig ? {
       'Authorization': `Bearer ${modelConfig.apiKey}`,
@@ -416,16 +416,23 @@ export function ChatContainer({
     }
   }, [config.enableLocalStorage, onModelConfigChange]);
 
-  // Load available models when app starts
+  // Load available models when app starts or modelConfig changes
   useEffect(() => {
     const loadAvailableModels = async () => {
       try {
         const models = await getAllAvailableModels();
         setAvailableModels(models);
         
-        // If we have models and no selected model, pick the first one
-        if (models.length > 0 && !selectedModel.id) {
-          const firstModel = models[0];
+        // Filter models by current provider if we have modelConfig
+        const currentProvider = modelConfig?.provider;
+        const providerModels = currentProvider 
+          ? models.filter(m => m.provider.toLowerCase() === currentProvider.toLowerCase())
+          : models;
+        
+        // Auto-select first model from current provider if no model selected or current model doesn't match provider
+        const currentModelValid = selectedModel.id && providerModels.some(m => m.id === selectedModel.id);
+        if (providerModels.length > 0 && (!selectedModel.id || !currentModelValid)) {
+          const firstModel = providerModels[0];
           setSelectedModel({
             id: firstModel.id,
             name: firstModel.name,
@@ -438,7 +445,7 @@ export function ChatContainer({
     };
 
     loadAvailableModels();
-  }, [selectedModel.id]);
+  }, [selectedModel.id, modelConfig?.provider]);
 
   // Session management effects (only if enabled)
   useEffect(() => {
