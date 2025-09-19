@@ -209,37 +209,86 @@ async function fetchDeepSeekModels(apiKey: string): Promise<AIModel[]> {
   }));
 }
 
-// Gemini models - static list with API validation
+// Gemini models - dynamic fetching with fallback
 async function fetchGeminiModels(apiKey: string): Promise<AIModel[]> {
-  // Google doesn't provide a models API for Gemini, return known models
-  const geminiModels = [
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', category: 'Google Gemini' },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', category: 'Google Gemini' },
-    { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro', category: 'Google Gemini' },
-  ];
+  try {
+    const response = await fetch('/api/models/gemini', {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
 
-  return geminiModels.map(model => ({
-    id: model.id,
-    name: model.name,
-    category: model.category,
-    provider: 'gemini' as const
-  }));
+    if (response.ok) {
+      const data = await response.json() as { data: any[] };
+      return data.data.map((model: any) => ({
+        id: model.id,
+        name: model.name,
+        category: 'Google Gemini',
+        provider: 'gemini' as const
+      }));
+    } else {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn('Failed to fetch dynamic Gemini models, using fallback:', error);
+    
+    // Fallback to static models
+    const geminiModels = [
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', category: 'Google Gemini' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', category: 'Google Gemini' },
+      { id: 'gemini-1.0-pro', name: 'Gemini 1.0 Pro', category: 'Google Gemini' },
+    ];
+
+    return geminiModels.map(model => ({
+      id: model.id,
+      name: model.name,
+      category: model.category,
+      provider: 'gemini' as const
+    }));
+  }
 }
 
-// Grok models - static list with API validation
+// Grok models - dynamic fetching with fallback
 async function fetchGrokModels(apiKey: string): Promise<AIModel[]> {
-  // xAI doesn't provide a models API for Grok, return known models
-  const grokModels = [
-    { id: 'grok-1', name: 'Grok 1', category: 'xAI' },
-    { id: 'grok-1.5', name: 'Grok 1.5', category: 'xAI' },
-  ];
+  try {
+    const response = await fetch('/api/models/grok', {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
 
-  return grokModels.map(model => ({
-    id: model.id,
-    name: model.name,
-    category: model.category,
-    provider: 'grok' as const
-  }));
+    if (response.ok) {
+      const data = await response.json() as { data: any[] };
+      return data.data.map((model: any) => ({
+        id: model.id,
+        name: model.name,
+        category: 'xAI',
+        provider: 'grok' as const
+      }));
+    } else {
+      throw new Error(`API responded with status: ${response.status}`);
+    }
+  } catch (error) {
+    console.warn('Failed to fetch dynamic Grok models, using fallback:', error);
+    
+    // Fallback to static models
+    const grokModels = [
+      { id: 'grok-1', name: 'Grok 1', category: 'xAI' },
+      { id: 'grok-1.5', name: 'Grok 1.5', category: 'xAI' },
+      { id: 'grok-2', name: 'Grok 2', category: 'xAI' },
+    ];
+
+    return grokModels.map(model => ({
+      id: model.id,
+      name: model.name,
+      category: model.category,
+      provider: 'grok' as const
+    }));
+  }
 }
 
 // Main function to get models (with caching)

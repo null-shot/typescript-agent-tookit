@@ -14,49 +14,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Google doesn't have a public models API for Gemini,
-    // so we return the known available models
-    const geminiModels = [
-      {
-        id: 'gemini-1.5-pro',
-        name: 'Gemini 1.5 Pro',
-        provider: 'gemini'
-      },
-      {
-        id: 'gemini-1.5-flash',
-        name: 'Gemini 1.5 Flash',
-        provider: 'gemini'
-      },
-      {
-        id: 'gemini-1.0-pro',
-        name: 'Gemini 1.0 Pro',
-        provider: 'gemini'
-      },
-      {
-        id: 'gemini-pro-vision',
-        name: 'Gemini Pro Vision',
-        provider: 'gemini'
-      }
-    ];
+    console.log('🔄 Fetching dynamic Gemini models from Google AI API...');
 
-    // Validate the API key by making a simple request to Google AI
     try {
-      const validationResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-        method: 'POST',
+      // Fetch dynamic models from Google AI API
+      const modelsResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{ text: 'test' }]
-          }]
-        })
+        }
       });
 
-      // If we get a 400 with invalid API key, the key is invalid
-      if (validationResponse.status === 400) {
-        const errorData = await validationResponse.json();
-        if (errorData.error?.message?.includes('API_KEY_INVALID')) {
+      if (modelsResponse.status === 400) {
+        const errorData = await modelsResponse.json();
+        if (errorData.error?.message?.includes('API key not valid')) {
+          console.log('❌ Invalid Google API key');
           return NextResponse.json(
             { error: 'Invalid Google API key' },
             { status: 401 }
@@ -64,13 +36,60 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Even if the request fails for other reasons (like quota), 
-      // we still return the models if the key is valid
-    } catch (validationError) {
-      console.warn('Could not validate Google API key, returning models anyway:', validationError);
+      if (!modelsResponse.ok) {
+        throw new Error(`Google AI API responded with status: ${modelsResponse.status}`);
+      }
+
+      const modelsData = await modelsResponse.json();
+      
+      // Filter and transform Google AI models to our format
+      const geminiModels = modelsData.models
+        ?.filter((model: any) => {
+          // Only include Gemini models that support generateContent
+          return model.name?.includes('gemini') && 
+                 model.supportedGenerationMethods?.includes('generateContent');
+        })
+        ?.map((model: any) => ({
+          id: model.name.replace('models/', ''), // Remove 'models/' prefix
+          name: model.displayName || model.name.replace('models/', ''),
+          provider: 'gemini'
+        })) || [];
+
+      console.log(`✅ Successfully fetched ${geminiModels.length} dynamic Gemini models`);
+      return NextResponse.json({ data: geminiModels });
+
+    } catch (fetchError) {
+      console.warn('⚠️ Google AI API request failed, falling back to static models');
+      console.warn('Error:', fetchError);
+      
+      // Fallback to static models
+      const fallbackModels = [
+        {
+          id: 'gemini-1.5-pro',
+          name: 'Gemini 1.5 Pro',
+          provider: 'gemini'
+        },
+        {
+          id: 'gemini-1.5-flash',
+          name: 'Gemini 1.5 Flash',
+          provider: 'gemini'
+        },
+        {
+          id: 'gemini-1.0-pro',
+          name: 'Gemini 1.0 Pro',
+          provider: 'gemini'
+        },
+        {
+          id: 'gemini-pro-vision',
+          name: 'Gemini Pro Vision',
+          provider: 'gemini'
+        }
+      ];
+
+      console.log('📋 Using fallback Gemini models');
+      return NextResponse.json({ data: fallbackModels });
     }
 
-    return NextResponse.json({ data: geminiModels });
   } catch (error) {
     console.error('Error fetching Gemini models:', error);
     return NextResponse.json(

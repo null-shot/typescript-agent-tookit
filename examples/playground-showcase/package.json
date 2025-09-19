@@ -17,6 +17,7 @@
     "@ai-sdk/deepseek": "catalog:",
     "@ai-sdk/google": "catalog:",
     "@ai-sdk/openai": "catalog:",
+    "@ai-sdk/xai": "catalog:",
     "@nullshot/playground": "workspace:*",
     "ai": "catalog:",
     "class-variance-authority": "^0.7.0",

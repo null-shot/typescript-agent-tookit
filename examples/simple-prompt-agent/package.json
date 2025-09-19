@@ -26,6 +26,7 @@
 		"@ai-sdk/deepseek": "catalog:",
 		"@ai-sdk/google": "catalog:",
 		"@ai-sdk/openai": "catalog:",
+		"@ai-sdk/xai": "catalog:",
 		"@nullshot/agent": "workspace:*",
 		"@nullshot/cli": "workspace:*",
 		"ai": "catalog:",

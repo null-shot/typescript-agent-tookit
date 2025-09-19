@@ -6,6 +6,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createDeepSeek } from '@ai-sdk/deepseek';
+import { createXai } from '@ai-sdk/xai';
 import { createWorkersAI } from 'workers-ai-provider';
 import { AiSdkAgent, AIUISDKMessage } from '@nullshot/agent/aisdk';
 import { Service } from '@nullshot/agent';
@@ -211,16 +212,15 @@ export class SimplePromptAgent extends AiSdkAgent<Env> {
 			console.log(`✅ Using Gemini with model: ${env.GEMINI_MODEL || 'gemini-1.5-pro'}`);
 			break;
 		case 'grok':
-			// xAI Grok integration using OpenAI-compatible API
+			// xAI Grok integration using official @ai-sdk/xai
 			if (!env.GROK_API_KEY) {
 				throw new Error('Grok requires GROK_API_KEY. Please set this environment variable.');
 			}
-			provider = createOpenAI({
+			provider = createXai({
 				apiKey: env.GROK_API_KEY,
-				baseURL: 'https://api.x.ai/v1',
 			});
 			model = provider.languageModel(env.GROK_MODEL || 'grok-1');
-			console.log(`✅ Using Grok with model: ${env.GROK_MODEL || 'grok-1'}`);
+			console.log(`✅ Using Grok with model: ${env.GROK_MODEL || 'grok-1'} (official xAI provider)`);
 			break;
 			default:
 				// This should never happen due to validation above, but TypeScript requires this

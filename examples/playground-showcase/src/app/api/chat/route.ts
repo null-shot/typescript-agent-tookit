@@ -4,6 +4,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createDeepSeek } from '@ai-sdk/deepseek';
+import { createXai } from '@ai-sdk/xai';
 import { z } from 'zod';
 
 export async function POST(request: NextRequest) {
@@ -12,15 +13,21 @@ export async function POST(request: NextRequest) {
     console.log('Chat API received body:', JSON.stringify(body, null, 2));
     
     // Extract messages from the standard useChat format
-    const { messages } = body;
+    const { messages: rawMessages } = body;
 
-    if (!messages || !Array.isArray(messages)) {
+    if (!rawMessages || !Array.isArray(rawMessages)) {
       console.log('Missing messages array');
       return NextResponse.json(
         { error: 'Messages array is required' },
         { status: 400 }
       );
     }
+
+    // Clean messages to ensure compatibility with all AI providers
+    const messages = rawMessages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
 
     // Get model configuration from headers or use defaults
     const headerProvider = request.headers.get('x-provider') || 'anthropic';
@@ -158,16 +165,15 @@ export async function POST(request: NextRequest) {
       aiModel = geminiProvider(modelName);
       console.log('✅ Using Gemini with model:', modelName);
     } else if (finalProvider === 'grok') {
-      // xAI Grok integration using OpenAI-compatible API
+      // xAI Grok integration using official @ai-sdk/xai
       if (!modelName) {
         modelName = 'grok-1';
       }
-      const grokProvider = createOpenAI({
+      const xaiProvider = createXai({
         apiKey: finalApiKey,
-        baseURL: 'https://api.x.ai/v1',
       });
-      aiModel = grokProvider(modelName);
-      console.log('✅ Using Grok with model:', modelName);
+      aiModel = xaiProvider(modelName);
+      console.log('✅ Using Grok with model:', modelName, '(official xAI provider)');
     } else {
       return NextResponse.json(
         { error: `Unsupported provider: ${finalProvider}` },
@@ -181,8 +187,6 @@ export async function POST(request: NextRequest) {
 
     // Temporarily disable tools to fix chat
     const tools = undefined;
-
-    // Create the streaming response
     const result = streamText({
       model: aiModel,
       messages: messages,

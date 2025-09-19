@@ -23,7 +23,7 @@ A Next.js application showcasing the `@nullshot/playground` React component libr
 
 - **Chat Interface**: Full-featured chat with streaming, history, and AI integration
 - **MCP Server Directory**: Server management with real-time status updates
-- **Model Selector**: AI model configuration and selection
+- **Model Selector**: AI model configuration and selection with support for 6 providers (OpenAI, Anthropic, DeepSeek, Workers AI, Gemini, Grok)
 - **Configuration Provider**: Flexible theming and proxy configuration
 
 ## 🛠️ Getting Started
@@ -113,6 +113,10 @@ NEXT_PUBLIC_MCP_PROXY_WS_URL=ws://localhost:6050/client/ws
 # Optional: AI model API keys for examples
 NEXT_PUBLIC_OPENAI_API_KEY=your_openai_key
 NEXT_PUBLIC_ANTHROPIC_API_KEY=your_anthropic_key
+NEXT_PUBLIC_DEEPSEEK_API_KEY=your_deepseek_key
+NEXT_PUBLIC_GOOGLE_API_KEY=your_google_api_key
+NEXT_PUBLIC_GROK_API_KEY=your_grok_api_key
+NEXT_PUBLIC_CLOUDFLARE_API_KEY=your_cloudflare_api_key
 ```
 
 ## 🎨 Customization
