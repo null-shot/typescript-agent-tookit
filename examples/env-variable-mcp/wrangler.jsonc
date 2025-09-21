@@ -1,0 +1,30 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "env-variable-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-17",
+	"observability": {
+		"enabled": true
+	},
+	"vars": {
+		"DEFAULT_NAME": "World"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "EXAMPLE_MCP_SERVER",
+				"class_name": "ExampleMcpServer"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["ExampleMcpServer"]
+		}
+	]
+}
