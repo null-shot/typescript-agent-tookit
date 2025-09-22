@@ -29,7 +29,7 @@ export class EnvVariableMcpServer extends McpHonoServerDO<Env> {
 	 */
 	configureServer(server: McpServer): void {
 		// Create and set up tools and resources with our repository
-		setupServerTools(server);
+		setupServerTools(server, this.env);
 		setupServerResources(server);
 		setupServerPrompts(server);
 	}
