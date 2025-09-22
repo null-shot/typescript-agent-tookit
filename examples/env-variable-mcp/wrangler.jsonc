@@ -7,24 +7,25 @@
 	"name": "env-variable-mcp",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-17",
+	"compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"vars": {
-		"DEFAULT_NAME": "World"
+		"DEFAULT_NAME": "World",
 	},
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "EXAMPLE_MCP_SERVER",
-				"class_name": "ExampleMcpServer"
-			}
-		]
+				"class_name": "ExampleMcpServer",
+			},
+		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_sqlite_classes": ["ExampleMcpServer"]
-		}
-	]
+			"new_sqlite_classes": ["ExampleMcpServer"],
+		},
+	],
 }

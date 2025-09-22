@@ -11,7 +11,7 @@ export function setupServerTools(server: McpServer, env: Env) {
 				.string()
 				.optional()
 				.describe(
-					'The name to use when sending the greeting. If no name is supplied, then the default value set by an env variable is used.'
+					'The name to use when sending the greeting. If no name is supplied, then the default value set by an env variable is used.',
 				),
 		},
 		async ({ name }: { name?: string }) => {
@@ -25,6 +25,6 @@ export function setupServerTools(server: McpServer, env: Env) {
 					},
 				],
 			};
-		}
+		},
 	);
 }
