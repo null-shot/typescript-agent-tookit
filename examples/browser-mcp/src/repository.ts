@@ -170,7 +170,7 @@ export class BrowserRepository {
     if (list.objects.length === 0) return null;
 
     // Get the most recent cache entry
-    const latestObject = list.objects.sort((a, b) => 
+    const latestObject = list.objects.sort((a: R2Object, b: R2Object) => 
       new Date(b.uploaded).getTime() - new Date(a.uploaded).getTime()
     )[0];
 

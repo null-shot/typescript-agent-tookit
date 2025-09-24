@@ -1,16 +1,8 @@
-// Import cloudflare:test types with error handling for test environments
-let env: any, createExecutionContext: any, waitOnExecutionContext: any;
-try {
-  // const cloudflareTest = await import("cloudflare:test"); // Commented out for CI compatibility
-  env = {};
-  createExecutionContext = () => ({});
-  waitOnExecutionContext = () => Promise.resolve();
-} catch {
-  // Fallback for non-Cloudflare test environments
-  env = {};
-  createExecutionContext = () => ({});
-  waitOnExecutionContext = () => Promise.resolve();
-}
+import {
+  env,
+  createExecutionContext,
+  waitOnExecutionContext,
+} from "cloudflare:test";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { WorkerSSEClientTransport } from "@nullshot/test-utils/mcp/WorkerSSEClientTransport";
@@ -56,6 +48,7 @@ describe("Browser MCP Client Integration Tests", () => {
     console.log(`--------- STARTING BROWSER MCP TEST ---------`);
     ctx = createExecutionContext();
 
+    // Create a standard MCP client
     client = new Client({
       name: "test-client",
       version: "1.0.0",
@@ -96,7 +89,10 @@ describe("Browser MCP Client Integration Tests", () => {
   }
 
   // Helper function to check if a tool call involves browser rendering
-  async function callToolSafely(toolName: string, args: any): Promise<ToolResponse | null> {
+  async function callToolSafely(
+    toolName: string,
+    args: any
+  ): Promise<ToolResponse | null> {
     try {
       const response = (await client.callTool({
         name: toolName,
@@ -104,9 +100,16 @@ describe("Browser MCP Client Integration Tests", () => {
       })) as ToolResponse;
       return response;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Browser') || errorMessage.includes('launch') || errorMessage.includes('chrome')) {
-        console.log(`${toolName} test skipped - Browser Rendering not available in test environment`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (
+        errorMessage.includes("Browser") ||
+        errorMessage.includes("launch") ||
+        errorMessage.includes("chrome")
+      ) {
+        console.log(
+          `${toolName} test skipped - Browser Rendering not available in test environment`
+        );
         return null; // Indicates test should be skipped
       }
       throw error; // Re-throw if it's a different error
@@ -160,7 +163,7 @@ describe("Browser MCP Client Integration Tests", () => {
     expect(Array.isArray(tools.tools)).toBe(true);
 
     // Check for expected tools
-    const toolNames = tools.tools.map(tool => tool.name);
+    const toolNames = tools.tools.map((tool) => tool.name);
     expect(toolNames).toContain("navigate");
     expect(toolNames).toContain("screenshot");
     expect(toolNames).toContain("extract_text");
@@ -182,7 +185,7 @@ describe("Browser MCP Client Integration Tests", () => {
     expect(Array.isArray(resources.resources)).toBe(true);
 
     // Check for expected resources
-    const resourceUris = resources.resources.map(resource => resource.uri);
+    const resourceUris = resources.resources.map((resource) => resource.uri);
     expect(resourceUris).toContain("browser://sessions");
     expect(resourceUris).toContain("browser://results");
     expect(resourceUris).toContain("browser://cache");
@@ -190,7 +193,9 @@ describe("Browser MCP Client Integration Tests", () => {
     expect(resourceUris).toContain("browser://status");
 
     await waitOnExecutionContext(ctx);
-    console.log(`List resources test passed! Found ${resources.resources.length} resources`);
+    console.log(
+      `List resources test passed! Found ${resources.resources.length} resources`
+    );
   });
 
   it("should list available prompts", async () => {
@@ -204,13 +209,15 @@ describe("Browser MCP Client Integration Tests", () => {
     expect(Array.isArray(prompts.prompts)).toBe(true);
 
     // Check for expected prompts
-    const promptNames = prompts.prompts.map(prompt => prompt.name);
+    const promptNames = prompts.prompts.map((prompt) => prompt.name);
     expect(promptNames).toContain("web_scraper");
     expect(promptNames).toContain("automation_flow");
     expect(promptNames).toContain("data_extractor");
 
     await waitOnExecutionContext(ctx);
-    console.log(`List prompts test passed! Found ${prompts.prompts.length} prompts`);
+    console.log(
+      `List prompts test passed! Found ${prompts.prompts.length} prompts`
+    );
   });
 
   // Browser-dependent tests with graceful fallback
@@ -224,7 +231,7 @@ describe("Browser MCP Client Integration Tests", () => {
       timeout: 45000,
     });
 
-    if (response && typeof response === 'object' && 'success' in response) {
+    if (response && typeof response === "object" && "success" in response) {
       // Browser Rendering available
       expect(response.success).toBe(true);
       expect(response.sessionId).toBeDefined();
@@ -255,11 +262,15 @@ describe("Browser MCP Client Integration Tests", () => {
       timeout: 45000,
     });
 
-    if (response && typeof response === 'object' && 'success' in response) {
+    if (response && typeof response === "object" && "success" in response) {
       const typedResponse = response as any;
       expect(typedResponse.success).toBe(true);
-      expect(typedResponse.screenshot_data || typedResponse.screenshot_base64).toBeDefined();
-      expect(typedResponse.screenshot_data || typedResponse.screenshot_base64).toContain("data:image/png;base64,");
+      expect(
+        typedResponse.screenshot_data || typedResponse.screenshot_base64
+      ).toBeDefined();
+      expect(
+        typedResponse.screenshot_data || typedResponse.screenshot_base64
+      ).toContain("data:image/png;base64,");
       expect(typedResponse.format).toBe("png");
       expect(typedResponse.size).toBeGreaterThan(0);
 
@@ -280,8 +291,11 @@ describe("Browser MCP Client Integration Tests", () => {
     await client.connect(transport);
 
     // Add timeout wrapper to prevent hanging
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Test timeout after 30 seconds')), 30000)
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error("Test timeout after 30 seconds")),
+        30000
+      )
     );
 
     try {
@@ -294,15 +308,15 @@ describe("Browser MCP Client Integration Tests", () => {
           },
           timeout: 25000, // Reduced from 45s to prevent hanging
         }),
-        timeoutPromise
+        timeoutPromise,
       ]);
 
-      if (response && typeof response === 'object' && 'success' in response) {
+      if (response && typeof response === "object" && "success" in response) {
         const typedResponse = response as any; // Type assertion for test compatibility
         expect(typedResponse.success).toBe(true);
         expect(typedResponse.data).toBeDefined();
         expect(typeof typedResponse.data).toBe("object");
-        
+
         // Validate extracted data structure
         if (typedResponse.data.title) {
           expect(typeof typedResponse.data.title).toBe("string");
@@ -310,7 +324,9 @@ describe("Browser MCP Client Integration Tests", () => {
         }
         if (typedResponse.data.content) {
           expect(typeof typedResponse.data.content).toBe("string");
-          console.log(`📝 Extracted content: ${typedResponse.data.content.substring(0, 100)}...`);
+          console.log(
+            `📝 Extracted content: ${typedResponse.data.content.substring(0, 100)}...`
+          );
         }
 
         if (typedResponse.sessionId) {
@@ -318,12 +334,15 @@ describe("Browser MCP Client Integration Tests", () => {
         }
         console.log(`✅ Text extraction test passed with real data!`);
       } else {
-        console.log(`⚠️  Text extraction test skipped - Browser Rendering not available`);
+        console.log(
+          `⚠️  Text extraction test skipped - Browser Rendering not available`
+        );
         expect(true).toBe(true);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('timeout')) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("timeout")) {
         console.log(`⏰ Text extraction test timed out - preventing hang`);
         expect(true).toBe(true); // Pass the test even if timeout
       } else {
@@ -345,7 +364,7 @@ describe("Browser MCP Client Integration Tests", () => {
       timeout: 45000,
     });
 
-    if (response && typeof response === 'object' && 'success' in response) {
+    if (response && typeof response === "object" && "success" in response) {
       expect(response.success).toBe(true);
       expect(response.links).toBeDefined();
       expect(Array.isArray(response.links)).toBe(true);
@@ -356,13 +375,14 @@ describe("Browser MCP Client Integration Tests", () => {
       }
       console.log(`Link extraction test passed! Found ${response.count} links`);
     } else {
-      console.log(`Link extraction test skipped - Browser Rendering not available`);
+      console.log(
+        `Link extraction test skipped - Browser Rendering not available`
+      );
       expect(true).toBe(true);
     }
 
     await waitOnExecutionContext(ctx);
   });
-
 
   it("should read browser sessions resource", async () => {
     const transport = createTransport(ctx);
@@ -435,7 +455,9 @@ describe("Browser MCP Client Integration Tests", () => {
       expect(response.messages).toBeDefined();
       expect(Array.isArray(response.messages)).toBe(true);
       expect(response.messages.length).toBeGreaterThan(0);
-      expect(response.messages[0].content.text).toContain("Web Scraping Strategy");
+      expect(response.messages[0].content.text).toContain(
+        "Web Scraping Strategy"
+      );
 
       await waitOnExecutionContext(ctx);
       console.log(`Web scraper prompt test passed!`);
@@ -463,7 +485,9 @@ describe("Browser MCP Client Integration Tests", () => {
       expect(response.messages).toBeDefined();
       expect(Array.isArray(response.messages)).toBe(true);
       expect(response.messages.length).toBeGreaterThan(0);
-      expect(response.messages[0].content.text).toContain("Browser Automation Workflow");
+      expect(response.messages[0].content.text).toContain(
+        "Browser Automation Workflow"
+      );
 
       await waitOnExecutionContext(ctx);
       console.log(`Automation flow prompt test passed!`);
@@ -492,7 +516,9 @@ describe("Browser MCP Client Integration Tests", () => {
       expect(response.messages).toBeDefined();
       expect(Array.isArray(response.messages)).toBe(true);
       expect(response.messages.length).toBeGreaterThan(0);
-      expect(response.messages[0].content.text).toContain("Data Extraction Pattern");
+      expect(response.messages[0].content.text).toContain(
+        "Data Extraction Pattern"
+      );
 
       await waitOnExecutionContext(ctx);
       console.log(`Data extraction pattern prompt test passed!`);
@@ -519,7 +545,9 @@ describe("Browser MCP Client Integration Tests", () => {
       testSessions.sessionTest = sessionId;
 
       // Close the session
-      const closeResponse = await callToolSafely("close_session", { sessionId });
+      const closeResponse = await callToolSafely("close_session", {
+        sessionId,
+      });
 
       if (closeResponse) {
         expect(closeResponse.success).toBe(true);
@@ -528,7 +556,9 @@ describe("Browser MCP Client Integration Tests", () => {
 
       console.log(`Session management test passed!`);
     } else {
-      console.log(`Session management test skipped - Browser Rendering not available`);
+      console.log(
+        `Session management test skipped - Browser Rendering not available`
+      );
       expect(true).toBe(true);
     }
 
@@ -547,7 +577,7 @@ describe("Browser MCP Client Integration Tests", () => {
           sessionId: "invalid-session-id",
         },
       });
-      
+
       // Should not reach here if error handling works
       console.log(`Error handling test passed! Got expected error response`);
       expect(true).toBe(true);
@@ -575,14 +605,25 @@ describe("Browser MCP Client Integration Tests", () => {
       testSessions.workflowTest = sessionId;
 
       // Try additional steps
-      const screenshotResponse = await callToolSafely("screenshot", { sessionId, fullPage: false, format: "png" });
-      const extractResponse = await callToolSafely("extract_text", { sessionId, selectors: { title: "h1", content: "p" } });
-      const closeResponse = await callToolSafely("close_session", { sessionId });
+      const screenshotResponse = await callToolSafely("screenshot", {
+        sessionId,
+        fullPage: false,
+        format: "png",
+      });
+      const extractResponse = await callToolSafely("extract_text", {
+        sessionId,
+        selectors: { title: "h1", content: "p" },
+      });
+      const closeResponse = await callToolSafely("close_session", {
+        sessionId,
+      });
 
       console.log(`Complete workflow test passed with Browser Rendering!`);
       expect(true).toBe(true);
     } else {
-      console.log(`Complete workflow test skipped - Browser Rendering not available`);
+      console.log(
+        `Complete workflow test skipped - Browser Rendering not available`
+      );
       expect(true).toBe(true);
     }
 

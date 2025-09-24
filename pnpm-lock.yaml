@@ -24,12 +24,6 @@ catalogs:
     '@types/node':
       specifier: ^20.19.9
       version: 20.19.11
-    '@vitest/runner':
-      specifier: ~3.2.0
-      version: 3.2.4
-    '@vitest/snapshot':
-      specifier: ~3.2.0
-      version: 3.2.4
     '@vitest/ui':
       specifier: ~3.2.0
       version: 3.2.4
@@ -248,12 +242,6 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 20.19.11
-      '@vitest/runner':
-        specifier: 'catalog:'
-        version: 3.2.4
-      '@vitest/snapshot':
-        specifier: 'catalog:'
-        version: 3.2.4
       concurrently:
         specifier: ^9.1.2
         version: 9.2.1
