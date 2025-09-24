@@ -7,7 +7,16 @@
 	"name": "env-variable-mcp",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-17",
-	"compatibility_flags": ["nodejs_compat", "nodejs_compat_populate_process_env"],
+	"compatibility_flags": [
+		// ensure more compatibility with NodeJS
+		// https://developers.cloudflare.com/workers/runtime-apis/nodejs/
+		"nodejs_compat",
+		// allows use of process.ENV for backwards compatibility of getting ENV variables
+		//
+		// i.e. populates the process.ENV with the ENV variables
+		// https://developers.cloudflare.com/workers/configuration/compatibility-flags/#nodejs-compatibility-flag
+		"nodejs_compat_populate_process_env",
+	],
 	"observability": {
 		"enabled": true,
 	},
@@ -17,15 +26,15 @@
 	"durable_objects": {
 		"bindings": [
 			{
-				"name": "EXAMPLE_MCP_SERVER",
-				"class_name": "ExampleMcpServer",
+				"name": "ENV_VARIABLE_MCP_SERVER",
+				"class_name": "EnvVariableMcpServer",
 			},
 		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_sqlite_classes": ["ExampleMcpServer"],
+			"new_sqlite_classes": ["EnvVariableMcpServer"],
 		},
 	],
 }
