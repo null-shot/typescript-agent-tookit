@@ -221,35 +221,41 @@ describe("Browser MCP Client Integration Tests", () => {
   });
 
   // Browser-dependent tests with graceful fallback
-  it("should navigate to a simple webpage or skip gracefully", async () => {
-    const transport = createTransport(ctx);
-    await client.connect(transport);
+  it(
+    "should navigate to a simple webpage or skip gracefully",
+    async () => {
+      const transport = createTransport(ctx);
+      await client.connect(transport);
 
-    const response = await callToolSafely("navigate", {
-      url: "https://example.com",
-      viewport: { width: 800, height: 600 },
-      timeout: 45000,
-    });
+      const response = await callToolSafely("navigate", {
+        url: "https://example.com",
+        viewport: { width: 800, height: 600 },
+        timeout: 45000,
+      });
 
-    if (response && typeof response === "object" && "success" in response) {
-      // Browser Rendering available
-      expect(response.success).toBe(true);
-      expect(response.sessionId).toBeDefined();
-      expect(response.url).toBeDefined();
-      expect(response.title).toBeDefined();
+      if (response && typeof response === "object" && "success" in response) {
+        // Browser Rendering available
+        expect(response.success).toBe(true);
+        expect(response.sessionId).toBeDefined();
+        expect(response.url).toBeDefined();
+        expect(response.title).toBeDefined();
 
-      if (response.sessionId) {
-        testSessions.navigationTest = response.sessionId;
+        if (response.sessionId) {
+          testSessions.navigationTest = response.sessionId;
+        }
+        console.log(`Navigation test passed! Session: ${response.sessionId}`);
+      } else {
+        // Browser Rendering not available - test passes
+        console.log(
+          `Navigation test skipped - Browser Rendering not available`
+        );
+        expect(true).toBe(true);
       }
-      console.log(`Navigation test passed! Session: ${response.sessionId}`);
-    } else {
-      // Browser Rendering not available - test passes
-      console.log(`Navigation test skipped - Browser Rendering not available`);
-      expect(true).toBe(true);
-    }
 
-    await waitOnExecutionContext(ctx);
-  });
+      await waitOnExecutionContext(ctx);
+    },
+    { timeout: 60000 }
+  );
 
   it("should take a screenshot or skip gracefully", async () => {
     const transport = createTransport(ctx);
@@ -590,43 +596,47 @@ describe("Browser MCP Client Integration Tests", () => {
     await waitOnExecutionContext(ctx);
   });
 
-  it("should perform complete workflow test or skip gracefully", async () => {
-    const transport = createTransport(ctx);
-    await client.connect(transport);
+  it(
+    "should perform complete workflow test or skip gracefully",
+    async () => {
+      const transport = createTransport(ctx);
+      await client.connect(transport);
 
-    const navResponse = await callToolSafely("navigate", {
-      url: "https://example.com",
-      viewport: { width: 1280, height: 720 },
-      timeout: 45000,
-    });
-
-    if (navResponse && navResponse.success) {
-      const sessionId = navResponse.sessionId!;
-      testSessions.workflowTest = sessionId;
-
-      // Try additional steps
-      const screenshotResponse = await callToolSafely("screenshot", {
-        sessionId,
-        fullPage: false,
-        format: "png",
-      });
-      const extractResponse = await callToolSafely("extract_text", {
-        sessionId,
-        selectors: { title: "h1", content: "p" },
-      });
-      const closeResponse = await callToolSafely("close_session", {
-        sessionId,
+      const navResponse = await callToolSafely("navigate", {
+        url: "https://example.com",
+        viewport: { width: 1280, height: 720 },
+        timeout: 45000,
       });
 
-      console.log(`Complete workflow test passed with Browser Rendering!`);
-      expect(true).toBe(true);
-    } else {
-      console.log(
-        `Complete workflow test skipped - Browser Rendering not available`
-      );
-      expect(true).toBe(true);
-    }
+      if (navResponse && navResponse.success) {
+        const sessionId = navResponse.sessionId!;
+        testSessions.workflowTest = sessionId;
 
-    await waitOnExecutionContext(ctx);
-  });
+        // Try additional steps
+        const screenshotResponse = await callToolSafely("screenshot", {
+          sessionId,
+          fullPage: false,
+          format: "png",
+        });
+        const extractResponse = await callToolSafely("extract_text", {
+          sessionId,
+          selectors: { title: "h1", content: "p" },
+        });
+        const closeResponse = await callToolSafely("close_session", {
+          sessionId,
+        });
+
+        console.log(`Complete workflow test passed with Browser Rendering!`);
+        expect(true).toBe(true);
+      } else {
+        console.log(
+          `Complete workflow test skipped - Browser Rendering not available`
+        );
+        expect(true).toBe(true);
+      }
+
+      await waitOnExecutionContext(ctx);
+    },
+    { timeout: 60000 }
+  );
 });
