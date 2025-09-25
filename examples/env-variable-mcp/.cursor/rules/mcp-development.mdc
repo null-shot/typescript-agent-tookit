@@ -1,0 +1,199 @@
+---
+alwaysApply: true
+description: "MCP Server Development Patterns for Tools, Resources, Prompts, and Custom Routes"
+---
+
+# MCP Server Development Guide
+
+This project follows specific patterns for building MCP (Model Context Protocol) servers using Cloudflare Workers and Durable Objects.
+
+## Core Architecture
+
+- Main server class extends `McpHonoServerDO<Env>` from `@nullshot/mcp`
+- Server configuration is split into three modules: [tools.ts](mdc:src/tools.ts), [resources.ts](mdc:src/resources.ts), [prompts.ts](mdc:src/prompts.ts)
+- Entry point is [server.ts](mdc:src/server.ts) which coordinates everything
+
+## MCP Server Class Pattern
+
+```typescript
+export class YourMcpServer extends McpHonoServerDO<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+  }
+
+  getImplementation(): Implementation {
+    return {
+      name: 'YourMcpServer',
+      version: '1.0.0',
+    };
+  }
+
+  configureServer(server: McpServer): void {
+    setupServerTools(server);
+    setupServerResources(server);
+    setupServerPrompts(server);
+  }
+
+  // OPTIONAL: Override for custom HTTP endpoints
+  protected setupRoutes(app: Hono<{ Bindings: Env }>): void {
+    super.setupRoutes(app); // Call parent to maintain MCP functionality
+    
+    // Add custom routes here
+    app.get('/api/custom', (c) => c.json({ message: 'custom endpoint' }));
+  }
+}
+```
+
+## Tools Pattern (src/tools.ts)
+
+Tools are functions that clients can call. Always use this exact pattern:
+
+```typescript
+export function setupServerTools(server: McpServer) {
+  server.tool(
+    'tool_name',                    // Unique tool identifier
+    'Brief tool description',       // Human-readable description
+    {                              // Zod schema for parameters
+      param1: z.string().describe('Parameter description'),
+      param2: z.number().optional().describe('Optional parameter'),
+    },       
+    async ({ param1, param2 }) => { // Implementation function
+      // Tool logic here
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Result: ${param1}`
+          }
+        ],
+        // Optional: return additional data
+        metadata: { /* any extra data */ }
+      };
+    }
+  );
+}
+```
+
+**Key Requirements:**
+- Use Zod schemas with `.describe()` for all parameters
+- Return content array with type "text"
+- Handle errors gracefully with try/catch
+- Use descriptive tool names (snake_case)
+
+## Resources Pattern (src/resources.ts)
+
+Resources provide persistent data access. Always use this pattern:
+
+```typescript
+export function setupServerResources(server: McpServer) {
+  server.resource(
+    'resource_name',
+    'protocol://path/pattern/{id}',  // URI pattern with placeholders
+    async (uri: URL) => {
+      try {
+        // Parse URI to extract parameters
+        const parts = uri.pathname.split('/');
+        const id = parts[parts.length - 1];
+        
+        // Fetch/compute resource data
+        const data = await fetchResourceData(id);
+        
+        return {
+          contents: [
+            {
+              text: `Resource content: ${JSON.stringify(data)}`,
+              uri: uri.href
+            }
+          ]
+        };
+      } catch (error) {
+        throw new Error(`Failed to fetch resource: ${error.message}`);
+      }
+    }
+  );
+}
+```
+
+**Key Requirements:**
+- Use descriptive URI patterns with placeholders
+- Parse URI to extract parameters
+- Return contents array with text and uri
+- Always wrap in try/catch for error handling
+
+## Prompts Pattern (src/prompts.ts)
+
+Prompts provide reusable message templates. Always use this pattern:
+
+```typescript
+export function setupServerPrompts(server: McpServer) {
+  server.prompt(
+    'prompt_name',
+    'Brief prompt description',
+    (args?: { param?: string }) => ({  // Optional parameters
+      messages: [{
+        role: 'assistant',  // or 'user', 'system'
+        content: {
+          type: 'text',
+          text: `Your prompt content here. ${args?.param || ''}`
+        }
+      }]
+    })
+  );
+}
+```
+
+**Key Requirements:**
+- Use descriptive prompt names (snake_case)
+- Support optional parameters via args
+- Always return messages array
+- Use appropriate role (assistant/user/system)
+
+## Custom Routes with setupRoutes
+
+To add custom HTTP endpoints beyond MCP functionality:
+
+```typescript
+protected setupRoutes(app: Hono<{ Bindings: Env }>): void {
+  // CRITICAL: Always call parent first to maintain MCP functionality
+  super.setupRoutes(app);
+  
+  // Add custom endpoints
+  app.get('/api/health', (c) => {
+    return c.json({ status: 'healthy', timestamp: new Date().toISOString() });
+  });
+  
+  app.post('/api/webhook', async (c) => {
+    const body = await c.req.json();
+    // Process webhook
+    return c.json({ received: true });
+  });
+  
+  // Access environment bindings via c.env
+  app.get('/api/data', async (c) => {
+    const result = await c.env.DATABASE.prepare('SELECT * FROM items').all();
+    return c.json(result);
+  });
+}
+```
+
+## Development Checklist
+
+When implementing MCP functionality:
+
+1. **Tools**: Define in `setupServerTools()` with Zod schemas
+2. **Resources**: Define in `setupServerResources()` with URI patterns  
+3. **Prompts**: Define in `setupServerPrompts()` with message templates
+4. **Custom Routes**: Override `setupRoutes()` if HTTP endpoints needed
+5. **Error Handling**: Always use try/catch in async operations
+6. **Types**: Use TypeScript interfaces for complex data structures
+7. **Testing**: Test tools, resources, and prompts independently
+
+## Common Imports
+
+```typescript
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpHonoServerDO } from '@nullshot/mcp';
+import { Implementation } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
+import { Hono } from 'hono';
+```

@@ -173,17 +173,17 @@ export function setupBrowserResources(
         
         const cacheStats = {
           totalCachedPages: cacheObjects.length,
-          totalSize: cacheObjects.reduce((sum, obj) => sum + obj.size, 0),
+          totalSize: cacheObjects.reduce((sum: number, obj: R2Object) => sum + obj.size, 0),
           oldestCache: cacheObjects.length > 0 
-            ? Math.min(...cacheObjects.map(obj => new Date(obj.uploaded).getTime()))
+            ? Math.min(...cacheObjects.map((obj: R2Object) => new Date(obj.uploaded).getTime()))
             : null,
           newestCache: cacheObjects.length > 0
-            ? Math.max(...cacheObjects.map(obj => new Date(obj.uploaded).getTime()))
+            ? Math.max(...cacheObjects.map((obj: R2Object) => new Date(obj.uploaded).getTime()))
             : null,
         };
 
         // Get sample of cached URLs
-        const sampleCache = cacheObjects.slice(0, 20).map(obj => {
+        const sampleCache = cacheObjects.slice(0, 20).map((obj: R2Object) => {
           const urlPart = obj.key.split('/')[1];
           return {
             url: decodeURIComponent(urlPart || ''),
