@@ -1,0 +1,31 @@
+{
+  "name": "secret-mcp",
+  "version": "0.2.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "build": "tsc --noEmit && wrangler deploy --dry-run",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev\" --kill-others",
+    "start": "wrangler dev",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.8.66",
+    "@vitest/runner": "^3.2.0",
+    "@vitest/snapshot": "^3.2.0",
+    "@nullshot/test-utils": "^0.3.1",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.3",
+    "vitest": "~3.2.0",
+    "wrangler": "^4.32.0",
+    "@nullshot/cli": "0.2.2"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.4",
+    "@nullshot/mcp": "0.3.6",
+    "zod": "^3.25.76"
+  },
+  "packageManager": "pnpm@10.12.4+sha512.5ea8b0deed94ed68691c9bad4c955492705c5eeb8a87ef86bc62c74a26b037b08ff9570f108b2e4dbd1dd1a9186fea925e527f141c648e85af45631074680184"
+}
