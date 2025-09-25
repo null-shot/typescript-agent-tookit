@@ -20,10 +20,14 @@
 	},
 	"dependencies": {
 		"@ai-sdk/anthropic": "catalog:",
+		"@ai-sdk/deepseek": "catalog:",
+		"@ai-sdk/google": "catalog:",
 		"@ai-sdk/openai": "catalog:",
+		"@ai-sdk/xai": "catalog:",
 		"@nullshot/agent": "workspace:*",
 		"@nullshot/cli": "workspace:*",
 		"ai": "catalog:",
-		"hono": "^4.7.7"
+		"hono": "^4.7.7",
+		"workers-ai-provider": "catalog:"
 	}
 }

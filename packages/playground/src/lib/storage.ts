@@ -125,7 +125,7 @@ const AI_MODEL_CONFIG_PREFIX = "ai_model_config_";
 const CURRENT_PROVIDER_KEY = "current_ai_provider";
 
 export interface AIModelConfig {
-  provider: "openai" | "anthropic";
+  provider: "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok";
   apiKey: string;
   model: string;
   temperature?: number;
@@ -199,7 +199,7 @@ export function loadAIModelConfig(): AIModelConfig | null {
 }
 
 export function loadProviderConfig(
-  provider: "openai" | "anthropic"
+  provider: "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok"
 ): ProviderConfig | null {
   try {
     const stored = localStorage.getItem(`${AI_MODEL_CONFIG_PREFIX}${provider}`);
@@ -210,7 +210,7 @@ export function loadProviderConfig(
   }
 }
 
-export function saveCurrentProvider(provider: "openai" | "anthropic") {
+export function saveCurrentProvider(provider: "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok") {
   try {
     localStorage.setItem(CURRENT_PROVIDER_KEY, provider);
   } catch (error) {
@@ -218,11 +218,11 @@ export function saveCurrentProvider(provider: "openai" | "anthropic") {
   }
 }
 
-export function getCurrentProvider(): "openai" | "anthropic" {
+export function getCurrentProvider(): "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok" {
   try {
     if (typeof window === "undefined") return "openai";
     return (
-      (localStorage.getItem(CURRENT_PROVIDER_KEY) as "openai" | "anthropic") ||
+      (localStorage.getItem(CURRENT_PROVIDER_KEY) as "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok") ||
       "openai"
     );
   } catch (error) {
@@ -231,7 +231,7 @@ export function getCurrentProvider(): "openai" | "anthropic" {
   }
 }
 
-export function deleteAIModelConfig(provider?: "openai" | "anthropic") {
+export function deleteAIModelConfig(provider?: "openai" | "anthropic" | "workers-ai" | "deepseek" | "gemini" | "grok") {
   try {
     if (provider) {
       localStorage.removeItem(`${AI_MODEL_CONFIG_PREFIX}${provider}`);

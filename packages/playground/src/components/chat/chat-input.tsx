@@ -58,14 +58,21 @@ export function ChatInput({
   useEffect(() => {
     const fetchProviderModels = async () => {
       const currentConfig = getCurrentModelConfig();
-      if (!currentConfig || !currentConfig.apiKey) {
+      if (!currentConfig) {
+        setProviderModels([]);
+        return;
+      }
+
+      // Only Workers AI can work without API key, all others require API keys
+      const providersWithoutApiKey = ['workers-ai'];
+      if (!providersWithoutApiKey.includes(currentConfig.provider) && !currentConfig.apiKey) {
         setProviderModels([]);
         return;
       }
 
       setLoadingModels(true);
       try {
-        const models = await getModels(currentConfig.provider, currentConfig.apiKey);
+        const models = await getModels(currentConfig.provider, currentConfig.apiKey || 'no-key');
         setProviderModels(models);
       } catch (error) {
         console.error('Error fetching provider models:', error);
@@ -76,7 +83,55 @@ export function ChatInput({
     };
 
     fetchProviderModels();
-  }, []);
+  }, []); // TODO: This should re-run when provider/config changes
+  
+  // Re-fetch models when the saved configuration changes
+  useEffect(() => {
+    const fetchProviderModels = async () => {
+      const currentConfig = getCurrentModelConfig();
+      if (!currentConfig) {
+        setProviderModels([]);
+        return;
+      }
+
+      // Only Workers AI can work without API key, all others require API keys
+      const providersWithoutApiKey = ['workers-ai'];
+      if (!providersWithoutApiKey.includes(currentConfig.provider) && !currentConfig.apiKey) {
+        setProviderModels([]);
+        return;
+      }
+
+      setLoadingModels(true);
+      try {
+        const models = await getModels(currentConfig.provider, currentConfig.apiKey || 'no-key');
+        setProviderModels(models);
+      } catch (error) {
+        console.error('Error fetching provider models after config change:', error);
+        setProviderModels([]);
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    // Listen for storage changes (when Model Selection saves config)
+    const handleStorageChange = () => {
+      fetchProviderModels();
+    };
+    
+    // Listen for custom config update events (from Settings Modal)
+    const handleConfigUpdate = () => {
+      fetchProviderModels();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('ai-config-updated', handleConfigUpdate);
+    fetchProviderModels(); // Initial fetch
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('ai-config-updated', handleConfigUpdate);
+    };
+  }, []); // Run once but listen for storage changes
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -171,11 +226,13 @@ export function ChatInput({
 
             {showModelDropdown && modelsToShow.length > 0 && (
               <div 
-                className="figma-dropdown-menu absolute bottom-full left-0 mb-2 min-w-[200px] z-[99999]"
+                className="figma-dropdown-menu absolute bottom-full left-0 mb-2 min-w-[400px] max-w-[500px] z-[99999]"
                 style={{
                   background: '#222531',
                   border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '12px'
+                  borderRadius: '12px',
+                  maxHeight: '300px',
+                  overflowY: 'auto'
                 }}
               >
                 {loadingModels ? (
@@ -215,7 +272,8 @@ export function ChatInput({
                             onModelChange?.(newSelectedModel);
                             setShowModelDropdown(false);
                           }}
-                          className="figma-dropdown-item"
+                          className="figma-dropdown-item w-full px-4 py-3 text-left text-sm text-white/80 hover:bg-white/10 transition-colors whitespace-nowrap overflow-hidden text-ellipsis"
+                          title={model.name} // Show full name on hover
                         >
                           {model.name}
                         </button>
