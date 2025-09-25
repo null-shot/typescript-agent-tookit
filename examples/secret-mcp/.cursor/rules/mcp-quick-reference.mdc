@@ -1,0 +1,62 @@
+---
+description: "Quick reference for MCP development patterns"
+alwaysApply: false
+---
+# MCP Development Quick Reference
+
+## When Building MCP Servers
+
+### Required Files & Structure
+- [server.ts](mdc:src/server.ts) - Main server class extending `McpHonoServerDO<Env>`
+- [tools.ts](mdc:src/tools.ts) - Function tools clients can call
+- [resources.ts](mdc:src/resources.ts) - Persistent data resources
+- [prompts.ts](mdc:src/prompts.ts) - Reusable message templates
+
+### Quick Patterns
+
+**Tools** - Functions clients call:
+```typescript
+server.tool('verb_noun', 'Description', { param: z.string().describe('...') }, async ({ param }) => {
+  return { content: [{ type: "text", text: `Result: ${param}` }] };
+});
+```
+
+**Resources** - Data access:
+```typescript
+server.resource('get_item', 'data://service/items/{id}', async (uri: URL) => {
+  const id = uri.pathname.split('/').pop();
+  return { contents: [{ text: `Data for ${id}`, uri: uri.href }] };
+});
+```
+
+**Prompts** - Message templates:
+```typescript
+server.prompt('help_topic', 'Description', () => ({
+  messages: [{ role: 'assistant', content: { type: 'text', text: 'Help content' } }]
+}));
+```
+
+**Custom Routes** - HTTP endpoints:
+```typescript
+protected setupRoutes(app: Hono<{ Bindings: Env }>): void {
+  super.setupRoutes(app); // ALWAYS call parent first
+  app.get('/api/custom', (c) => c.json({ message: 'custom' }));
+}
+```
+
+### Key Requirements
+- ✅ Use Zod schemas with `.describe()` for tool parameters
+- ✅ Always call `super.setupRoutes(app)` before adding custom routes
+- ✅ Return `content` array for tools, `contents` array for resources
+- ✅ Use snake_case for tool/resource/prompt names
+- ✅ Include error handling with try/catch
+- ✅ Access environment bindings via `c.env` in routes
+
+### Import Checklist
+```typescript
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpHonoServerDO } from '@nullshot/mcp';
+import { z } from 'zod';
+```
+
+See detailed patterns in [mcp-development.mdc](mdc:.cursor/rules/mcp-development.mdc) and [mcp-generation-patterns.mdc](mdc:.cursor/rules/mcp-generation-patterns.mdc).

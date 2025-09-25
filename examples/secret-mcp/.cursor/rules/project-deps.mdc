@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Using pnpm for package management
+
+- Use pnpm to update, add and execute package commands versus modifying package.json manually or alternative package managers.

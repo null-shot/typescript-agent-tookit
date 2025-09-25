@@ -1,0 +1,27 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "secret-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-17",
+	"observability": {
+		"enabled": true,
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "SECRET_MCP_SERVER",
+				"class_name": "SecretMcpServer",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["SecretMcpServer"],
+		},
+	],
+}
