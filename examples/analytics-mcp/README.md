@@ -19,6 +19,7 @@ This example serves as a **demonstration of MCP framework capabilities** integra
 Follow this complete guide to set up Analytics MCP and create a working dashboard in under 30 minutes.
 
 ### **Prerequisites**
+
 - Node.js 18+ and pnpm
 - Cloudflare account with Workers access
 - Analytics Engine enabled (free tier available)
@@ -42,7 +43,7 @@ wrangler whoami
 wrangler secret put CLOUDFLARE_ACCOUNT_ID
 # Enter your account ID when prompted (from whoami output)
 
-wrangler secret put CLOUDFLARE_API_TOKEN  
+wrangler secret put CLOUDFLARE_API_TOKEN
 # Enter your API token when prompted (see token creation steps below)
 
 # Deploy to Cloudflare Workers
@@ -54,12 +55,13 @@ Your Analytics MCP server will be deployed to: `https://analytics-mcp.{your-subd
 ### **Step 2: Configure Local Development Environment**
 
 **Set up Analytics Engine credentials for local testing:**
+
 ```bash
 # Create API token for Analytics Engine access
 # Go to: https://dash.cloudflare.com/profile/api-tokens
-# 1. Click "Create Token" 
+# 1. Click "Create Token"
 # 2. Use "Edit Cloudflare Workers" template OR "Custom token"
-# 3. Required permissions: Account -> Cloudflare Workers:Edit, Account -> Analytics Engine:Read, User -> User 
+# 3. Required permissions: Account -> Cloudflare Workers:Edit, Account -> Analytics Engine:Read, User -> User
 Details:Read
 # 4. Select your account in "Account Resources"
 # 5. Click "Continue to summary" then "Create Token"
@@ -77,33 +79,39 @@ echo "CLOUDFLARE_API_TOKEN=your_api_token" >> .env
 ### **Step 3: Test with MCP Inspector**
 
 **Start the development environment:**
+
 ```bash
 # Start MCP Inspector and local dev server (with credentials)
 pnpm dev
 ```
 
 This opens:
+
 - **MCP Inspector**: Browser popup for interactive testing
 - **Worker Dev**: Local development server on `localhost:8787` (with real Analytics Engine access)
 
 **Connect MCP Inspector:**
+
 1. **In MCP Inspector popup**:
    - **Server URL**: `https://your-worker-name.your-subdomain.workers.dev/sse` (⭐ **RECOMMENDED** - reliable read/write)
    - **Alternative**: `http://localhost:8787/sse` (⚠️ **LOCAL DEV** - has Analytics Engine write limitations)
    - **Click**: "Connect"
-   
+
    **💡 Find your worker URL:**
+
    ```bash
    # Deploy first, then get the URL
    wrangler deploy
    # Output shows: Published analytics-mcp (1.23s)
    #               https://analytics-mcp.your-subdomain.workers.dev
-   ``` 
+   ```
+
 2. **Expected**: 8 available tools (track_metric, query_analytics, etc.)
 
 **🔍 Important Architecture Note:**
+
 - **Both localhost and production SSE connect to the SAME Analytics Engine** (localhost via `.env` credentials, production via wrangler secrets)
-- **`list_datasets` shows identical results** (same record counts, timestamps)  
+- **`list_datasets` shows identical results** (same record counts, timestamps)
 - **Cloudflare Workers local development limitation**: Analytics Engine writes in local mode don't persist consistently
 - **For reliable data testing, always use the production SSE URL** ✅
 
@@ -112,6 +120,7 @@ This opens:
 **Before adding bulk data, test individual tools:**
 
 1. **Test `track_metric` tool**:
+
    ```json
    {
      "dataset": "github_stats",
@@ -129,6 +138,7 @@ This opens:
    ```
 
 2. **Test `query_analytics` tool**:
+
    ```json
    {
      "sql": "SELECT blob2 as EventType, blob3 as Date, double1 as PRsCreated, double2 as PRsMerged, double3 as PRsClosed FROM github_stats ORDER BY blob3 DESC LIMIT 5"
@@ -144,6 +154,7 @@ This opens:
 #### **5.1: Generate Test Data**
 
 **Create batch test files:**
+
 ```bash
 # Navigate to analytics-mcp directory
 cd examples/analytics-mcp
@@ -153,6 +164,7 @@ node generate-batch-data.js anthropics claude-code
 ```
 
 **Expected output:**
+
 ```
 🚀 Analytics MCP Batch Data Generator (Simulated GitHub Data)
 =========================================================
@@ -162,7 +174,7 @@ node generate-batch-data.js anthropics claude-code
 
 📊 Generating data for anthropics/claude-code (real GitHub data):
 ✅ anthropics_claude_code_batch_1.json: 10 records
-✅ anthropics_claude_code_batch_2.json: 10 records  
+✅ anthropics_claude_code_batch_2.json: 10 records
 ✅ anthropics_claude_code_batch_3.json: 10 records
 
 🎯 Generated 30 data points in 3 batches
@@ -184,6 +196,7 @@ node generate-batch-data.js anthropics claude-code
 **⚠️ Important**: Use **production SSE** for reliable writes: `https://your-worker-name.your-subdomain.workers.dev/sse`
 
 **💡 Get your production URL:**
+
 ```bash
 wrangler deploy
 # Copy the URL from the output: https://analytics-mcp.your-subdomain.workers.dev
@@ -192,7 +205,7 @@ wrangler deploy
 **For each batch file (1-3):**
 
 1. **Open** `anthropics_claude_code_batch_1.json` in your editor
-2. **Select All** (Cmd+A) and **Copy** (Cmd+C) the entire JSON array
+2. **Select All** and **Copy** the entire JSON array
 3. **In MCP Inspector**:
    - **Tool**: `track_batch_metrics`
    - **dataset**: `github_stats`
@@ -204,7 +217,7 @@ wrangler deploy
      "success": true,
      "data": {
        "message": "Successfully tracked 10 data points in dataset 'github_stats'",
-       "dataset": "github_stats", 
+       "dataset": "github_stats",
        "count": 10,
        "timestamp": 1757062581198
      }
@@ -217,6 +230,7 @@ wrangler deploy
 **After processing all 3 batches, verify total records:**
 
 **Use `query_analytics` tool:**
+
 ```json
 {
   "sql": "SELECT count() as total_records FROM github_stats WHERE blob2 = 'github_real_30days'"
@@ -224,12 +238,13 @@ wrangler deploy
 ```
 
 **Expected Result:**
+
 ```json
 {
   "success": true,
   "data": {
-    "data": [{"total_records": "30"}],
-    "meta": {"rows": 1}
+    "data": [{ "total_records": "30" }],
+    "meta": { "rows": 1 }
   }
 }
 ```
@@ -239,6 +254,7 @@ wrangler deploy
 #### **5.4: Sample Data Queries**
 
 **View recent data:**
+
 ```json
 {
   "sql": "SELECT blob1 as repo, blob3, double1 as stars_total, double4 as prs_created FROM github_stats WHERE blob2 = 'github_real_30days' ORDER BY blob3 DESC LIMIT 10"
@@ -246,15 +262,17 @@ wrangler deploy
 ```
 
 **Repository breakdown:**
-```json  
+
+```json
 {
   "sql": "SELECT blob1 as repo, count() as records FROM github_stats WHERE blob2 = 'github_real_30days' GROUP BY blob1"
 }
 ```
 
 **🎉 Success Criteria:**
+
 - ✅ All 3 batches return `"success": true`
-- ✅ Total query shows 30 records  
+- ✅ Total query shows 30 records
 - ✅ Data appears for `anthropics/claude-code` repository
 
 ### **Step 6: Setup Local Grafana Dashboard**
@@ -263,12 +281,12 @@ wrangler deploy
 
 📖 **Setup**: [Cloudflare Workers Analytics Engine - Querying from Grafana](https://developers.cloudflare.com/analytics/analytics-engine/grafana/)
 
-
 ### **Step 7: Create Dashboard Panels**
 
 **Example: In your local Grafana (localhost:3000), create 2 panels with these proven working queries:**
 
 **Panel 1: anthropics/claude-code PR stats**
+
 ```sql
 SELECT
     blob3,
@@ -283,6 +301,7 @@ ORDER BY blob3
 ```
 
 **Panel 2: anthropics/claude-code stars**
+
 ```sql
 SELECT
     blob3,
@@ -296,6 +315,7 @@ ORDER BY blob3
 ```
 
 **Panel Configuration:**
+
 - **Time field**: `blob3` (contains dates)
 - **Data source**: Analytics Engine SQL API (configured above)
 - **Visualization**: Time series
@@ -304,6 +324,7 @@ ORDER BY blob3
 ### **Step 8: View Your Analytics Dashboard**
 
 Your dashboard will show:
+
 - **📈 PR Activity**: Claude Code PR and issue activity
 - **⭐ Star Growth**: Anthropics Claude Code star growth
 - **🎯 Professional insights**: Development patterns and growth trends
@@ -315,14 +336,17 @@ This section provides complete, tested examples for all available MCP tools. Use
 ### **Data Writing Tools**
 
 #### **`track_metric`** - Single Data Point
+
 Record individual analytics events with dimensions and metrics.
 
 **Dataset:**
+
 ```json
 "github_stats"
 ```
 
 **Dimensions:**
+
 ```json
 {
   "repo": "anthropics/claude-code",
@@ -332,6 +356,7 @@ Record individual analytics events with dimensions and metrics.
 ```
 
 **Metrics:**
+
 ```json
 {
   "prs_created": 1,
@@ -341,6 +366,7 @@ Record individual analytics events with dimensions and metrics.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -355,14 +381,17 @@ Record individual analytics events with dimensions and metrics.
 ```
 
 #### **`track_batch_metrics`** - Multiple Data Points
+
 Efficiently submit multiple analytics events in a single request.
 
 **Dataset:**
+
 ```json
 "github_stats"
 ```
 
 **Data Points Array:**
+
 ```json
 [
   {
@@ -393,6 +422,7 @@ Efficiently submit multiple analytics events in a single request.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -408,9 +438,11 @@ Efficiently submit multiple analytics events in a single request.
 ### **Query & Analysis Tools**
 
 #### **`query_analytics`** - Raw SQL Queries
+
 Execute custom SQL queries against your analytics data with full SQL support.
 
 **SQL Query:**
+
 ```sql
 SELECT blob1 as repo, blob2 as event_type, blob3, double1 as prs_created, double2 as prs_merged
 FROM github_stats
@@ -420,6 +452,7 @@ LIMIT 10
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -444,14 +477,17 @@ LIMIT 10
 ```
 
 #### **`get_metrics_summary`** - Aggregated Statistics
+
 Get summarized metrics with time ranges and dimension grouping.
 
 **Dataset:**
+
 ```json
 "github_stats"
 ```
 
 **Time Range:**
+
 ```json
 {
   "start": "2025-09-01T00:00:00Z",
@@ -460,11 +496,13 @@ Get summarized metrics with time ranges and dimension grouping.
 ```
 
 **Dimensions:**
+
 ```json
 ["event_type"]
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -492,24 +530,29 @@ Get summarized metrics with time ranges and dimension grouping.
 ```
 
 #### **`get_time_series`** - Time Series Data
+
 Retrieve time-series data for trend analysis and visualization.
 
 **Dataset:**
+
 ```json
 "github_stats"
 ```
 
 **Metric:**
+
 ```json
 "prs_created"
 ```
 
 **Interval:**
+
 ```json
 "1d"
 ```
 
 **Time Range:**
+
 ```json
 {
   "start": "2025-09-01T00:00:00Z",
@@ -518,11 +561,13 @@ Retrieve time-series data for trend analysis and visualization.
 ```
 
 **Dimensions:**
+
 ```json
 ["pr_stats"]
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -560,29 +605,35 @@ Retrieve time-series data for trend analysis and visualization.
 ```
 
 #### **`analyze_trends`** - Trend Analysis
+
 Analyze trends in metrics over time with automatic pattern detection.
 
 **Dataset:**
+
 ```json
 "github_stats"
 ```
 
 **Metric:**
+
 ```json
 "pr_stats"
 ```
 
 **Time Range:**
+
 ```json
 "30d"
 ```
 
 **Column (Optional):**
+
 ```json
 "double1"
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -607,6 +658,7 @@ Analyze trends in metrics over time with automatic pattern detection.
 ### **Utility Tools**
 
 #### **`list_datasets`** - Available Datasets
+
 List all available datasets and their metadata.
 
 ```json
@@ -614,13 +666,14 @@ List all available datasets and their metadata.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
   "data": [
     {
       "name": "github_stats:github_star_cumulative",
-      "description": "Event type 'github_star_cumulative' in github_stats", 
+      "description": "Event type 'github_star_cumulative' in github_stats",
       "record_count": "36",
       "dimensions": ["repo", "event_type", "date", "batch_id"],
       "metrics": ["stars_total", "forks_total", "prs_created", "prs_merged"]
@@ -637,6 +690,7 @@ List all available datasets and their metadata.
 ```
 
 #### **`get_recent_data`** - Recent Records
+
 Get the most recent data entries for debugging and inspection.
 
 ```json
@@ -647,6 +701,7 @@ Get the most recent data entries for debugging and inspection.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -674,16 +729,16 @@ Get the most recent data entries for debugging and inspection.
 
 ### **Quick Reference**
 
-| Tool | Purpose | Use Case |
-|------|---------|----------|
-| `track_metric` | Single data point | Individual events, one-off metrics |
+| Tool                  | Purpose              | Use Case                             |
+| --------------------- | -------------------- | ------------------------------------ |
+| `track_metric`        | Single data point    | Individual events, one-off metrics   |
 | `track_batch_metrics` | Multiple data points | Bulk data ingestion, historical data |
-| `query_analytics` | Custom SQL | Complex queries, joins, aggregations |
-| `get_metrics_summary` | Summary statistics | Dashboard metrics, KPI tracking |
-| `get_time_series` | Time-based data | Charts, trend visualization |
-| `analyze_trends` | Trend detection | Pattern analysis, change detection |
-| `list_datasets` | Dataset discovery | Explore available data |
-| `get_recent_data` | Recent inspection | Debugging, data validation |
+| `query_analytics`     | Custom SQL           | Complex queries, joins, aggregations |
+| `get_metrics_summary` | Summary statistics   | Dashboard metrics, KPI tracking      |
+| `get_time_series`     | Time-based data      | Charts, trend visualization          |
+| `analyze_trends`      | Trend detection      | Pattern analysis, change detection   |
+| `list_datasets`       | Dataset discovery    | Explore available data               |
+| `get_recent_data`     | Recent inspection    | Debugging, data validation           |
 
 ## Project Structure
 
