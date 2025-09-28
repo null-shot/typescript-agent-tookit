@@ -69,6 +69,49 @@ importers:
         specifier: ^1.17.2
         version: 1.17.4
 
+  examples/analytics-mcp:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: 'catalog:'
+        version: 1.17.4
+      '@nullshot/mcp':
+        specifier: workspace:*
+        version: link:../../packages/mcp
+      hono:
+        specifier: ^4.7.6
+        version: 4.9.4
+      zod:
+        specifier: 'catalog:'
+        version: 3.25.76
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: 'catalog:'
+        version: 0.8.66(@cloudflare/workers-types@4.20250829.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4)
+      '@nullshot/test-utils':
+        specifier: workspace:*
+        version: link:../../packages/test-utils
+      '@types/chai':
+        specifier: ^5.2.2
+        version: 5.2.2
+      '@types/node':
+        specifier: 'catalog:'
+        version: 20.19.11
+      chai:
+        specifier: ^6.0.1
+        version: 6.0.1
+      concurrently:
+        specifier: ^9.1.2
+        version: 9.2.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.2
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@edge-runtime/vm@3.2.0)(@types/node@20.19.11)(@vitest/ui@3.2.4)(jiti@2.5.1)(lightningcss@1.30.1)(terser@5.16.9)(tsx@4.20.5)(yaml@2.8.1)
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.33.1(@cloudflare/workers-types@4.20250829.0)
+
   examples/browser-mcp:
     dependencies:
       '@cloudflare/puppeteer':
@@ -18138,7 +18181,7 @@ snapshots:
   workers-ai-provider@2.0.0(zod@4.1.8):
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.8(zod@4.1.8)
+      '@ai-sdk/provider-utils': 3.0.9(zod@4.1.8)
     transitivePeerDependencies:
       - zod
 

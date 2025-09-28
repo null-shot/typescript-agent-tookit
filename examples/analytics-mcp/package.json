@@ -1,0 +1,43 @@
+{
+  "name": "analytics-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Analytics MCP example demonstrating NullShot Analytics Engine integration",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "wrangler build",
+    "deploy": "wrangler deploy",
+    "dev": "concurrently \"npx @modelcontextprotocol/inspector\" \"wrangler dev --port 8787\" --kill-others",
+    "dev:vite": "vite dev",
+    "start": "wrangler dev",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types"
+  },
+  "keywords": [
+    "mcp",
+    "analytics",
+    "nullshot",
+    "cloudflare-workers",
+    "time-series"
+  ],
+  "author": "TypeScript Agent Framework",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
+    "@nullshot/mcp": "workspace:*",
+    "hono": "^4.7.6",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "catalog:",
+    "@types/node": "catalog:",
+    "@nullshot/test-utils": "workspace:*",
+    "@types/chai": "^5.2.2",
+    "chai": "^6.0.1",
+    "concurrently": "^9.1.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
