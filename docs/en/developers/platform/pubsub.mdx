@@ -1,0 +1,710 @@
+export const metadata = {
+  "title": "Pub/Sub",
+  "description": "Real-time messaging between agents and users with durable subscriptions"
+};
+
+# Pub/Sub
+
+**Connect your agents to real-time messaging at global scale.** Pub/Sub enables instant communication between agents, users, and services through durable message channels that scale from one to millions of concurrent connections.
+
+## Key Features
+
+- **Durable Connections**: WebSocket connections that survive network interruptions
+- **Global Distribution**: Sub-20ms message delivery worldwide
+- **Automatic Scaling**: Handle millions of concurrent connections
+- **Message Ordering**: Guaranteed order within channels
+- **Presence Detection**: Track who's online in real-time
+
+## TypeScript API
+
+```typescript
+interface PubSub {
+  // Publishing messages
+  publish(channel: string, message: any): Promise<void>;
+  publishToUser(userId: string, message: any): Promise<void>;
+  broadcast(message: any, filter?: BroadcastFilter): Promise<void>;
+  
+  // Managing subscriptions
+  subscribe(channel: string, handler: MessageHandler): Promise<Subscription>;
+  unsubscribe(subscription: Subscription): Promise<void>;
+  
+  // Presence management
+  trackPresence(channel: string, metadata?: any): Promise<void>;
+  getPresence(channel: string): Promise<PresenceInfo[]>;
+}
+
+interface MessageHandler {
+  (message: PubSubMessage): Promise<void>;
+}
+
+interface PubSubMessage {
+  channel: string;
+  data: any;
+  timestamp: number;
+  senderId?: string;
+  messageId: string;
+}
+
+interface BroadcastFilter {
+  channels?: string[];
+  userIds?: string[];
+  metadata?: Record<string, any>;
+}
+```
+
+## Agent Examples
+
+### Real-Time Collaboration Agent
+
+```typescript
+// Agent that enables real-time collaborative editing
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { pubsub, memoryStore } = platform;
+  
+  if (message.content.includes('create document')) {
+    const documentTitle = extractTitle(message.content);
+    const documentId = generateId();
+    
+    // Create document in memory store
+    const document = {
+      id: documentId,
+      title: documentTitle,
+      content: '',
+      collaborators: [message.userId],
+      createdAt: Date.now()
+    };
+    
+    await memoryStore.put(`document:${documentId}`, JSON.stringify(document));
+    
+    // Create collaboration channel
+    const channelName = `document:${documentId}:collaboration`;
+    
+    // Track presence for the creator
+    await pubsub.trackPresence(channelName, {
+      userId: message.userId,
+      role: 'owner',
+      cursor: null
+    });
+    
+    return {
+      message: `Document "${documentTitle}" created! Share this ID with collaborators: ${documentId}`,
+      actions: [{
+        type: 'document_created',
+        data: {
+          documentId,
+          channelName,
+          joinUrl: `https://platform.nullshot.com/docs/${documentId}`
+        }
+      }]
+    };
+  }
+  
+  if (message.content.includes('join document')) {
+    const documentId = extractDocumentId(message.content);
+    const channelName = `document:${documentId}:collaboration`;
+    
+    // Get document
+    const documentData = await memoryStore.get(`document:${documentId}`);
+    if (!documentData) {
+      return { message: "Document not found." };
+    }
+    
+    const document = JSON.parse(documentData);
+    
+    // Add user to collaborators
+    if (!document.collaborators.includes(message.userId)) {
+      document.collaborators.push(message.userId);
+      await memoryStore.put(`document:${documentId}`, JSON.stringify(document));
+    }
+    
+    // Track user presence
+    await pubsub.trackPresence(channelName, {
+      userId: message.userId,
+      role: 'collaborator',
+      cursor: null,
+      joinedAt: Date.now()
+    });
+    
+    // Notify other collaborators
+    await pubsub.publish(channelName, {
+      type: 'user_joined',
+      userId: message.userId,
+      timestamp: Date.now(),
+      message: `${message.userId} joined the document`
+    });
+    
+    return {
+      message: `Joined document "${document.title}"! You can now collaborate in real-time.`,
+      actions: [{
+        type: 'document_joined',
+        data: {
+          documentId,
+          channelName,
+          currentCollaborators: document.collaborators
+        }
+      }]
+    };
+  }
+  
+  if (message.content.includes('edit document')) {
+    const { documentId, edit } = extractEditOperation(message.content);
+    const channelName = `document:${documentId}:collaboration`;
+    
+    // Apply edit to document
+    const documentData = await memoryStore.get(`document:${documentId}`);
+    const document = JSON.parse(documentData);
+    
+    const editOperation = {
+      type: 'text_edit',
+      operation: edit.operation, // 'insert', 'delete', 'replace'
+      position: edit.position,
+      content: edit.content,
+      userId: message.userId,
+      timestamp: Date.now()
+    };
+    
+    // Apply operation to document content
+    document.content = applyEditOperation(document.content, editOperation);
+    document.lastModified = Date.now();
+    
+    await memoryStore.put(`document:${documentId}`, JSON.stringify(document));
+    
+    // Broadcast edit to all collaborators
+    await pubsub.publish(channelName, {
+      type: 'document_edit',
+      ...editOperation
+    });
+    
+    return {
+      message: "Edit applied and synced to all collaborators.",
+      actions: [{
+        type: 'edit_applied',
+        data: editOperation
+      }]
+    };
+  }
+}
+
+// Real-time edit subscription handler
+pubsub.subscribe('document:*:collaboration', async (message) => {
+  switch (message.data.type) {
+    case 'document_edit':
+      // Apply remote edit to local document
+      await applyRemoteEdit(message.data);
+      break;
+      
+    case 'cursor_move':
+      // Update cursor position for user
+      await updateCursorPosition(message.data);
+      break;
+      
+    case 'user_joined':
+      // Show notification of new collaborator
+      await notifyUserJoined(message.data);
+      break;
+  }
+});
+```
+
+### Live Chat Support Agent
+
+```typescript
+// Agent that provides real-time customer support
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { pubsub, memoryStore } = platform;
+  
+  if (message.content.includes('start support chat')) {
+    const chatId = generateId();
+    const channelName = `support:${chatId}`;
+    
+    // Create chat session
+    const chatSession = {
+      id: chatId,
+      userId: message.userId,
+      status: 'waiting',
+      startedAt: Date.now(),
+      messages: [],
+      assignedAgent: null
+    };
+    
+    await memoryStore.put(`chat:${chatId}`, JSON.stringify(chatSession));
+    
+    // Find available support agent
+    const availableAgent = await findAvailableSupportAgent();
+    
+    if (availableAgent) {
+      chatSession.assignedAgent = availableAgent.id;
+      chatSession.status = 'active';
+      await memoryStore.put(`chat:${chatId}`, JSON.stringify(chatSession));
+      
+      // Notify agent of new chat
+      await pubsub.publishToUser(availableAgent.id, {
+        type: 'new_chat_assigned',
+        chatId,
+        channelName,
+        customerInfo: {
+          userId: message.userId,
+          issue: extractIssueType(message.content)
+        }
+      });
+      
+      // Setup presence tracking
+      await pubsub.trackPresence(channelName, {
+        userId: message.userId,
+        role: 'customer',
+        status: 'active'
+      });
+      
+      return {
+        message: `Connected to support agent ${availableAgent.name}! Chat ID: ${chatId}`,
+        actions: [{
+          type: 'chat_started',
+          data: { chatId, channelName, agentName: availableAgent.name }
+        }]
+      };
+    } else {
+      // Add to queue
+      await addToSupportQueue(chatId, message.userId);
+      
+      return {
+        message: `You're in the support queue. Position: ${await getQueuePosition(chatId)}. Estimated wait: 5 minutes.`,
+        actions: [{
+          type: 'queued_for_support',
+          data: { chatId, channelName }
+        }]
+      };
+    }
+  }
+  
+  if (message.content.includes('send chat message')) {
+    const { chatId, messageText } = extractChatMessage(message.content);
+    const channelName = `support:${chatId}`;
+    
+    // Get chat session
+    const chatData = await memoryStore.get(`chat:${chatId}`);
+    const chat = JSON.parse(chatData);
+    
+    const chatMessage = {
+      id: generateId(),
+      senderId: message.userId,
+      content: messageText,
+      timestamp: Date.now(),
+      type: 'text'
+    };
+    
+    chat.messages.push(chatMessage);
+    await memoryStore.put(`chat:${chatId}`, JSON.stringify(chat));
+    
+    // Broadcast to channel
+    await pubsub.publish(channelName, {
+      type: 'chat_message',
+      ...chatMessage
+    });
+    
+    // If customer message, notify agent
+    if (message.userId !== chat.assignedAgent) {
+      await pubsub.publishToUser(chat.assignedAgent, {
+        type: 'customer_message',
+        chatId,
+        message: chatMessage
+      });
+    }
+    
+    return {
+      message: "Message sent!",
+      actions: [{
+        type: 'message_sent',
+        data: chatMessage
+      }]
+    };
+  }
+}
+
+// Support agent message handler
+pubsub.subscribe('support:*', async (message) => {
+  const { type, data } = message.data;
+  
+  switch (type) {
+    case 'chat_message':
+      // Display message in chat UI
+      await displayChatMessage(data);
+      break;
+      
+    case 'typing_indicator':
+      // Show typing indicator
+      await showTypingIndicator(data.senderId);
+      break;
+      
+    case 'chat_ended':
+      // Clean up chat UI
+      await cleanupChatSession(data.chatId);
+      break;
+  }
+});
+```
+
+### Live Streaming Agent
+
+```typescript
+// Agent that manages live streaming events
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { pubsub, storage } = platform;
+  
+  if (message.content.includes('start live stream')) {
+    const streamTitle = extractStreamTitle(message.content);
+    const streamId = generateId();
+    const channelName = `stream:${streamId}`;
+    
+    // Create stream metadata
+    const stream = {
+      id: streamId,
+      title: streamTitle,
+      hostId: message.userId,
+      status: 'live',
+      startedAt: Date.now(),
+      viewerCount: 0,
+      chatEnabled: true
+    };
+    
+    await storage.put(`streams/${streamId}/metadata.json`, JSON.stringify(stream));
+    
+    // Setup stream presence
+    await pubsub.trackPresence(channelName, {
+      userId: message.userId,
+      role: 'host',
+      status: 'streaming'
+    });
+    
+    return {
+      message: `Live stream "${streamTitle}" started! Stream ID: ${streamId}`,
+      actions: [{
+        type: 'stream_started',
+        data: {
+          streamId,
+          channelName,
+          streamUrl: `https://platform.nullshot.com/stream/${streamId}`
+        }
+      }]
+    };
+  }
+  
+  if (message.content.includes('join stream')) {
+    const streamId = extractStreamId(message.content);
+    const channelName = `stream:${streamId}`;
+    
+    // Get stream metadata
+    const streamObject = await storage.get(`streams/${streamId}/metadata.json`);
+    if (!streamObject) {
+      return { message: "Stream not found or ended." };
+    }
+    
+    const stream = JSON.parse(await streamObject.text());
+    
+    // Track viewer presence
+    await pubsub.trackPresence(channelName, {
+      userId: message.userId,
+      role: 'viewer',
+      joinedAt: Date.now()
+    });
+    
+    // Update viewer count
+    const presence = await pubsub.getPresence(channelName);
+    const viewerCount = presence.filter(p => p.metadata?.role === 'viewer').length;
+    
+    stream.viewerCount = viewerCount;
+    await storage.put(`streams/${streamId}/metadata.json`, JSON.stringify(stream));
+    
+    // Notify host of new viewer
+    await pubsub.publishToUser(stream.hostId, {
+      type: 'viewer_joined',
+      streamId,
+      viewerId: message.userId,
+      totalViewers: viewerCount
+    });
+    
+    // Broadcast viewer count update
+    await pubsub.publish(channelName, {
+      type: 'viewer_count_update',
+      count: viewerCount
+    });
+    
+    return {
+      message: `Joined "${stream.title}" with ${viewerCount} other viewers!`,
+      actions: [{
+        type: 'stream_joined',
+        data: { streamId, channelName, viewerCount }
+      }]
+    };
+  }
+  
+  if (message.content.includes('stream chat')) {
+    const { streamId, messageText } = extractStreamChat(message.content);
+    const channelName = `stream:${streamId}`;
+    
+    const chatMessage = {
+      id: generateId(),
+      senderId: message.userId,
+      content: messageText,
+      timestamp: Date.now(),
+      type: 'chat'
+    };
+    
+    // Broadcast to all viewers
+    await pubsub.publish(channelName, {
+      type: 'stream_chat',
+      ...chatMessage
+    });
+    
+    return {
+      message: "Chat message sent to all viewers!",
+      actions: [{
+        type: 'chat_sent',
+        data: chatMessage
+      }]
+    };
+  }
+}
+
+// Stream event handler
+pubsub.subscribe('stream:*', async (message) => {
+  const { type, data } = message.data;
+  
+  switch (type) {
+    case 'stream_chat':
+      await displayStreamChat(data);
+      break;
+      
+    case 'viewer_count_update':
+      await updateViewerCount(data.count);
+      break;
+      
+    case 'stream_ended':
+      await handleStreamEnd(data.streamId);
+      break;
+  }
+});
+```
+
+### Gaming Matchmaking Agent
+
+```typescript
+// Agent that handles real-time game matchmaking
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { pubsub, memoryStore } = platform;
+  
+  if (message.content.includes('find match')) {
+    const gameMode = extractGameMode(message.content);
+    const skillLevel = await getUserSkillLevel(message.userId);
+    
+    // Look for existing lobbies
+    const availableLobbies = await findAvailableLobbies(gameMode, skillLevel);
+    
+    if (availableLobbies.length > 0) {
+      const lobby = availableLobbies[0];
+      const channelName = `lobby:${lobby.id}`;
+      
+      // Add player to lobby
+      lobby.players.push({
+        userId: message.userId,
+        skillLevel,
+        joinedAt: Date.now()
+      });
+      
+      await memoryStore.put(`lobby:${lobby.id}`, JSON.stringify(lobby));
+      
+      // Track presence in lobby
+      await pubsub.trackPresence(channelName, {
+        userId: message.userId,
+        role: 'player',
+        skillLevel
+      });
+      
+      // Notify other players
+      await pubsub.publish(channelName, {
+        type: 'player_joined',
+        player: {
+          userId: message.userId,
+          skillLevel
+        },
+        playersCount: lobby.players.length,
+        maxPlayers: lobby.maxPlayers
+      });
+      
+      // Check if lobby is full
+      if (lobby.players.length >= lobby.maxPlayers) {
+        await startMatch(lobby, pubsub);
+      }
+      
+      return {
+        message: `Joined lobby! Players: ${lobby.players.length}/${lobby.maxPlayers}`,
+        actions: [{
+          type: 'lobby_joined',
+          data: { lobbyId: lobby.id, channelName, playersCount: lobby.players.length }
+        }]
+      };
+    } else {
+      // Create new lobby
+      const lobbyId = generateId();
+      const channelName = `lobby:${lobbyId}`;
+      
+      const newLobby = {
+        id: lobbyId,
+        gameMode,
+        skillRange: [skillLevel - 100, skillLevel + 100],
+        players: [{
+          userId: message.userId,
+          skillLevel,
+          joinedAt: Date.now()
+        }],
+        maxPlayers: getMaxPlayersForMode(gameMode),
+        createdAt: Date.now(),
+        status: 'waiting'
+      };
+      
+      await memoryStore.put(`lobby:${lobbyId}`, JSON.stringify(newLobby));
+      
+      // Track presence
+      await pubsub.trackPresence(channelName, {
+        userId: message.userId,
+        role: 'player',
+        skillLevel
+      });
+      
+      return {
+        message: `Created new lobby for ${gameMode}. Waiting for players... (1/${newLobby.maxPlayers})`,
+        actions: [{
+          type: 'lobby_created',
+          data: { lobbyId, channelName, gameMode }
+        }]
+      };
+    }
+  }
+}
+
+// Match start handler
+async function startMatch(lobby: any, pubsub: PubSub) {
+  const matchId = generateId();
+  const matchChannel = `match:${matchId}`;
+  
+  // Create match session
+  const match = {
+    id: matchId,
+    players: lobby.players,
+    gameMode: lobby.gameMode,
+    status: 'in_progress',
+    startedAt: Date.now()
+  };
+  
+  // Notify all players
+  await pubsub.publish(`lobby:${lobby.id}`, {
+    type: 'match_starting',
+    matchId,
+    matchChannel,
+    countdown: 5
+  });
+  
+  // Start game after countdown
+  setTimeout(async () => {
+    await pubsub.publish(matchChannel, {
+      type: 'match_started',
+      gameState: initializeGameState(match)
+    });
+  }, 5000);
+}
+
+// Lobby presence handler
+pubsub.subscribe('lobby:*', async (message) => {
+  const { type, data } = message.data;
+  
+  switch (type) {
+    case 'player_joined':
+      await updateLobbyUI(data);
+      break;
+      
+    case 'match_starting':
+      await showMatchCountdown(data);
+      break;
+      
+    case 'player_left':
+      await handlePlayerLeave(data);
+      break;
+  }
+});
+```
+
+## Best Practices
+
+### Connection Management
+
+```typescript
+// ✅ Good: Handle connection drops gracefully
+pubsub.subscribe('user:*', async (message) => {
+  try {
+    await handleMessage(message);
+  } catch (error) {
+    if (error.code === 'CONNECTION_LOST') {
+      // Attempt reconnection with exponential backoff
+      await reconnectWithBackoff();
+    }
+  }
+});
+```
+
+### Message Filtering
+
+```typescript
+// ✅ Good: Use presence to avoid sending to offline users
+const activeUsers = await pubsub.getPresence('channel:general');
+const onlineUserIds = activeUsers.map(u => u.metadata.userId);
+
+await pubsub.broadcast({
+  type: 'notification',
+  content: 'System maintenance in 5 minutes'
+}, {
+  userIds: onlineUserIds
+});
+```
+
+### Channel Organization
+
+```typescript
+// ✅ Good: Use hierarchical channel naming
+const channels = {
+  user: `user:${userId}`,                    // Personal messages
+  team: `team:${teamId}:general`,           // Team communication
+  project: `project:${projectId}:updates`, // Project updates
+  system: `system:alerts`                  // System-wide alerts
+};
+```
+
+## Limitations & Considerations
+
+- **Message Size**: Maximum 1MB per message
+- **Channel Limits**: 1,000 channels per WebSocket connection
+- **Connection Duration**: 24 hours maximum per connection
+- **Message Rate**: 1,000 messages per second per channel
+- **Presence Updates**: Updated every 30 seconds
+
+## Related Services
+
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Store session state and user preferences
+- **[Queues](/en/developers/platform/queues)** - Handle message processing pipelines
+- **[Analytics Storage](/en/developers/platform/analytics-storage)** - Track messaging patterns and engagement
+
+---
+
+## Official Documentation
+
+- [Pub/Sub Documentation](https://developers.cloudflare.com/pub-sub/) 

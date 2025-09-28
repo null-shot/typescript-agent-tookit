@@ -1,0 +1,461 @@
+export const metadata = {
+  "title": "Getting Started",
+  "description": "Build your first AI agent with the TypeScript Agent Framework"
+};
+
+# Getting Started
+
+Learn how to build your first AI agent using the TypeScript Agent Framework by creating a **Simple Prompt Agent**. This guide walks through the complete implementation from the [typescript-agent-template](https://github.com/null-shot/typescript-agent-template), showing you how to create a production-ready conversational AI agent with session management and streaming responses.
+
+## What You'll Build
+
+By the end of this guide, you'll have a fully functional AI agent that:
+
+- 🧠 **Converses intelligently** using Anthropic's Claude
+- 💬 **Maintains conversation context** across multiple interactions
+- 🔄 **Streams responses** in real-time for better UX
+- 🚀 **Scales automatically** on Cloudflare's edge network
+- 🛠️ **Supports MCP tools** for extended capabilities
+
+## Prerequisites
+
+Before starting, ensure you have:
+
+- **Node.js 22+** and **pnpm** installed
+- **Cloudflare account** with Workers enabled
+- **Anthropic API key** for Claude integration
+
+## Quick Setup
+
+### 1. Clone and Install
+
+```bash
+# Create Agent Template project
+npx @nullshot/cli create agent
+
+# Install dependencies after going into your project folder
+pnpm install
+```
+
+### 2. Configure local Environment
+
+```bash
+# Add your Anthropic API key to Cloudflare Workers secrets
+cp .vars-example .dev.vars
+```
+
+### 3. Start Development
+
+```bash
+# Start development server with hot reload
+pnpm dev
+```
+
+### 4. Test Your Agent
+
+```bash
+# Test with curl
+curl -X POST http://localhost:8787/agent/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"Hello! Can you help me?"}]}'
+```
+
+## Architecture Overview
+
+The agent uses **Cloudflare Durable Objects** for session management, ensuring:
+
+- **Persistent Memory**: Conversations maintain context across interactions
+- **Global Distribution**: Sessions accessible from any Cloudflare edge location
+- **Auto Scaling**: Each session runs independently
+
+## Code Breakdown
+
+Let's dive into the complete implementation from [`src/index.ts`](https://github.com/null-shot/typescript-agent-template/blob/main/src/index.ts):
+
+### Core Imports and Setup
+
+```typescript
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { SimplePromptAgent } from "@nullshot/agent/agents";
+import { anthropic } from "@ai-sdk/anthropic";
+import type { AIUISDKMessage } from "@nullshot/agent/types";
+```
+
+**Key Components:**
+- **Hono**: Fast, lightweight web framework for Cloudflare Workers
+- **CORS**: Cross-origin resource sharing for web applications
+- **SimplePromptAgent**: Base agent class from our SDK
+- **Anthropic**: AI provider integration
+- **Types**: TypeScript definitions for message handling
+
+### Main Application Setup
+
+```typescript
+const app = new Hono<{ Bindings: Env }>();
+
+// Enable CORS for web applications
+app.use("/agent/*", cors());
+
+// Health check endpoint
+app.get("/", (c) => c.text("Agent is running!"));
+```
+
+This creates the main application with CORS enabled for the `/agent/*` routes, allowing web applications to communicate with your agent.
+
+### The SimplePromptAgent Class
+
+```typescript
+class SimplePromptAgent extends SimplePromptAgent<Env> {
+  constructor(
+    state: DurableObjectState,
+    env: Env,
+    model: any,
+    // services?: Service[] // Uncomment to add MCP tools
+  ) {
+    super(state, env, model);
+  }
+```
+
+**Key Features:**
+- **Extends SimplePromptAgent**: Inherits session management and streaming capabilities
+- **Durable Object State**: Persistent storage for conversation history
+- **Environment Access**: Cloudflare Workers environment variables
+- **Model Integration**: AI provider (Anthropic Claude) connection
+
+### Message Processing Logic
+
+```typescript
+async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+  const result = await this.streamText(sessionId, {
+    model: this.model,
+    system: 'You are a helpful AI assistant. Be concise and helpful.',
+    messages: messages.messages,
+    maxSteps: 10,
+    // experimental_toolCallStreaming: true, // Uncomment for tool streaming
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+**Process Breakdown:**
+1. **Session ID**: Unique identifier for conversation continuity
+2. **Messages**: Array of conversation messages (user + assistant)
+3. **System Prompt**: Defines the agent's personality and behavior
+4. **Max Steps**: Limits reasoning steps for cost control
+5. **Streaming**: Returns real-time response stream
+
+### Chat Endpoint Handler
+
+```typescript
+app.post("/agent/chat/:sessionId?", async (c) => {
+  const sessionId = c.req.param("sessionId") || crypto.randomUUID();
+  const body = await c.req.json<AIUISDKMessage>();
+
+  // Get Durable Object instance for this session
+  const id = c.env.SIMPLE_PROMPT_AGENT.idFromName(sessionId);
+  const stub = c.env.SIMPLE_PROMPT_AGENT.get(id);
+
+  // Process the message through the agent
+  return await stub.processMessage(sessionId, body);
+});
+```
+
+**Endpoint Logic:**
+1. **Session Management**: Creates new session ID if none provided
+2. **Request Parsing**: Extracts JSON message payload
+3. **Durable Object Lookup**: Gets or creates session-specific agent instance
+4. **Message Processing**: Forwards request to agent for handling
+
+### Durable Object Export
+
+```typescript
+export { SimplePromptAgent };
+
+export default {
+  fetch: app.fetch,
+} satisfies ExportedHandler<Env>;
+```
+
+This exports the agent class and the main fetch handler for Cloudflare Workers.
+
+## Usage Examples
+
+### Basic Chat Interaction
+
+**Start a new conversation:**
+
+```bash
+curl -X POST https://your-worker.workers.dev/agent/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {
+        "role": "user",
+        "content": "What is quantum computing?"
+      }
+    ]
+  }'
+```
+
+**Continue existing conversation:**
+
+```bash
+curl -X POST https://your-worker.workers.dev/agent/chat/session-123 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {
+        "role": "user", 
+        "content": "What is quantum computing?"
+      },
+      {
+        "role": "assistant",
+        "content": "Quantum computing is a revolutionary approach..."
+      },
+      {
+        "role": "user",
+        "content": "Can you give me a simple analogy?"
+      }
+    ]
+  }'
+```
+
+### JavaScript Client Implementation
+
+```typescript
+class AgentClient {
+  constructor(private baseUrl: string) {}
+
+  async sendMessage(message: string, sessionId?: string): Promise<ReadableStream> {
+    const url = sessionId 
+      ? `${this.baseUrl}/agent/chat/${sessionId}` 
+      : `${this.baseUrl}/agent/chat`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: message }],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.body!;
+  }
+
+  async *streamResponse(stream: ReadableStream): AsyncGenerator<string> {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        yield decoder.decode(value, { stream: true });
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+}
+
+// Usage
+const client = new AgentClient("https://your-worker.workers.dev");
+const stream = await client.sendMessage("Hello!", "my-session");
+
+for await (const chunk of client.streamResponse(stream)) {
+  console.log(chunk); // Process streaming response
+}
+```
+
+### React Hook Integration
+
+```typescript
+import { useState, useCallback } from "react";
+
+interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export function useAgent(baseUrl: string) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => crypto.randomUUID());
+
+  const sendMessage = useCallback(async (content: string) => {
+    const userMessage: Message = { role: "user", content };
+    setMessages(prev => [...prev, userMessage]);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${baseUrl}/agent/chat/${sessionId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: [...messages, userMessage] }),
+      });
+
+      if (!response.ok) throw new Error("Failed to send message");
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = "";
+
+      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        assistantMessage += chunk;
+
+        setMessages(prev => [
+          ...prev.slice(0, -1), 
+          { role: "assistant", content: assistantMessage }
+        ]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [baseUrl, sessionId, messages]);
+
+  return { messages, sendMessage, isLoading, sessionId };
+}
+```
+
+## Customization Options
+
+### 1. Modify Agent Personality
+
+```typescript
+async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+  const result = await this.streamText(sessionId, {
+    model: this.model,
+    system: `You are a specialized coding assistant. 
+             Always provide code examples and explain complex concepts simply.
+             Be encouraging and patient with beginners.`,
+    messages: messages.messages,
+    maxSteps: 10,
+  });
+
+  return result.toDataStreamResponse();
+}
+```
+
+### 2. Add MCP Tools
+
+```typescript
+import { ToolboxService } from "@nullshot/agent/services";
+
+class SimplePromptAgent extends SimplePromptAgent<Env> {
+  constructor(state: DurableObjectState, env: Env, model: any) {
+    super(state, env, model, [
+      new ToolboxService(env, mcpConfig), // Enable MCP toolbox
+    ]);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<Response> {
+    const result = await this.streamText(sessionId, {
+      model: this.model,
+      system: 'You are a helpful AI assistant with access to tools.',
+      messages: messages.messages,
+      maxSteps: 10,
+      experimental_toolCallStreaming: true, // Enable tool streaming
+    });
+
+    return result.toDataStreamResponse();
+  }
+}
+```
+
+### 3. Environment Configuration
+
+Update your `wrangler.jsonc`:
+
+```json
+{
+  "name": "my-agent",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-19",
+  "vars": {
+    "AI_PROVIDER": "anthropic"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SIMPLE_PROMPT_AGENT",
+        "class_name": "SimplePromptAgent",
+        "script_name": "my-agent"
+      }
+    ]
+  }
+}
+```
+
+## Deployment
+
+### Deploy to Production
+
+```bash
+# Deploy to Cloudflare Workers
+pnpm deploy
+
+# View deployment logs
+npx wrangler tail
+```
+
+### Environment Variables
+
+Set these as Cloudflare Workers secrets:
+
+```bash
+# Required: Anthropic API key
+npx wrangler secret put ANTHROPIC_API_KEY
+
+# Optional: Custom model configuration
+npx wrangler secret put ANTHROPIC_MODEL # defaults to claude-3-haiku-20240307
+```
+
+## Next Steps
+
+Now that you have a working agent, explore these advanced features:
+
+1. **[Sessions](/docs/developers/agents-framework/sessions)**: Deep dive into session handling and state management
+2. **[AI SDK Integration](/docs/developers/agents-framework/ai-sdk)**: Advanced AI provider configurations and tool calling
+3. **[MCP Tools](/docs/developers/agents-framework/agent-sdk)**: Add external capabilities to your agents
+4. **[Middleware](/docs/developers/agents-framework/middleware)**: Custom request/response processing
+
+## Troubleshooting
+
+### Common Issues
+
+**Agent not responding:**
+- Check your Anthropic API key is set correctly
+- Verify the `wrangler.jsonc` configuration
+- Review Cloudflare Workers logs with `npx wrangler tail`
+
+**CORS errors:**
+- Ensure CORS is enabled for your routes
+- Check your client's origin is allowed
+
+**Session state lost:**
+- Verify Durable Objects are properly configured
+- Check session ID consistency in your client
+
+### Getting Help
+
+- **Documentation**: Comprehensive guides and API references
+- **GitHub Issues**: Report bugs and request features
+- **Discord Community**: Real-time support and discussions
+
+---
+
+You've successfully built your first AI agent! The Simple Prompt Agent demonstrates the core concepts of the TypeScript Agent Framework while providing a solid foundation for more complex implementations. 

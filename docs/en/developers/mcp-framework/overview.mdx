@@ -1,0 +1,129 @@
+export const metadata = {
+  "title": "Overview",
+  "description": "Understanding Model Context Protocol (MCP) - The new API standard for LLMs"
+};
+
+**Model Context Protocol (MCP) is revolutionizing how AI agents interact with external systems.** Think of MCP tools as the new APIs for LLMs - instead of agents making raw HTTP calls, they use standardized, type-safe tools that understand context and provide structured interactions.
+
+## What is Model Context Protocol (MCP)?
+
+Model Context Protocol is an open standard that enables seamless integration between AI assistants and external tools, data sources, and services. It provides a unified way for Large Language Models to interact with the world beyond their training data.
+
+### The Problem MCP Solves
+
+Before MCP, AI agents faced several challenges:
+
+- **Fragmented Integrations**: Each service required custom integration code
+- **No Standardization**: Every API had different patterns and authentication methods  
+- **Limited Context**: Agents couldn't maintain context across different tool interactions
+- **Type Safety Issues**: No guarantee that tool calls would work correctly
+
+### MCP as the New API Standard
+
+MCP tools are fundamentally different from traditional APIs:
+
+```typescript
+// ❌ Traditional API: Raw HTTP calls, no context, error-prone
+const response = await fetch('https://api.weather.com/current', {
+  headers: { 'Authorization': `Bearer ${token}` },
+  method: 'GET'
+});
+const weather = await response.json(); // Hope it works!
+
+// ✅ MCP Tool: Informs AI models how to get the weather, and provides logic to do so!
+mcpServer.tool(
+  'get_weater',
+  'Get the current weather in a given city',
+  {
+    city: z.string().describe('City'),
+  },       
+  async ({ city }: { 
+    city: string; 
+  }) => {
+    // Business logic for getting weather
+  }
+)
+```
+
+## Core MCP Concepts
+
+### Tools vs Resources vs Prompts
+
+MCP provides three main interaction patterns:
+
+**🔧 Tools** - Functions that agents can execute
+```typescript
+// Example: File operations, API calls, calculations
+await mcp.call('create-file', { path: '/docs/readme.md', content: 'Hello World' });
+```
+
+**📚 Resources** - Data sources that agents can read
+```typescript  
+// Example: Files, databases, documentation
+const content = await mcp.read('file:///workspace/config.json');
+```
+
+**💭 Prompts** - Pre-defined prompt templates
+```typescript
+// Example: Code review, analysis templates  
+const prompt = await mcp.getPrompt('code-review', { language: 'typescript' });
+```
+
+### Why MCP Tools Are Revolutionary
+
+#### 1. **Context Awareness**
+Traditional APIs are stateless. MCP tools understand the conversation context and maintain state across interactions.
+
+#### 2. **Type Safety**
+Every MCP tool comes with schema validation, ensuring agents call tools correctly every time.
+
+#### 3. **Composability**
+MCP tools can work together seamlessly, enabling complex workflows through simple tool chaining.
+
+#### 4. **Universal Standard**
+One protocol works across all AI models and platforms - no vendor lock-in.
+
+## MCP Servers
+MCP Servers expose tools, resources, and prompts to AI agents. They act as bridges between the standardized MCP protocol and specific services or data sources.
+
+## MCP Clients  
+MCP Clients (like our TypeScript Agent Framework [Toolbox](/en/docs/developers/services/toolbox)) consume MCP servers and make their capabilities available to AI models.
+
+## Benefits of MCP
+
+### For Developers
+- **Rapid Development**: Build tools once, use everywhere
+- **Type Safety**: Full TypeScript support with compile-time validation
+- **Ecosystem**: Leverage existing MCP servers from the community
+- **Testability**: Tools are easily unit tested and debugged
+
+### For AI Agents
+- **Reliability**: Structured interactions with guaranteed schemas
+- **Capability**: Access to unlimited external functionality  
+- **Context**: Maintain state and context across tool calls
+- **Composability**: Chain tools together for complex operations
+
+## The MCP Ecosystem
+
+The MCP ecosystem is rapidly growing with servers for:
+
+- **Development Tools**: Git, Docker, package managers
+- **Cloud Services**: AWS, Azure, Google Cloud
+- **Databases**: PostgreSQL, MongoDB, Redis
+- **APIs**: Slack, GitHub, Stripe, OpenAI
+- **File Systems**: Local files, cloud storage
+- **Monitoring**: Metrics, logs, alerts
+
+## Getting Started
+
+Ready to build your first MCP server? Our **[Getting Started](/en/developers/mcp-framework/getting-started)** guide walks you through creating a complete MCP server with real tools, from setup to deployment.
+
+## Next Steps
+
+- **[Getting Started](/en/developers/mcp-framework/getting-started)** - Build your first MCP server
+- **[Agent Framework](/en/developers/agents-framework/overview)** - Integrate MCP tools with AI agents  
+- **[Platform Services](/en/developers/platform/overview)** - Backend services for MCP servers
+
+---
+
+*MCP is transforming how AI agents interact with the world. Join the revolution and build the tools that will power the next generation of AI applications.* 

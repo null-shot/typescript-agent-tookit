@@ -1,0 +1,895 @@
+export const metadata = {
+  "title": "Analytics Engine",
+  "description": "Time-series data storage for agent performance metrics, billing, and insights"
+};
+
+**Turn your agent data into actionable insights.** Analytics Engine is a time-series database optimized for storing and querying metrics at massive scale. Perfect for tracking agent performance, user engagement, billing data, trading data, and generating real-time dashboards.
+
+## Key Features
+
+- **Time-Series Optimized**: Built for high-frequency metric ingestion with 90 day retention
+- **SQL Querying**: Use familiar SQL to analyze your data
+- **Real-Time Analytics**: Query data as soon as it's written
+- **Cost Effective**: Pay only for data points written, not storage
+- **Global Distribution**: Data available worldwide with low latency
+
+*NOTE: If you are looking for longer storage retention, consider [SQL Database](/en/developers/platform/d1-database) combined with caching techniques to achieve similar results.*
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add analytics in your `wrangler.json`:
+
+```json
+{
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "agent_metrics"
+    }
+  ]
+}
+```
+
+### Agent Integration
+
+Access analytics through your agent's environment and start tracking basic metrics:
+
+```typescript
+// src/agents/AnalyticsAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class AnalyticsAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+  
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { ANALYTICS } = this.env;
+    const startTime = Date.now();
+    
+    // Track message received
+    await ANALYTICS.writeDataPoint('agent_metrics', {
+      dimensions: {
+        agentId: 'analytics-demo',
+        userId: message.userId,
+        messageType: 'user_message'
+      },
+      metrics: {
+        messages_received: 1,
+        message_length: message.content.length
+      }
+    });
+    
+    // Process the message
+    const response = await this.generateResponse(message.content);
+    const processingTime = Date.now() - startTime;
+    
+    // Track processing metrics
+    await ANALYTICS.writeDataPoint('agent_metrics', {
+      dimensions: {
+        agentId: 'analytics-demo',
+        userId: message.userId,
+        success: 'true'
+      },
+      metrics: {
+        processing_time_ms: processingTime,
+        responses_generated: 1
+      }
+    });
+    
+    return { message: response };
+  }
+}
+```
+
+### Basic Query Example
+
+Query your analytics data using SQL to extract meaningful insights:
+
+```typescript
+// Query recent performance metrics
+async function getRecentMetrics(analytics: Analytics): Promise<any[]> {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  
+  const query = `
+    SELECT 
+      agentId,
+      COUNT(*) as total_messages,
+      AVG(processing_time_ms) as avg_processing_time
+    FROM agent_metrics 
+    WHERE timestamp >= ${oneHourAgo}
+      AND success = 'true'
+    GROUP BY agentId
+    ORDER BY total_messages DESC
+  `;
+  
+  const result = await analytics.query(query);
+  return result.data;
+}
+```
+
+### MCP Integration
+
+```typescript
+// src/mcp/AnalyticsMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class AnalyticsMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'track-event': async ({ event, dimensions, metrics }: { 
+        event: string; 
+        dimensions?: Record<string, string>; 
+        metrics?: Record<string, number> 
+      }) => {
+        const { ANALYTICS } = this.env;
+        
+        await ANALYTICS.writeDataPoint('mcp_events', {
+          dimensions: {
+            event_type: event,
+            source: 'mcp-server',
+            ...dimensions
+          },
+          metrics: {
+            event_count: 1,
+            ...metrics
+          }
+        });
+        
+        return {
+          success: true,
+          message: `Tracked event: ${event}`,
+          timestamp: Date.now()
+        };
+      },
+      
+      'query-metrics': async ({ sql }: { sql: string }) => {
+        const { ANALYTICS } = this.env;
+        
+        const result = await ANALYTICS.query(sql);
+        return {
+          success: true,
+          data: result.data,
+          rowCount: result.data.length
+        };
+      }
+    };
+  }
+}
+```
+
+## TypeScript API Reference
+
+You can access the analytics API via the `env` of the **Agent** or **MCP Tool**:
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+function example() {
+  // ANALYTICS can be named to anything and equals the binding in wrangler.json
+  const { ANALYTICS } = this.env;
+}
+```
+
+### Data Writing Methods
+
+**`writeDataPoint(dataset: string, data: AnalyticsDataPoint): Promise<void>`**  
+Writes a single data point to the specified dataset. Use for individual events or metrics.
+
+**`writeDataPoints(dataset: string, data: AnalyticsDataPoint[]): Promise<void>`**  
+Writes multiple data points in a single batch operation. More efficient for bulk data ingestion.
+
+### Query Methods
+
+**`query(sql: string): Promise<AnalyticsQueryResult>`**  
+Executes a SQL query against your analytics data. Returns structured results with metadata.
+
+**`getMetrics(dataset: string, options: MetricsOptions): Promise<MetricsResult>`**  
+Predefined query helper for common metric aggregations with time ranges and grouping.
+
+**`getTimeSeries(dataset: string, metric: string, options: TimeSeriesOptions): Promise<TimeSeriesResult>`**  
+Specialized query for time-series data with automatic interval bucketing.
+
+### Data Structures
+
+```typescript
+interface AnalyticsDataPoint {
+  // Required fields
+  timestamp?: number;           // Unix timestamp (defaults to now)
+  
+  // Optional dimensions (for grouping)
+  dimensions?: {
+    userId?: string;
+    agentId?: string;
+    messageType?: string;
+    [key: string]: string | number | boolean;
+  };
+  
+  // Metrics (numeric values)
+  metrics?: {
+    count?: number;
+    duration?: number;
+    tokens?: number;
+    cost?: number;
+    [key: string]: number;
+  };
+}
+
+interface MetricsOptions {
+  timeRange: {
+    start: number;              // Unix timestamp
+    end: number;                // Unix timestamp
+  };
+  dimensions?: string[];        // Group by these dimensions
+  metrics?: string[];           // Include these metrics
+  interval?: string;            // '1m', '5m', '1h', '1d'
+}
+```
+
+## Examples
+
+Each example demonstrates different analytics patterns for monitoring agent performance, billing tracking, A/B testing, and real-time system monitoring.
+
+### Performance Monitoring Agent
+
+Comprehensive agent performance tracking with error handling and user satisfaction metrics:
+
+```typescript
+// Agent that tracks its own performance metrics
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { analytics, memoryStore } = platform;
+  const startTime = Date.now();
+  
+  try {
+    // Step 1: Track incoming message metrics
+    await analytics.writeDataPoint('agent_metrics', {
+      dimensions: {
+        agentId: 'performance-monitor',
+        userId: message.userId,
+        messageType: detectMessageType(message.content), // "question", "command", "chat"
+        source: message.metadata?.source || 'unknown'
+      },
+      metrics: {
+        messages_received: 1,
+        message_length: message.content.length
+      }
+    });
+    
+    // Step 2: Process the message (business logic)
+    const response = await generateResponse(message.content);
+    const processingTime = Date.now() - startTime;
+    
+    // Step 3: Track successful response metrics
+    await analytics.writeDataPoint('agent_metrics', {
+      dimensions: {
+        agentId: 'performance-monitor',
+        userId: message.userId,
+        messageType: detectMessageType(message.content),
+        success: 'true'
+      },
+      metrics: {
+        responses_generated: 1,
+        processing_time_ms: processingTime,
+        response_length: response.length,
+        tokens_consumed: await estimateTokens(message.content + response)
+      }
+    });
+    
+    // Step 4: Track user satisfaction if feedback provided
+    if (message.metadata?.feedback) {
+      await analytics.writeDataPoint('user_satisfaction', {
+        dimensions: {
+          agentId: 'performance-monitor',
+          userId: message.userId,
+          rating: message.metadata.feedback.rating.toString() // "1-5"
+        },
+        metrics: {
+          satisfaction_score: message.metadata.feedback.rating,
+          feedback_count: 1
+        }
+      });
+    }
+    
+    return { message: response };
+    
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    
+    // Step 5: Track error metrics for debugging
+    await analytics.writeDataPoint('agent_metrics', {
+      dimensions: {
+        agentId: 'performance-monitor',
+        userId: message.userId,
+        messageType: detectMessageType(message.content),
+        success: 'false',
+        error_type: error.name || 'unknown' // "TimeoutError", "ValidationError", etc.
+      },
+      metrics: {
+        errors_count: 1,
+        processing_time_ms: processingTime
+      }
+    });
+    
+    throw error;
+  }
+}
+
+// Analytics dashboard query agent
+export async function generatePerformanceReport(
+  timeRange: { start: number; end: number },
+  platform: PlatformServices
+): Promise<PerformanceReport> {
+  const { analytics } = platform;
+  
+  // Query 1: Get overall performance metrics
+  const performanceQuery = `
+    SELECT 
+      agentId,
+      COUNT(*) as total_messages,
+      AVG(processing_time_ms) as avg_processing_time,
+      SUM(CASE WHEN success = 'true' THEN 1 ELSE 0 END) as successful_messages,
+      SUM(CASE WHEN success = 'false' THEN 1 ELSE 0 END) as failed_messages,
+      AVG(tokens_consumed) as avg_tokens
+    FROM agent_metrics 
+    WHERE timestamp >= ${timeRange.start} AND timestamp <= ${timeRange.end}
+    GROUP BY agentId
+    ORDER BY total_messages DESC
+  `;
+  
+  const performance = await analytics.query(performanceQuery);
+  
+  // Query 2: Get hourly message trends
+  const trendsQuery = `
+    SELECT 
+      agentId,
+      toStartOfHour(timestamp) as hour,
+      COUNT(*) as messages_count,
+      AVG(processing_time_ms) as avg_processing_time
+    FROM agent_metrics 
+    WHERE timestamp >= ${timeRange.start} AND timestamp <= ${timeRange.end}
+    GROUP BY agentId, hour
+    ORDER BY hour ASC
+  `;
+  
+  const trends = await analytics.query(trendsQuery);
+  
+  // Query 3: Get user satisfaction scores
+  const satisfactionQuery = `
+    SELECT 
+      agentId,
+      AVG(satisfaction_score) as avg_satisfaction,
+      COUNT(*) as feedback_count
+    FROM user_satisfaction 
+    WHERE timestamp >= ${timeRange.start} AND timestamp <= ${timeRange.end}
+    GROUP BY agentId
+  `;
+  
+  const satisfaction = await analytics.query(satisfactionQuery);
+  
+  return {
+    performance: performance.data,
+    trends: trends.data,
+    satisfaction: satisfaction.data,
+    generatedAt: Date.now()
+  };
+}
+```
+
+### Usage-Based Billing Agent
+
+Track detailed resource usage and implement billing alerts for cost management:
+
+```typescript
+// Agent that tracks usage for billing purposes
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { analytics, memoryStore } = platform;
+  
+  // Step 1: Get user's current billing plan
+  const userPlan = await getUserBillingPlan(message.userId); // "free", "pro", "enterprise"
+  const startTime = Date.now();
+  
+  // Step 2: Track API call event
+  await analytics.writeDataPoint('billing_events', {
+    dimensions: {
+      userId: message.userId,
+      plan: userPlan.tier,
+      feature: 'message_processing',
+      agent_type: 'billing-tracker'
+    },
+    metrics: {
+      api_calls: 1,
+      base_cost: userPlan.costPerMessage // $0.01, $0.005, etc.
+    }
+  });
+  
+  // Step 3: Process message and measure resource consumption
+  const response = await generateResponse(message.content);
+  const processingTime = Date.now() - startTime;
+  const tokensUsed = await estimateTokens(message.content + response);
+  
+  // Step 4: Calculate detailed costs based on usage
+  const costs = calculateUsageCosts({
+    tokensUsed,
+    processingTime,
+    plan: userPlan
+  });
+  
+  // Step 5: Track detailed usage metrics for billing
+  await analytics.writeDataPoint('usage_metrics', {
+    dimensions: {
+      userId: message.userId,
+      plan: userPlan.tier,
+      model: 'gpt-4', // LLM model used
+      feature: 'text_generation'
+    },
+    metrics: {
+      tokens_consumed: tokensUsed,
+      processing_time_ms: processingTime,
+      compute_cost: costs.compute,    // CPU/GPU costs
+      token_cost: costs.tokens,       // LLM API costs  
+      total_cost: costs.total
+    }
+  });
+  
+  // Step 6: Check for billing alerts (80% threshold)
+  const monthlyUsage = await getMonthlyUsage(message.userId);
+  if (monthlyUsage.cost > userPlan.monthlyLimit * 0.8) {
+    await analytics.writeDataPoint('billing_alerts', {
+      dimensions: {
+        userId: message.userId,
+        alert_type: 'usage_warning',
+        plan: userPlan.tier
+      },
+      metrics: {
+        usage_percentage: (monthlyUsage.cost / userPlan.monthlyLimit) * 100,
+        remaining_budget: userPlan.monthlyLimit - monthlyUsage.cost
+      }
+    });
+    
+    // Send notification to user
+    await sendBillingAlert(message.userId, {
+      type: 'usage_warning',
+      currentUsage: monthlyUsage.cost,
+      limit: userPlan.monthlyLimit,
+      percentage: (monthlyUsage.cost / userPlan.monthlyLimit) * 100
+    });
+  }
+  
+  return { message: response };
+}
+```
+
+### A/B Testing Analytics Agent
+
+Run experiments and analyze statistical significance of different agent variants:
+
+```typescript
+// Agent that runs A/B tests and tracks results
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { analytics, memoryStore } = platform;
+  
+  // Step 1: Determine which test variants to use
+  const activeTests = await getActiveTests(); // ["response_style_test", "greeting_test"]
+  const userVariants = await assignTestVariants(message.userId, activeTests);
+  // Example: { "response_style_test": "formal", "greeting_test": "friendly" }
+  
+  const startTime = Date.now();
+  
+  // Step 2: Track test exposure events
+  for (const [testId, variant] of Object.entries(userVariants)) {
+    await analytics.writeDataPoint('ab_test_exposure', {
+      dimensions: {
+        test_id: testId,
+        variant: variant, // "control", "variant_a", "variant_b"
+        userId: message.userId,
+        messageType: detectMessageType(message.content)
+      },
+      metrics: {
+        exposures: 1
+      }
+    });
+  }
+  
+  // Step 3: Generate response using assigned test variants
+  const response = await generateResponseWithVariants(message.content, userVariants);
+  const processingTime = Date.now() - startTime;
+  
+  // Step 4: Track response metrics for each active test
+  for (const [testId, variant] of Object.entries(userVariants)) {
+    await analytics.writeDataPoint('ab_test_metrics', {
+      dimensions: {
+        test_id: testId,
+        variant: variant,
+        userId: message.userId,
+        success: 'true'
+      },
+      metrics: {
+        response_time_ms: processingTime,
+        response_length: response.length,
+        responses: 1
+      }
+    });
+  }
+  
+  return { 
+    message: response,
+    actions: [{
+      type: 'ab_test_tracking',
+      data: { userVariants, processingTime }
+    }]
+  };
+}
+```
+
+### Real-Time Monitoring Agent
+
+Monitor system health with automatic anomaly detection and alerting:
+
+```typescript
+// Agent that monitors system health and alerts
+export async function processMessage(
+  sessionId: string, messages: AIUISDKMessage,
+  platform: PlatformServices
+): Promise<AgentResponse> {
+  const { analytics } = platform;
+  
+  // Step 1: Collect current system health metrics
+  const healthMetrics = await collectSystemHealthMetrics();
+  // Returns: { cpu: 45.2, memory: 78.1, connections: 150, queueDepth: 5, errorRate: 0.02 }
+  
+  // Step 2: Write system metrics to multiple datasets
+  await analytics.writeDataPoints('system_health', [
+    {
+      dimensions: {
+        service: 'message_processing',
+        region: 'global',
+        environment: 'production'
+      },
+      metrics: {
+        cpu_usage: healthMetrics.cpu,
+        memory_usage: healthMetrics.memory,
+        active_connections: healthMetrics.connections,
+        queue_depth: healthMetrics.queueDepth,
+        error_rate: healthMetrics.errorRate
+      }
+    },
+    {
+      dimensions: {
+        service: 'storage',
+        region: 'global',
+        environment: 'production'
+      },
+      metrics: {
+        storage_usage: healthMetrics.storageUsage,
+        read_latency: healthMetrics.readLatency,    // milliseconds
+        write_latency: healthMetrics.writeLatency,  // milliseconds
+        throughput: healthMetrics.throughput        // requests per second
+      }
+    }
+  ]);
+  
+  // Step 3: Run anomaly detection algorithms
+  const anomalies = await detectAnomalies(healthMetrics);
+  // Returns: [{ type: 'high_cpu', severity: 'warning', value: 95.2, threshold: 80 }]
+  
+  if (anomalies.length > 0) {
+    // Step 4: Track alert events
+    for (const anomaly of anomalies) {
+      await analytics.writeDataPoint('system_alerts', {
+        dimensions: {
+          alert_type: anomaly.type,        // "high_cpu", "memory_leak", "queue_backup"
+          severity: anomaly.severity,      // "info", "warning", "critical"
+          service: anomaly.service
+        },
+        metrics: {
+          alert_count: 1,
+          value: anomaly.value,
+          threshold: anomaly.threshold
+        }
+      });
+    }
+    
+    // Step 5: Send alerts to operations team
+    await sendOperationalAlert({
+      anomalies,
+      timestamp: Date.now(),
+      systemMetrics: healthMetrics
+    });
+    
+    return {
+      message: `System health check complete. ${anomalies.length} anomalies detected and alerts sent.`,
+      actions: anomalies.map(a => ({
+        type: 'anomaly_detected',
+        data: a
+      }))
+    };
+  }
+  
+  return {
+    message: "System health check complete. All metrics within normal ranges."
+  };
+}
+
+// Real-time dashboard data aggregation
+async function getDashboardData(platform: PlatformServices): Promise<DashboardData> {
+  const { analytics } = platform;
+  
+  const now = Date.now();
+  const oneHourAgo = now - (60 * 60 * 1000);
+  
+  // Query 1: Current system status (last 5 minutes)
+  const currentMetrics = await analytics.query(`
+    SELECT 
+      AVG(cpu_usage) as avg_cpu,
+      AVG(memory_usage) as avg_memory,
+      MAX(queue_depth) as max_queue_depth,
+      AVG(error_rate) as avg_error_rate,
+      COUNT(*) as metric_count
+    FROM system_health 
+    WHERE timestamp >= ${now - 300000} -- Last 5 minutes
+      AND service = 'message_processing'
+  `);
+  
+  // Query 2: Hourly trends for charts
+  const hourlyTrends = await analytics.query(`
+    SELECT 
+      toStartOfMinute(timestamp) as minute,
+      AVG(cpu_usage) as cpu,
+      AVG(memory_usage) as memory,
+      AVG(error_rate) as error_rate
+    FROM system_health 
+    WHERE timestamp >= ${oneHourAgo}
+      AND service = 'message_processing'
+    GROUP BY minute
+    ORDER BY minute ASC
+  `);
+  
+  // Query 3: Active alerts summary
+  const activeAlerts = await analytics.query(`
+    SELECT 
+      alert_type,
+      severity,
+      COUNT(*) as count,
+      MAX(timestamp) as last_occurrence
+    FROM system_alerts 
+    WHERE timestamp >= ${oneHourAgo}
+    GROUP BY alert_type, severity
+    ORDER BY count DESC
+  `);
+  
+  return {
+    current: currentMetrics.data[0],
+    trends: hourlyTrends.data,
+    alerts: activeAlerts.data,
+    lastUpdated: now
+  };
+}
+```
+
+## Best Practices
+
+Follow these patterns for optimal analytics performance and maintainability. Use consistent naming conventions and batch operations when possible.
+
+### Efficient Data Modeling
+
+Choose appropriate dimension cardinality and use consistent naming conventions to optimize query performance and storage costs.
+
+```typescript
+// ✅ Good: Use consistent dimension names and optimize for queries
+const standardDimensions = {
+  userId: message.userId,
+  agentId: 'my-agent',
+  environment: 'production',
+  version: '1.0.0'
+};
+
+// ✅ Good: Batch data points for better performance
+const dataPoints = messages.map(msg => ({
+  dimensions: {
+    ...standardDimensions,
+    messageType: detectType(msg.content)
+  },
+  metrics: {
+    processing_time: msg.processingTime,
+    tokens_used: msg.tokensUsed
+  }
+}));
+
+await analytics.writeDataPoints('agent_metrics', dataPoints);
+
+// ❌ Bad: Inconsistent dimension names
+await analytics.writeDataPoint('metrics', {
+  dimensions: {
+    user_id: 'user1',        // Inconsistent naming
+    agent: 'my-agent',       // Missing 'Id' suffix
+    env: 'prod',            // Abbreviation instead of full name
+    ver: '1.0'              // Different naming pattern
+  }
+});
+
+// ❌ Bad: High cardinality dimensions (too many unique values)
+await analytics.writeDataPoint('metrics', {
+  dimensions: {
+    userId: message.userId,
+    timestamp: Date.now().toString(),  // Unique for every event
+    messageContent: message.content,   // Potentially unlimited values
+    sessionId: generateUUID()          // High cardinality
+  }
+});
+
+// ❌ Bad: Individual writes instead of batching
+for (const msg of messages) {
+  await analytics.writeDataPoint('metrics', { /* data */ }); // Multiple network calls
+}
+```
+
+### Query Optimization
+
+Write efficient SQL queries that filter early and use appropriate aggregations to minimize data transfer and processing time.
+
+```typescript
+// ✅ Good: Use time range filters and appropriate aggregations
+const optimizedQuery = `
+  SELECT 
+    agentId,
+    toStartOfHour(timestamp) as hour,
+    COUNT(*) as message_count,
+    AVG(processing_time) as avg_processing_time
+  FROM agent_metrics 
+  WHERE timestamp >= ${startTime} 
+    AND timestamp <= ${endTime}
+    AND agentId IN ('agent1', 'agent2') -- Filter early
+  GROUP BY agentId, hour
+  ORDER BY hour ASC
+  LIMIT 1000
+`;
+
+// ✅ Good: Use CTEs for complex queries
+const complexQuery = `
+  WITH recent_data AS (
+    SELECT agentId, processing_time 
+    FROM agent_metrics 
+    WHERE timestamp >= ${oneHourAgo}
+  ),
+  aggregated AS (
+    SELECT 
+      agentId,
+      AVG(processing_time) as avg_time,
+      COUNT(*) as total_count
+    FROM recent_data
+    GROUP BY agentId
+  )
+  SELECT * FROM aggregated 
+  WHERE total_count > 10
+`;
+
+// ❌ Bad: No time range filters
+const badQuery = `
+  SELECT * FROM agent_metrics  -- Scans entire dataset
+  WHERE agentId = 'my-agent'
+  ORDER BY timestamp DESC
+`;
+
+// ❌ Bad: Inefficient aggregations
+const inefficientQuery = `
+  SELECT 
+    userId,
+    agentId,
+    timestamp,
+    processing_time
+  FROM agent_metrics 
+  WHERE timestamp >= ${startTime}
+  -- No aggregation, returns raw data
+`;
+
+// ❌ Bad: Missing LIMIT causes large result sets
+const unlimitedQuery = `
+  SELECT * FROM agent_metrics 
+  WHERE timestamp >= ${startTime}
+  -- No LIMIT, could return millions of rows
+`;
+```
+
+### Error Handling
+
+Implement graceful error handling to ensure analytics failures don't break your main application flow.
+
+```typescript
+// ✅ Good: Handle analytics failures gracefully
+async function safeWriteMetrics(analytics: Analytics, dataset: string, data: AnalyticsDataPoint) {
+  try {
+    await analytics.writeDataPoint(dataset, data);
+  } catch (error) {
+    console.error('Analytics write failed:', error);
+    // Don't fail the main operation
+  }
+}
+
+// ✅ Good: Retry logic for transient failures
+async function writeMetricsWithRetry(analytics: Analytics, dataset: string, data: AnalyticsDataPoint) {
+  const maxRetries = 3;
+  let attempt = 0;
+  
+  while (attempt < maxRetries) {
+    try {
+      await analytics.writeDataPoint(dataset, data);
+      return; // Success
+    } catch (error) {
+      attempt++;
+      if (attempt >= maxRetries) {
+        console.error(`Analytics write failed after ${maxRetries} attempts:`, error);
+        return; // Give up gracefully
+      }
+      
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+    }
+  }
+}
+
+// ✅ Good: Validate data before writing
+async function validateAndWrite(analytics: Analytics, dataset: string, data: AnalyticsDataPoint) {
+  // Check required fields
+  if (!data.dimensions?.agentId) {
+    console.warn('Missing required agentId dimension');
+    return;
+  }
+  
+  // Validate dimension cardinality
+  if (Object.keys(data.dimensions).length > 20) {
+    console.warn('Too many dimensions, truncating');
+    data.dimensions = Object.fromEntries(
+      Object.entries(data.dimensions).slice(0, 20)
+    );
+  }
+  
+  await safeWriteMetrics(analytics, dataset, data);
+}
+
+// ❌ Bad: Let analytics failures break main functionality
+async function processMessage(sessionId: string, messages: AIUISDKMessage) {
+  // Main business logic
+  const response = await generateResponse(message.content);
+  
+  // This could break the entire function
+  await analytics.writeDataPoint('metrics', {
+    dimensions: { userId: message.userId }
+  });
+  
+  return response;
+}
+
+// ❌ Bad: No error handling or validation
+await analytics.writeDataPoint('metrics', {
+  dimensions: null,  // Could cause errors
+  metrics: undefined // Invalid data
+});
+```
+
+## Limitations & Considerations
+
+- **Data Point Size**: Maximum 25 fields per data point
+- **String Length**: Maximum 256 characters per string field
+- **Write Rate**: Up to 25,000 data points per minute per dataset
+- **Retention**: Data retained for 3 months by default
+- **Query Complexity**: Limited to 1000 result rows per query
+
+## Related Services
+
+- **[Memory Store (KV)](/en/developers/platform/memory-store)** - Store analytics configurations and cache query results
+- **[Queues](/en/developers/platform/queues)** - Buffer high-volume analytics data
+- **[Logs](/en/developers/platform/logs)** - Detailed debugging information to complement metrics 

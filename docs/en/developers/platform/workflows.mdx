@@ -1,0 +1,957 @@
+export const metadata = {
+  "title": "Workflows",
+  "description": "Orchestrate complex multi-step agent processes with durable execution"
+};
+
+**Orchestrate complex multi-agent processes that never fail.** Cloudflare Workflows enables your AI agents to execute long-running, multi-step processes with guaranteed completion, automatic retries, and durable state management. Perfect for complex tasks that involve multiple agents, external APIs, and time-based operations.
+
+## Key Features
+
+- **Durable Execution**: Workflows survive outages and continue from where they left off
+- **Automatic Retries**: Failed steps are automatically retried with exponential backoff
+- **Visual Debugging**: Track workflow execution in real-time through the dashboard
+- **Type Safety**: Full TypeScript support with compile-time validation
+- **Global Scale**: Workflows run on Cloudflare's edge network worldwide
+
+## Getting Started
+
+### Wrangler Configuration
+
+First, add workflows in your `wrangler.json`:
+
+```json
+{
+  "workflows": [
+    {
+      "binding": "WORKFLOWS",
+      "class_name": "HelloWorldWorkflow"
+    }
+  ]
+}
+```
+
+### Hello World Workflow
+
+Create a simple workflow that runs every 60 seconds:
+
+```typescript
+// src/workflows/HelloWorldWorkflow.ts
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+
+export class HelloWorldWorkflow extends WorkflowEntrypoint<Env, { message?: string }> {
+  async run(
+    event: WorkflowEvent<{ message?: string }>,
+    step: WorkflowStep
+  ): Promise<string> {
+    const { message } = event.payload;
+    
+    // Step 1: Log the start
+    await step.do('log_start', async () => {
+      console.log('Hello World workflow started!');
+      return { startedAt: Date.now() };
+    });
+    
+    // Step 2: Wait 60 seconds
+    await step.sleep('wait_60_seconds', '60 seconds');
+    
+    // Step 3: Process the hello world message
+    const result = await step.do('process_message', async () => {
+      const processedMessage = message || 'Hello, World!';
+      return {
+        processedMessage: `Processed: ${processedMessage}`,
+        timestamp: Date.now()
+      };
+    });
+    
+    return result.processedMessage;
+  }
+}
+```
+
+### Agent Integration
+
+Start the workflow from your agent class:
+
+```typescript
+// src/agents/HelloWorldAgent.ts
+import { AiAgentSDK } from '@typescript-agent-framework/core';
+
+export class HelloWorldAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+    // Start the hello world workflow when agent initializes
+    this.initializeWorkflows();
+  }
+  
+  private async initializeWorkflows() {
+    const { WORKFLOWS } = this.env;
+    
+    // Start the hello world workflow
+    const workflowResult = await WORKFLOWS.create({
+      id: 'hello-world-1',
+      params: {
+        message: 'Hello from agent initialization!',
+        startedAt: Date.now()
+      }
+    });
+    
+    console.log(`Hello World workflow started: ${workflowResult.id}`);
+  }
+}
+```
+
+### MCP Integration
+
+Workflows are powerful tools to run complex durable tasks for MCP Tools.
+
+```typescript
+// src/mcp/WorkflowMCPServer.ts
+import { MCPServerDO } from '@typescript-agent-framework/mcp';
+
+export class WorkflowMCPServer extends MCPServerDO<Env> {
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+  }
+
+  protected configureServer() {
+    return {
+      'launch-workflow': async ({ message }: { message: string }) => {
+        const { WORKFLOWS } = this.env;
+        
+        // Start the Hello World workflow with the message
+        const workflowResult = await WORKFLOWS.create({
+          id: `mcp-workflow-${Date.now()}`,
+          params: {
+            message,
+            launchedBy: 'mcp-server',
+            launchedAt: Date.now()
+          }
+        });
+        
+        return {
+          success: true,
+          workflowId: workflowResult.id,
+          message: `Launched Hello World workflow with message: "${message}"`,
+          status: 'started'
+        };
+      }
+    };
+  }
+}
+
+// Export the Durable Object class
+export { WorkflowMCPServer };
+
+// Wrangler configuration for the MCP server
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Handle MCP server requests
+    const id = env.WORKFLOW_MCP_SERVER.idFromName('workflow-mcp');
+    const obj = env.WORKFLOW_MCP_SERVER.get(id);
+    return obj.fetch(request);
+  }
+};
+```
+
+## TypeScript API Reference
+
+You can access the workflow api via the `env` of the **Agent** or **MCP Tool**
+
+```typescript
+// Example function that resides within any Agent or MCP Tool
+func example() {
+  // WORKFLOWS can be named to anything and equals the "binding" sent in wrangler.json
+  const { WORKFLOWS } = this.env;
+}
+```
+
+### Workflow Management
+
+**`create(options: { id: string, params: any }): Promise<WorkflowInstance>`**  
+Creates a new workflow instance with the specified parameters. Returns a workflow instance with unique ID that can be used for tracking and management.
+
+**`createBatch(batch: Array<{ id: string, params: any }>): Promise<WorkflowInstance[]>`**  
+Creates multiple workflow instances in a single API call for improved efficiency. Can create up to 100 instances at once. Returns an array of workflow instances. This is the preferred method when creating multiple workflows simultaneously as it reduces API call overhead and improves throughput.
+
+**`get(workflowId: string): Promise<WorkflowInstance>`**  
+Retrieves an existing workflow instance by ID for status checking and event sending.
+
+**`pause(workflowId: string): Promise<void>`**  
+Pauses a running workflow instance. The workflow will stop execution and can be resumed later.
+
+**`resume(workflowId: string): Promise<void>`**  
+Resumes a paused workflow instance from where it left off.
+
+**`terminate(workflowId: string): Promise<void>`**  
+Terminates a running workflow instance permanently. The workflow will stop execution and cannot be resumed.
+
+### Step Execution Methods
+
+**`step.do(stepName: string, handler: Function): Promise<any>`**  
+Executes a single step in your workflow. Steps are automatically checkpointed, so if the workflow fails, it resumes from the last completed step.
+
+**`step.sleep(stepName: string, duration: string | number): Promise<void>`**  
+Pauses workflow execution for the specified duration. Unlike regular timeouts, workflow sleep is durable and survives worker restarts.
+
+**`step.sleepUntil(stepName: string, timestamp: Date | number): Promise<void>`**  
+Pauses workflow execution until a specific date/time.
+
+**`step.waitForEvent(stepName: string, options: EventOptions): Promise<any>`**  
+Waits for an external event to continue workflow execution. Events can be triggered by other agents, webhooks, or scheduled tasks.
+
+
+
+## Examples
+
+### Multi-Agent Research Workflow
+
+```typescript
+// Workflow that coordinates multiple specialist agents with parallel execution
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+
+interface ResearchRequest {
+  topic: string;
+  researchId: string;
+  requester: string;
+}
+
+export class ResearchWorkflow extends WorkflowEntrypoint<Env, ResearchRequest> {
+  async run(event: WorkflowEvent<ResearchRequest>, step: WorkflowStep) {
+    const { topic, researchId } = event.payload;
+    
+    // Step 1: Start research tasks in parallel
+    await step.do('start_research_tasks', async () => {
+      const { RESEARCH_AGENTS } = this.env;
+      
+      // Start all research agents simultaneously
+      await Promise.all([
+        RESEARCH_AGENTS.webResearch(topic, researchId),
+        RESEARCH_AGENTS.academicResearch(topic, researchId),
+        RESEARCH_AGENTS.newsResearch(topic, researchId)
+      ]);
+      
+      return { tasksStarted: true };
+    });
+    
+    // Step 2: Wait for ALL research pieces to complete (5 min timeout each)
+    const webResearch = await step.waitForEvent('wait_web_research', {
+      event: 'web_research_complete',
+      filter: { researchId },
+      timeout: '5 minutes'
+    });
+    
+    const academicResearch = await step.waitForEvent('wait_academic_research', {
+      event: 'academic_research_complete',
+      filter: { researchId },
+      timeout: '5 minutes'
+    });
+    
+    const newsResearch = await step.waitForEvent('wait_news_research', {
+      event: 'news_research_complete',
+      filter: { researchId },
+      timeout: '5 minutes'
+    });
+    
+    // Step 3: Combine all research results
+    const combinedResults = await step.do('combine_research', async () => {
+      const research = {
+        web: webResearch.data,
+        academic: academicResearch.data,
+        news: newsResearch.data,
+        completedAt: Date.now()
+      };
+      
+      console.log(`Research completed for topic: ${topic}`);
+      return research;
+    });
+    
+    // Step 4: Generate synthesis report
+    const report = await step.do('generate_report', async () => {
+      const reportData = {
+        topic,
+        researchId,
+        results: combinedResults,
+        summary: {
+          webSources: combinedResults.web.sources?.length || 0,
+          academicPapers: combinedResults.academic.papers?.length || 0,
+          newsArticles: combinedResults.news.articles?.length || 0
+        },
+        generatedAt: Date.now()
+      };
+      
+      console.log(`Generated research report for: ${topic}`);
+      return reportData;
+    });
+    
+    return report;
+  }
+}
+```
+
+### Customer Onboarding Workflow
+
+```typescript
+// Multi-day workflow for onboarding new customers
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+
+interface OnboardingParams {
+  customerId: string;
+  customerEmail: string;
+  signupDate: number;
+}
+
+export class OnboardingWorkflow extends WorkflowEntrypoint<Env, OnboardingParams> {
+  async run(event: WorkflowEvent<OnboardingParams>, step: WorkflowStep) {
+    const { customerId, customerEmail } = event.payload;
+    
+    // Step 1: Send welcome email immediately
+    await step.do('send_welcome', async () => {
+
+      await emailService.send({
+        to: customerEmail,
+        template: 'welcome',
+        customerId
+      });
+      
+      return { welcomeEmailSent: true };
+    });
+    
+    // Step 2: Wait 24 hours for user to complete profile
+    await step.sleep('wait_24_hours', '24 hours');
+    
+    // Step 3: Check profile completion
+    const profileStatus = await step.do('check_profile', async () => {
+      const { USER_DB } = this.env;
+      const profile = await users.get(USER_DB, `customer:${customerId}:profile`);
+      return profile ? JSON.parse(profile) : null;
+    });
+    
+    if (!profileStatus || !profileStatus.complete) {
+      // Send reminder email
+      await step.do('send_reminder', async () => {
+        await emailService.send({
+          to: customerEmail,
+          template: 'profile_reminder',
+          customerId
+        });
+        
+        return { reminderSent: true };
+      });
+      
+      // Wait another 48 hours
+      await step.sleep('wait_48_hours', '48 hours');
+    }
+    
+    // Step 4: Schedule onboarding call
+    const callScheduled = await step.do('schedule_call', async () => {
+      const { CALENDAR_SERVICE, MEMORY_STORE } = this.env;
+      
+      // Get available time slots
+      const timeSlots = await CALENDAR_SERVICE.getAvailableSlots(customerId, 3);
+      
+      // Get customer preferences
+      const prefsData = await MEMORY_STORE.get(`customer:${customerId}:preferences`);
+      const preferences = prefsData ? JSON.parse(prefsData) : { timezone: 'UTC' };
+      
+      // Send calendar invite
+      await CALENDAR_SERVICE.sendInvite({
+        customerId,
+        timeSlots,
+        preferences
+      });
+      
+      return { timeSlots, preferences };
+    });
+    
+    // Step 5: Wait for call completion or timeout (7 days)
+    try {
+      const callResult = await step.waitForEvent('wait_call_completion', {
+        event: 'onboarding_call_completed',
+        filter: { customerId },
+        timeout: '7 days'
+      });
+      
+      // Step 6: Send success follow-up
+      await step.do('send_success_followup', async () => {
+s        await emailService.send({
+          to: customerEmail,
+          template: 'call_completed',
+          data: {
+            customerId,
+            callNotes: callResult.notes
+          }
+        });
+        
+        return { followupSent: true };
+      });
+      
+      return {
+        customerId,
+        status: 'completed',
+        completedSteps: ['welcome', 'profile_check', 'call_completed'],
+        callScheduled
+      };
+    } catch (error) {
+      // Timeout occurred - send different follow-up
+      await step.do('send_timeout_followup', async () => {
+s        await emailService.send({
+          to: customerEmail,
+          template: 'missed_call_followup',
+          data: {
+            customerId,
+            alternativeResources: true
+          }
+        });
+        
+        return { timeoutFollowupSent: true };
+      });
+      
+      return {
+        customerId,
+        status: 'incomplete',
+        completedSteps: ['welcome', 'profile_check', 'call_scheduled'],
+        callScheduled
+      };
+    }
+  }
+}
+```
+
+### Data Processing Pipeline Workflow
+
+```typescript
+// Workflow that processes large datasets with retry logic
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+
+interface DataProcessingParams {
+  datasetId: string;
+  userId: string;
+  priority: 'low' | 'normal' | 'high';
+}
+
+export class DataProcessingWorkflow extends WorkflowEntrypoint<Env, DataProcessingParams> {
+  async run(event: WorkflowEvent<DataProcessingParams>, step: WorkflowStep) {
+    const { datasetId, userId } = event.payload;
+    
+    // Step 1: Download and validate dataset
+    const dataset = await step.do('download_dataset', async () => {
+      const { STORAGE } = this.env;
+      
+      const file = await STORAGE.get(`datasets/${datasetId}.json`);
+      if (!file) throw new Error('Dataset not found');
+      
+      const data = JSON.parse(await file.text());
+      if (!data.records || !Array.isArray(data.records)) {
+        throw new Error('Invalid dataset format');
+      }
+      
+      return data;
+    }, {
+      retries: {
+        limit: 3,
+        delay: '5 seconds',
+        backoff: 'exponential'
+      }
+    });
+    
+    // Step 2: Process data in chunks
+    const processedChunks = await step.do('process_chunks', async () => {
+      const { STORAGE } = this.env;
+      const chunkSize = 1000;
+      const chunks = [];
+      
+      // Split data into chunks
+      for (let i = 0; i < dataset.records.length; i += chunkSize) {
+        chunks.push(dataset.records.slice(i, i + chunkSize));
+      }
+      
+      const results = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        
+        // Process each chunk
+        const processed = await this.processDataChunk(chunk);
+        
+        // Store intermediate result
+        await STORAGE.put(
+          `temp/processed_${datasetId}_${i}.json`,
+          JSON.stringify(processed)
+        );
+        
+        results.push(processed);
+        
+        // Track progress
+        await ANALYTICS.writeDataPoint('chunk_processed', {
+          dimensions: { datasetId, userId },
+          metrics: { 
+            chunkIndex: i + 1,
+            totalChunks: chunks.length,
+            recordsInChunk: chunk.length
+          }
+        });
+      }
+      
+      return results;
+    }, {
+      retries: {
+        limit: 2,
+        delay: '10 seconds',
+        backoff: 'linear'
+      },
+      timeout: '30 minutes'
+    });
+    
+    // Step 3: Aggregate results
+    const finalResult = await step.do('aggregate_results', async () => {
+      const { STORAGE } = this.env;
+      
+      // Combine all processed chunks
+      const aggregated = {
+        datasetId,
+        totalRecords: dataset.records.length,
+        processedChunks: processedChunks.length,
+        results: processedChunks.flat(),
+        processedAt: Date.now()
+      };
+      
+      // Store final result
+      await STORAGE.put(
+        `results/${datasetId}_processed.json`,
+        JSON.stringify(aggregated)
+      );
+      
+      // Clean up temporary files
+      for (let i = 0; i < processedChunks.length; i++) {
+        await STORAGE.delete(`temp/processed_${datasetId}_${i}.json`);
+      }
+      
+      return aggregated;
+    });
+    
+    // Step 4: Send completion notification
+    await step.do('notify_completion', async () => {
+      const { ANALYTICS } = this.env;
+      
+      await ANALYTICS.writeDataPoint('processing_completed', {
+        dimensions: { datasetId, userId },
+        metrics: { 
+          recordsProcessed: dataset.records.length,
+          processingTimeMs: Date.now() - event.timestamp
+        }
+      });
+
+      return { trackingComplete: true };
+    });
+
+    await step.do('send_notification_complete') async() => {
+       // Notify user
+      await emailService.send({
+        to: userId,
+        template: 'processing_complete',
+        data: {
+          datasetId,
+          recordCount: dataset.records.length,
+          resultUrl: `/results/${datasetId}_processed.json`
+        }
+      });
+
+      return { notificationSent: true };
+    }
+    
+    return {
+      datasetId,
+      status: 'completed',
+      recordsProcessed: dataset.records.length,
+      result: finalResult
+    };
+  }
+  
+  private async processDataChunk(chunk: any[]): Promise<any[]> {
+    // Process each record in the chunk
+    return chunk.map(record => ({
+      ...record,
+      processed: true,
+      processedAt: Date.now()
+    }));
+  }
+}
+```
+
+### Human-in-the-Loop Workflow
+
+```typescript
+// Simple approval workflow that waits for human input
+import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+
+interface ApprovalRequest {
+  requestId: string;
+  amount: number;
+  description: string;
+  employeeId: string;
+  managerEmail: string;
+}
+
+export class ApprovalWorkflow extends WorkflowEntrypoint<Env, ApprovalRequest> {
+  async run(event: WorkflowEvent<ApprovalRequest>, step: WorkflowStep) {
+    const { requestId, amount, description, managerEmail } = event.payload;
+    
+    // Step 1: Send notification to manager
+    await step.do('send_notification', async () => {
+      
+      await emailService.send({
+        to: managerEmail,
+        template: 'approval_request',
+        data: {
+          requestId,
+          amount,
+          description,
+          approvalUrl: `https://app.example.com/approve/${requestId}`
+        }
+      });
+      
+      console.log(`Approval notification sent for request ${requestId}: $${amount} - ${description}`);
+      return { notificationSent: true };
+    });
+    
+    // Step 2: Wait for human approval (timeout after 7 days)
+    try {
+      const approvalEvent = await step.waitForEvent('wait_for_approval', {
+        event: 'approval_decision',
+        filter: { requestId },
+        timeout: '7 days'
+      });
+      
+      // Step 3: Process the decision
+      const result = await step.do('process_decision', async () => {
+        const { ANALYTICS } = this.env;
+        
+        if (approvalEvent.approved) {
+          console.log(`Request ${requestId} approved by ${approvalEvent.managerId}`);
+          
+          await ANALYTICS.writeDataPoint('approval_granted', {
+            dimensions: { 
+              requestId, 
+              managerId: approvalEvent.managerId,
+              amount: amount.toString()
+            },
+            metrics: { 
+              amount,
+              approvalTimeMs: Date.now() - event.timestamp
+            }
+          });
+          
+          return {
+            status: 'approved',
+            approvedBy: approvalEvent.managerId,
+            processedAt: Date.now()
+          };
+        } else {
+          console.log(`Request ${requestId} rejected: ${approvalEvent.reason}`);
+          
+          await ANALYTICS.writeDataPoint('approval_rejected', {
+            dimensions: { 
+              requestId, 
+              managerId: approvalEvent.managerId,
+              reason: approvalEvent.reason
+            },
+            metrics: { 
+              amount,
+              rejectionTimeMs: Date.now() - event.timestamp
+            }
+          });
+          
+          return {
+            status: 'rejected',
+            reason: approvalEvent.reason,
+            processedAt: Date.now()
+          };
+        }
+      });
+      
+      return result;
+    } catch (error) {
+      // Timeout occurred
+      const result = await step.do('handle_timeout', async () => {
+        const { ANALYTICS } = this.env;
+        
+        await ANALYTICS.writeDataPoint('approval_timeout', {
+          dimensions: { requestId },
+          metrics: { 
+            amount,
+            timeoutAfterMs: 7 * 24 * 60 * 60 * 1000 // 7 days
+          }
+        });
+        
+        return {
+          status: 'timeout',
+          processedAt: Date.now()
+        };
+      });
+      
+      return result;
+    }
+  }
+}
+```
+
+### Approval Worker (Event Broadcasting)
+
+```typescript
+// Worker that receives HTTP approvals and broadcasts events to workflows
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // Handle approval form submission
+    if (url.pathname === '/approve' && request.method === 'POST') {
+      const { requestId, approved, managerId, reason } = await request.json();
+      
+      // Get the workflow instance
+      const workflowInstance = await env.WORKFLOWS.get(requestId);
+      
+      // Send the approval event to the waiting workflow
+      await workflowInstance.dispatchEvent({
+        name: 'approval_decision',
+        payload: {
+          requestId,
+          approved,
+          managerId,
+          reason,
+          decidedAt: Date.now()
+        }
+      });
+      
+      return Response.json({ 
+        success: true, 
+        message: `Approval ${approved ? 'granted' : 'denied'}` 
+      });
+    }
+    
+    return new Response('Not found', { status: 404 });
+  }
+};
+```
+
+## Best Practices
+
+### Multiple Workflows Strategy
+
+```typescript
+// ✅ Good: Start multiple workflows for different tasks using batch API
+import { AiAgentSDK } from '@typescript-agent-framework/agent';
+
+export class OrderProcessingAgent extends AiAgentSDK {
+  constructor(env: Env) {
+    super(env);
+  }
+
+  async processMessage(sessionId: string, messages: AIUISDKMessage): Promise<AgentResponse> {
+    const { WORKFLOWS } = this.env;
+    
+    if (message.content.includes('process order')) {
+      const orderId = message.orderId;
+      
+      // Start separate workflows for different aspects using batch API
+      const workflowInstances = await WORKFLOWS.createBatch([
+        {
+          id: `inventory-${orderId}`,
+          params: { orderId, type: 'inventory_check' }
+        },
+        {
+          id: `payment-${orderId}`,
+          params: { orderId, type: 'payment_processing' }
+        },
+        {
+          id: `notification-${orderId}`,
+          params: { orderId, type: 'order_received' }
+        }
+      ]);
+      
+      const workflowIds = workflowInstances.map(instance => instance.id);
+      return { 
+        message: 'Order processing workflows started',
+        workflowIds
+      };
+    }
+    
+    return { message: "Send me an order to process!" };
+  }
+}
+
+// ❌ Bad: One monolithic workflow handling everything
+await WORKFLOWS.create({
+  id: 'process-everything',
+  params: { orderId, paymentData, inventoryData, notifications }
+});
+```
+
+### Granular Business Logic
+
+```typescript
+// ✅ Good: Each step does ONE business operation
+export class OrderProcessingWorkflow extends WorkflowEntrypoint<Env, { orderId: string }> {
+  async run(event: WorkflowEvent<{ orderId: string }>, step: WorkflowStep) {
+    const { orderId } = event.payload;
+    
+    // Step 1: ONLY validate order data
+    const orderData = await step.do('validate_order', async () => {
+      const { ORDER_SERVICE } = this.env;
+      return await ORDER_SERVICE.validateById(orderId);
+    });
+    
+    // Step 2: ONLY check inventory
+    const inventoryStatus = await step.do('check_inventory', async () => {
+      const { INVENTORY_SERVICE } = this.env;
+      return await INVENTORY_SERVICE.checkAvailability(orderData.items);
+    });
+    
+    // Step 3: ONLY reserve inventory
+    const reservation = await step.do('reserve_inventory', async () => {
+      const { INVENTORY_SERVICE } = this.env;
+      return await INVENTORY_SERVICE.reserve(orderData.items);
+    });
+    
+    // Step 4: ONLY process payment
+    const payment = await step.do('process_payment', async () => {
+      const { PAYMENT_SERVICE } = this.env;
+      return await PAYMENT_SERVICE.process(orderData.paymentMethod, orderData.total);
+    });
+    
+    return { orderId, status: 'completed', payment, reservation };
+  }
+}
+
+// ❌ Bad: Steps that do multiple business operations
+await step.do('validate_and_process_and_notify', async () => {
+  const order = await validateOrder();
+  const payment = await processPayment(order);
+  await sendNotification(payment);
+  await updateInventory(order);
+  return { everything: 'done' };
+});
+```
+
+### Error Handling Strategy
+
+```typescript
+// ✅ Good: Use try-catch blocks for non-retryable errors
+await step.do('critical_operation', async () => {
+  try {
+    const result = await someRiskyOperation();
+    return result;
+  } catch (error) {
+    if (error.code === 'PERMANENT_FAILURE') {
+      throw new NonRetryableError(`Permanent failure: ${error.message}`);
+    }
+    throw error; // Will be retried
+  }
+}, {
+  retries: {
+    limit: 3,
+    delay: '5 seconds',
+    backoff: 'exponential'
+  }
+});
+```
+
+### State Management
+
+```typescript
+// ✅ Good: Pass state through workflow steps naturally
+const orderData = await step.do('get_order', async () => {
+  return await getOrderById(orderId);
+});
+
+const validatedOrder = await step.do('validate_order', async () => {
+  return await validateOrder(orderData);
+});
+
+const processedOrder = await step.do('process_payment', async () => {
+  return await processPayment(validatedOrder);
+});
+```
+
+## Advanced Configuration
+
+### Error Handling
+
+**Retry Configuration**: Configure retries per step using the third parameter of `step.do`:
+
+```typescript
+await step.do('api_call', async () => {
+  // Step logic here
+}, {
+  retries: {
+    limit: 3,
+    delay: '10 seconds',
+    backoff: 'exponential'
+  },
+  timeout: '5 minutes'
+});
+```
+
+**NonRetryableError**: Force a workflow to fail without retries:
+
+```typescript
+import { NonRetryableError } from 'cloudflare:workflows';
+
+await step.do('validate_data', async () => {
+  if (!validData) {
+    throw new NonRetryableError('Data validation failed permanently');
+  }
+});
+```
+
+### Retry Policies
+
+```typescript
+interface StepConfig {
+  retries?: {
+    limit: number;
+    delay: string | number;
+    backoff: 'constant' | 'linear' | 'exponential';
+  };
+  timeout?: string | number;
+}
+```
+
+### Multiple Workflows in Wrangler
+
+```json
+{
+  "workflows": [
+    {
+      "binding": "WORKFLOWS",
+      "class_name": "HelloWorldWorkflow"
+    },
+    {
+      "binding": "WORKFLOWS", 
+      "class_name": "DataProcessingWorkflow"
+    },
+    {
+      "binding": "WORKFLOWS",
+      "class_name": "CustomerOnboardingWorkflow"
+    }
+  ]
+}
+```
+
+## Limitations
+
+- **Execution Time**: Maximum 30 days per workflow execution
+- **Step Size**: Maximum 128MB input/output per step
+- **Concurrency**: Maximum 100 parallel branches per workflow
+- **Events**: Maximum 10,000 events per workflow
+
+## Related Services
+
+- **[Queues](/en/developers/platform/queues)** - Message passing between workflow steps
+- **[Pub/Sub](/en/developers/platform/pubsub)** - Event-driven workflow triggers
+- **[Memory Store](/en/developers/platform/memory-store)** - Persistent state between workflow executions
+
+---
+
+## Official Documentation
+
+- [Workflows Documentation](https://developers.cloudflare.com/workflows/) 

@@ -1,0 +1,715 @@
+export const metadata = {
+  "title": "Overview",
+  "description": "Comprehensive TypeScript CLI for managing Model Context Protocol (MCP) servers and AI Agents with Cloudflare Workers"
+};
+
+**The Nullshot CLI is revolutionizing how developers manage MCP servers and AI Agents.** Think of it as the package manager for the MCP ecosystem - instead of manually configuring each service, you use standardized commands that understand dependencies and provide automated orchestration.
+
+## What is the Nullshot CLI?
+
+The Nullshot CLI is a comprehensive TypeScript command-line tool that enables seamless management of Model Context Protocol (MCP) servers and AI Agents with Cloudflare Workers. It provides dependency management, multi-config deployment, and automated service orchestration.
+
+### The Problem the CLI Solves
+
+Before the Nullshot CLI, developers faced several challenges:
+
+- **Manual Configuration**: Each MCP server required custom setup and configuration
+- **Dependency Hell**: Managing multiple services with complex interdependencies
+- **Deployment Complexity**: No unified way to deploy MCP ecosystems
+- **Development Overhead**: Time-consuming setup for multi-service architectures
+
+### CLI as the MCP Package Manager
+
+The Nullshot CLI is fundamentally different from traditional deployment tools:
+
+```bash
+# ❌ Traditional: Manual setup, complex configuration, error-prone
+git clone https://github.com/org/mcp-server
+cd mcp-server
+npm install
+# Configure wrangler.jsonc manually
+# Set up service bindings manually
+# Run migrations manually
+# Create mcp.json
+# Setup mcp server and run it
+# Run my agent!
+
+# ✅ Nullshot CLI: One command, automatic orchestration!
+nullshot create agent
+# Modify your mcp.json
+nullshot dev  # Everything just works!
+```
+
+We are not reinventing a package manager. We did this by building on top of `package.json`!
+
+## Core CLI Concepts
+
+### Installation vs Connection
+
+The Nullshot CLI supports two main patterns for MCP servers:
+
+**📦 Source-based Installation** - Download and install MCP servers locally
+```json
+{
+  "filesystem": {
+    "source": "github:modelcontextprotocol/servers#filesystem"
+  }
+}
+```
+
+**🔗 URL-based Connection** - Connect to hosted MCP servers
+```json
+{
+  "linear": {
+    "url": "https://mcp.linear.app/sse"
+  }
+}
+```
+
+### Why the CLI is Epic?
+
+1. **Dependency Orchestration**
+Traditional deployment requires manual coordination. The CLI understands service dependencies and orchestrates everything automatically.
+
+2. **Service Binding Generation**
+Every installed MCP server gets automatic Cloudflare Workers service bindings, enabling seamless inter-service communication.
+
+3. **Multi-Config Development**
+One `nullshot dev` command runs all services together with proper configuration and database migrations.
+
+4. **Universal MCP Support**
+Works with (almost) any MCP server - whether it's a GitHub repository or a hosted service URL. Stdio support coming soon!
+
+## Benefits of the Nullshot CLI
+
+### For Developers
+- **Rapid Development**: Set up complex MCP ecosystems in minutes, not hours
+- **Dependency Management**: Automatic detection and orchestration of service dependencies
+- **Type Safety**: Full TypeScript support with auto-generated Cloudflare Workers types
+- **Ecosystem Access**: Leverage the entire MCP server ecosystem with simple configuration
+
+### For MCP Servers
+- **Seamless Integration**: Works with any MCP server following the standard protocol
+- **Service Bindings**: Automatic integration into Cloudflare Workers architecture
+- **Database Migrations**: Automatic D1 database setup and migration handling
+- **Development Mode**: Unified development environment for all services
+
+## 📦 Installation
+
+```bash
+npm install -g @nullshot/cli
+# or
+yarn global add @nullshot/cli
+# or
+pnpm add -g @nullshot/cli
+```
+
+## 🏁 Quick Start
+
+### 1. Configure Your Services
+
+Create an `mcp.json` configuration file:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "source": "github:modelcontextprotocol/servers#filesystem"
+    },
+    "linear": {
+      "url": "https://mcp.linear.app/sse"
+    }
+  }
+}
+```
+
+### 2. Install Dependencies
+
+```bash
+# Install all configured servers and dependencies
+nullshot install
+```
+
+This will:
+- Install packages from GitHub repositories
+- Detect and extract Cloudflare Workers configurations
+- Run D1 database migrations if present
+- Generate service bindings in your `wrangler.jsonc`
+- Generate Cloudflare Workers types with `cf-typegen`
+
+### 3. Start Development
+
+```bash
+# Run all services in development mode
+nullshot dev
+```
+
+## 📋 Commands Reference
+
+### Global Options
+
+All commands support these global options:
+
+```bash
+--dry-run           Show what would be done without making changes
+-v, --verbose       Enable verbose logging
+-c, --config <file> Path to config file (default: "mcp.json")
+--cwd <dir>         Run as if nullshot was started in the specified directory
+```
+
+### `nullshot install`
+
+Install and configure MCP servers and dependencies.
+
+```bash
+nullshot install [options]
+
+Options:
+  --skip-package-update   Skip updating package.json dependencies
+  --skip-wrangler-update  Skip updating wrangler.jsonc configuration
+```
+
+**What it does:**
+- Installs packages from configured sources (GitHub, npm, etc.)
+- Analyzes dependency `wrangler.jsonc` files
+- Generates service bindings for inter-service communication
+- Runs D1 database migrations across all dependencies
+- Updates main project's `wrangler.jsonc` with service bindings and environment variables
+- Runs `cf-typegen` to generate Cloudflare Workers types
+- Stores metadata in `package.json` for dependency tracking
+
+### `nullshot dev`
+
+Run all services in development mode using Cloudflare Workers multi-config.
+
+```bash
+nullshot dev [options]
+
+Options:
+  --local  Use --local flag for D1 migrations (default: true)
+```
+
+**What it does:**
+- Analyzes all installed dependencies
+- Runs D1 migrations across all services
+- Executes `wrangler dev -c wrangler.jsonc -c dep1/wrangler.jsonc -c dep2/wrangler.jsonc`
+- Provides unified development environment for all services
+
+### `nullshot create`
+
+Create new MCP servers or AI Agents from templates.
+
+```bash
+nullshot create mcp    # Create MCP server project
+nullshot create agent  # Create AI Agent project
+```
+
+**Interactive prompts for:**
+- Project name and directory
+- Template selection
+- Initial configuration
+
+### `nullshot list`
+
+List currently installed MCP servers and their status.
+
+```bash
+nullshot list [options]
+
+Options:
+  --format <format>  Output format: table|json (default: table)
+```
+
+### `nullshot validate`
+
+Validate your MCP configuration file against the schema.
+
+```bash
+nullshot validate
+```
+
+## 📁 Configuration
+
+### MCP Configuration (`mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "<server-name>": {
+      "source": "string",  // Source URL (GitHub, npm, etc.) - for installable servers
+      "url": "string",     // Direct URL - for hosted MCP servers
+      "env": [             // Optional environment variables
+        {
+          "name": "string",
+          "value": "string" // Optional - reads from process.env if omitted
+        }
+      ]
+    }
+  }
+}
+```
+
+### Configuration Formats
+
+| Type | Format | Example | Description |
+|------|--------|---------|-------------|
+| **Source** | GitHub | `github:user/repo#branch` | Install from GitHub repository |
+| **Source** | GitHub subdirectory | `github:modelcontextprotocol/servers#filesystem` | Install specific subdirectory |
+| **Source** | npm | `@scope/package@version` | Install from npm registry |
+| **Source** | Git URL | `https://github.com/user/repo.git#tag` | Install from Git URL |
+| **URL** | Direct URL | `https://mcp.linear.app/sse` | Connect to hosted MCP server |
+
+### Generated Service Bindings
+
+After running `nullshot install`, your `wrangler.jsonc` is automatically updated:
+
+```jsonc
+{
+  "name": "my-project",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-15",
+  "compatibility_flags": ["nodejs_compat"],
+  
+  // Auto-generated service bindings for inter-service communication
+  "services": [
+    {
+      "binding": "MCP_FILESYSTEM_SERVICE", // Binding name for your code
+      "service": "mcp-filesystem",         // Actual service name
+    },
+    {
+      "binding": "MCP_GITHUB_SERVICE",
+      "service": "mcp-github",
+    },
+  ],
+  
+  // Merged environment variables from all dependencies
+  "vars": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "ghp_...",
+    "ALLOWED_DIRS": "/tmp,/home/user/docs",
+  },
+  
+  // Auto-detected D1 database bindings (if present in dependencies)
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-database",
+      "database_id": "uuid-here",
+    },
+  ],
+}
+```
+
+## 🔄 Development Workflows
+
+### Standard Workflow
+
+```bash
+# 1. Configure services in mcp.json
+# Create mcp.json with your desired services
+
+# 2. Install dependencies and configure services
+nullshot install
+
+# 3. Start development
+nullshot dev
+```
+
+### Advanced Workflow
+
+```bash
+# Preview changes before executing
+nullshot install --dry-run --verbose
+
+# Install without updating wrangler config
+nullshot install --skip-wrangler-update
+
+# Validate configuration
+nullshot validate
+
+# List installed services
+nullshot list --format json
+
+# Run in different directory
+nullshot dev --cwd ./my-project
+```
+
+### Multi-Service Development
+
+The CLI excels at managing multiple interconnected services:
+
+1. **Service Discovery**: Automatically detects `wrangler.jsonc` files in dependencies
+2. **Service Bindings**: Generates bindings for service-to-service communication
+3. **Unified Development**: Single `nullshot dev` command orchestrates all services
+4. **Database Migrations**: Runs D1 migrations across all services
+5. **Environment Management**: Merges environment variables from all dependencies
+
+Example multi-service setup:
+
+```bash
+# Install multiple related services
+echo '{
+  "mcpServers": {
+    "auth-service": {
+      "source": "github:myorg/mcp-auth#main"
+    },
+    "database-service": {
+      "source": "github:myorg/mcp-database#main"
+    },
+    "api-gateway": {
+      "source": "github:myorg/mcp-gateway#main"
+    }
+  }
+}' > mcp.json
+
+nullshot install
+nullshot dev  # Runs all three services with proper service bindings
+```
+
+## 🗃️ Database Integration
+
+### D1 Database Support
+
+The CLI automatically handles D1 database migrations:
+
+1. **Detection**: Scans dependency `wrangler.jsonc` files for `d1_databases` bindings
+2. **Migration Execution**: Runs `wrangler d1 migrations apply <binding> --local --config <config>`
+3. **Metadata Storage**: Tracks D1 databases in package metadata
+4. **Development Mode**: Automatically runs migrations before `wrangler dev`
+
+Example dependency with D1:
+
+```jsonc
+// dependency/wrangler.jsonc
+{
+  "name": "mcp-database",
+  "d1_databases": [
+    {
+      "binding": "USER_DB",
+      "database_name": "users",
+      "database_id": "uuid-here",
+    },
+  ],
+}
+```
+
+When you run `nullshot install`, the CLI will:
+- Detect the `USER_DB` binding
+- Run migrations: `wrangler d1 migrations apply USER_DB --local --config dependency/wrangler.jsonc`
+- Store `["USER_DB"]` in the dependency metadata
+
+## 🛠️ Integration Examples
+
+### Using Service Bindings in Your Code
+
+After installation, use the generated service bindings:
+
+```typescript
+// src/index.ts
+export default {
+  async fetch(request: Request, env: Env) {
+    // Call the filesystem service
+    const filesystemResponse = await env.MCP_FILESYSTEM_SERVICE.fetch(
+      new Request("https://filesystem/list-files"),
+    );
+
+    // Call the github service
+    const githubResponse = await env.MCP_GITHUB_SERVICE.fetch(
+      new Request("https://github/repos/user/repo"),
+    );
+
+    return new Response("Services orchestrated!");
+  },
+};
+```
+
+### Using MCP Client with Service Bindings
+
+For full MCP protocol support, use the custom ServiceBindingSSEClientTransport with the official MCP client:
+
+```typescript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { ServiceBindingSSEClientTransport } from '@nullshot/agent';
+
+// Connect to MCP server via service binding
+const transport = new ServiceBindingSSEClientTransport(env.MCP_FILESYSTEM_SERVICE);
+const client = new Client({ name: "my-app", version: "1.0.0" }, { capabilities: {} });
+
+await client.connect(transport);
+const result = await client.request({ method: "tools/list" }, {});
+await client.close();
+```
+
+### TypeScript Integration
+
+The CLI integrates with Cloudflare Workers type generation:
+
+```bash
+# Automatically runs after install (if cf-typegen script exists)
+nullshot install
+
+# Manual type generation
+npm run cf-typegen
+```
+
+Generated types will include your service bindings:
+
+```typescript
+// worker-configuration.d.ts (auto-generated)
+interface Env {
+  MCP_FILESYSTEM_SERVICE: Fetcher;
+  MCP_GITHUB_SERVICE: Fetcher;
+  // ... other bindings
+}
+```
+
+## 📁 Project Structure
+
+A typical project using Nullshot CLI:
+
+```
+my-project/
+├── src/
+│   ├── index.ts              # Main Worker entry point
+│   └── ...                   # Your application code
+├── node_modules/
+│   ├── mcp-filesystem/       # Installed MCP server dependency
+│   │   ├── wrangler.jsonc    # Dependency's Cloudflare config
+│   │   ├── migrations/       # D1 database migrations
+│   │   └── ...
+│   └── mcp-github/           # Another MCP server dependency
+│       ├── wrangler.jsonc
+│       └── ...
+├── mcp.json                  # MCP server configuration
+├── wrangler.jsonc            # Your Cloudflare Workers config (auto-updated)
+├── worker-configuration.d.ts # Auto-generated TypeScript types
+└── package.json              # Dependencies and generated scripts
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Configuration validation errors:**
+```bash
+❌ Invalid configuration: servers.test: missing required property 'source'
+💡 Check your mcp.json file syntax and required fields
+```
+
+**Package installation failures:**
+```bash
+❌ Failed to install package github:user/repo: Repository not found
+💡 Verify the GitHub repository exists and is accessible
+```
+
+**Service binding conflicts:**
+```bash
+❌ Service binding MCP_TEST_SERVICE already exists
+💡 Check for duplicate service names in your dependencies
+```
+
+**D1 migration failures:**
+```bash
+⚠️ D1 migration failed for service:DATABASE: Migration already applied
+💡 This is usually harmless - migrations are idempotent
+```
+
+### Debug Mode
+
+Enable comprehensive logging to troubleshoot issues:
+
+```bash
+# See everything that would happen without executing
+nullshot install --dry-run --verbose
+
+# Run with full logging
+nullshot dev --verbose
+
+# Check from different directory
+nullshot list --cwd ./my-project --verbose
+```
+
+## 🚀 Production Deployment
+
+### Deploy All Services
+
+```bash
+# Deploy main project
+wrangler deploy
+
+# Deploy dependencies (run in each dependency directory)
+cd node_modules/mcp-filesystem && wrangler deploy
+cd node_modules/mcp-github && wrangler deploy
+```
+
+### Environment Variables
+
+Set production environment variables:
+
+```bash
+# Set secrets for all services
+wrangler secret put GITHUB_TOKEN
+wrangler secret put DATABASE_URL
+
+# In dependency directories
+cd node_modules/mcp-filesystem
+wrangler secret put FILESYSTEM_ROOT
+```
+
+## 🔧 Advanced Configuration
+
+### Custom Working Directories
+
+Run commands in different directories:
+
+```bash
+# Install dependencies for project in different location
+nullshot install --cwd ../other-project
+
+# Run development server from different directory
+nullshot dev --cwd ./projects/main-app
+
+# Validate configuration in specific directory
+nullshot validate --cwd ./my-project
+```
+
+### Selective Updates
+
+Control what gets updated during installation:
+
+```bash
+# Install packages but don't update wrangler config
+nullshot install --skip-wrangler-update
+
+# Update configs but don't install new packages
+nullshot install --skip-package-update
+
+# Just run migrations and config updates
+nullshot install --skip-package-update --verbose
+```
+
+### Configuration Validation
+
+Validate configurations before deployment:
+
+```bash
+# Validate mcp.json schema
+nullshot validate
+
+# Validate with verbose output
+nullshot validate --verbose
+
+# Validate different config file
+nullshot validate --config ./configs/production.json
+```
+
+## 🔮 Future Development
+
+The Nullshot CLI is continuously evolving to provide better developer experience and more powerful features. Here are the upcoming enhancements planned for future releases:
+
+### Nullshot Deployments
+
+**One-Click Cloud Deployment**
+- Deploy all MCPs + Agent into cloud environment in a single command
+- Automated infrastructure provisioning and configuration
+- Support for multiple cloud providers (Cloudflare, AWS, Azure, GCP)
+- Environment-specific deployment configurations
+- Rollback and versioning capabilities
+
+```bash
+# Coming soon: Deploy entire MCP ecosystem
+nullshot deploy --env production
+nullshot deploy --env staging --rollback-on-failure
+```
+
+### Stdio Dependency Support
+
+**Enhanced Communication Protocols**
+- Full stdio support for local MCP server communication with command execution
+- Seamless stdio-to-HTTP bridge for cloud deployments
+- Automatic protocol detection and conversion
+- Performance optimization for different communication patterns
+
+```bash
+# Coming soon: Stdio configuration with command support
+{
+  "mcpServers": {
+    "local-mcp": {
+      "source": "github:myorg/local-mcp",
+      "protocol": "stdio",
+      "command": "node dist/server.js"  // Command support coming with stdio
+    }
+  }
+}
+```
+
+### Simple MCP Configuration Management
+
+**Interactive Configuration Commands**
+- Add, remove, and update MCP servers via CLI commands
+- Interactive configuration wizard for new projects
+- Configuration validation and suggestions
+- Template-based configuration generation
+
+```bash
+# Coming soon: Interactive MCP management
+nullshot config add filesystem --source github:modelcontextprotocol/servers#filesystem
+nullshot config remove github
+nullshot config list --status
+nullshot config wizard  # Interactive setup
+```
+
+### CI/CD Automation Scripts
+
+**Deployment Pipeline Integration**
+- Pre-built GitHub Actions workflows
+- GitLab CI/CD templates
+- Docker containerization support
+- Automated testing and validation pipelines
+- Environment promotion workflows
+
+```bash
+# Coming soon: CI/CD automation
+nullshot generate github-actions
+nullshot generate gitlab-ci
+nullshot generate dockerfile
+nullshot test --ci-mode
+```
+
+**Pipeline Features:**
+- Automated dependency updates
+- Security vulnerability scanning
+- Performance regression testing
+- Multi-environment deployment orchestration
+- Rollback automation
+
+### Additional Planned Features
+
+- **Plugin System**: Extensible architecture for custom commands and integrations
+- **Monitoring Integration**: Built-in observability and logging for deployed services
+- **Cost Optimization**: Automatic resource optimization recommendations
+- **Team Collaboration**: Shared configuration management and team workflows
+- **IDE Integration**: VS Code extension and other editor plugins
+
+## Getting Started
+
+Ready to orchestrate your first MCP ecosystem? Our **[Quick Start](#-quick-start)** section walks you through installing the CLI and setting up your first multi-service environment in minutes.
+
+## The CLI Ecosystem
+
+The Nullshot CLI works with the entire MCP ecosystem:
+
+- **Official MCP Servers**: Filesystem, GitHub, databases, and more
+- **Hosted Services**: Linear, Slack, and other cloud-based MCP servers  
+- **Custom Servers**: Your own MCP servers from any GitHub repository
+- **Agent Integration**: Seamless connection to AI agents via service bindings
+- **Development Tools**: Database migrations, type generation, and debugging
+
+## Next Steps
+
+- **[Quick Start](#-quick-start)** - Install the CLI and create your first MCP ecosystem
+- **[Agent Framework](/en/developers/agents-framework/overview)** - Connect MCP servers to AI agents
+- **[MCP Framework](/en/developers/mcp-framework/overview)** - Build custom MCP servers
+
+---
+
+*The Nullshot CLI is transforming how developers build with MCP. Join the ecosystem and orchestrate the tools that will power the next generation of AI applications.*

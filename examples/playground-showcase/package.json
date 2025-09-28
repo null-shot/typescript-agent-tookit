@@ -13,14 +13,21 @@
     "deploy": "wrangler pages deploy .vercel/output/static"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "catalog:",
+    "@ai-sdk/deepseek": "catalog:",
+    "@ai-sdk/google": "catalog:",
+    "@ai-sdk/openai": "catalog:",
+    "@ai-sdk/xai": "catalog:",
     "@nullshot/playground": "workspace:*",
+    "ai": "catalog:",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.0.0",
+    "lucide-react": "^0.263.1",
     "next": "15.2.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1",
-    "class-variance-authority": "^0.7.0",
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
+    "tailwind-merge": "^2.0.0",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/next-on-pages": "^1.13.5",
