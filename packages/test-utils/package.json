@@ -17,6 +17,11 @@
       "import": "./dist/mcp/WorkerSSEClientTransport.js",
       "default": "./dist/mcp/WorkerSSEClientTransport.js"
     },
+    "./mcp/WorkerStreamableHTTPClientTransport": {
+      "types": "./dist/mcp/WorkerStreamableHTTPClientTransport.d.ts",
+      "import": "./dist/mcp/WorkerStreamableHTTPClientTransport.js",
+      "default": "./dist/mcp/WorkerStreamableHTTPClientTransport.js"
+    },
     "./mcp/WorkerWebSocketClientTransport": {
       "types": "./dist/mcp/WorkerWebSocketClientTransport.d.ts",
       "import": "./dist/mcp/WorkerWebSocketClientTransport.js",
