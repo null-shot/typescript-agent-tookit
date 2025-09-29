@@ -5,7 +5,7 @@ import {
 } from "cloudflare:test";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { WorkerSSEClientTransport } from "@nullshot/test-utils/mcp/WorkerSSEClientTransport";
+import { WorkerStreamableHTTPClientTransport } from "@nullshot/test-utils/mcp/WorkerStreamableHTTPClientTransport";
 import { TodoStatus, Todo } from "../src/schema";
 
 // Define response type for clarity
@@ -62,8 +62,8 @@ describe("Todo MCP Client Integration Tests", () => {
 
   // Helper function to create the transport
   function createTransport(ctx: ExecutionContext) {
-    const url = new URL(`${baseUrl}/sse`);
-    return new WorkerSSEClientTransport(url, ctx);
+    const url = new URL(`${baseUrl}/mcp`);
+    return new WorkerStreamableHTTPClientTransport(url, ctx);
   }
 
   // Test for basic functionality
@@ -77,7 +77,7 @@ describe("Todo MCP Client Integration Tests", () => {
   });
 
   it("should successfully connect to the todo MCP server", async () => {
-    console.log(`Testing SSE transport connection`);
+    console.log(`Testing StreamableHTTP transport connection`);
 
     const transport = createTransport(ctx);
     await client.connect(transport);
