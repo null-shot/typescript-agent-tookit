@@ -1,7 +1,7 @@
 import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { WorkerSSEClientTransport } from '../../test-utils/src/mcp/WorkerSSEClientTransport';
+import { WorkerStreamableHTTPClientTransport } from '../../test-utils/src/mcp/WorkerStreamableHTTPClientTransport';
 import { WorkerWebSocketClientTransport } from '../../test-utils/src/mcp/WorkerWebSocketClientTransport';
 
 // Define response type for clarity
@@ -23,6 +23,13 @@ describe('MCP Client Connection Tests', () => {
       createTransport: (ctx: ExecutionContext) => {
         const url = new URL(`${baseUrl}/sse`);
         return new WorkerSSEClientTransport(url, ctx);
+      }
+    },
+    {
+      name: 'StreamableHTTP',
+      createTransport: (ctx: ExecutionContext) => {
+        const url = new URL(`${baseUrl}/mcp`);
+        return new WorkerStreamableHTTPClientTransport(url, ctx);
       }
     },
     {
