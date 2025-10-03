@@ -1,13 +1,19 @@
-# NullShot Typescript MCP Template
+# NullShot Typescript MCP Project using Secrets
 
-A template repository for bootstrapping MCPs (Model Context Protocol) for the null-shot/typescript-agent-framework.
+This is an example of how to use secrets using NullShot.
 
 ## Getting Started
+
+Make sure you setup your own file of secrets at `.dev.vars`. Also this file should be ignored inside of the `.gitignore`.
+
+_Note_
+For purposes of this demo, the `.dev.vars` file has been committed so you can see how the file should look like.
+
+After you have setup your secrets inside of `.dev.vars`, then you can run `wrangler types` and this will update your `worker-configuration.d.ts` to reference the secret variables you have created.
 
 ### Setup the repository
 
 **Option A: Use nullshot cli**
-
 
 You can create a new project by following this interactive prompt:
 
@@ -21,7 +27,7 @@ The following button will create a new repo in your organization and setup teh C
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/null-labs/mcp-template)
 
-*NOTE: The configuration only needs `npm run deploy` for the Deploy command to work*
+_NOTE: The configuration only needs `npm run deploy` for the Deploy command to work_
 
 **Option C: Github Template**
 
@@ -30,8 +36,8 @@ The following button will create a new repo in your organization and setup teh C
 
 The above will boostrap a serverless cloudflare compatible MCP Server with the following urls:
 
-* /ws - Websocket connection endpoint
-* /sse - SSE connection endpoint
+- /ws - Websocket connection endpoint
+- /sse - SSE connection endpoint
 
 ## Features
 
@@ -69,23 +75,23 @@ To add custom HTTP endpoints with `McpHonoServerDO`, extend the `setupRoutes` me
 
 ```typescript
 export class ExampleMcpServer extends McpHonoServerDO<Env> {
-  // Other methods...
+	// Other methods...
 
-  protected setupRoutes(app: Hono<{ Bindings: Env }>): void {
-    // Call the parent implementation to set up MCP routes
-    super.setupRoutes(app);
-    
-    // Add your custom routes
-    app.get('/api/status', (c) => {
-      return c.json({ status: 'ok' });
-    });
-    
-    app.post('/api/data', async (c) => {
-      const body = await c.req.json();
-      // Process data
-      return c.json({ success: true });
-    });
-  }
+	protected setupRoutes(app: Hono<{ Bindings: Env }>): void {
+		// Call the parent implementation to set up MCP routes
+		super.setupRoutes(app);
+
+		// Add your custom routes
+		app.get('/api/status', (c) => {
+			return c.json({ status: 'ok' });
+		});
+
+		app.post('/api/data', async (c) => {
+			const body = await c.req.json();
+			// Process data
+			return c.json({ success: true });
+		});
+	}
 }
 ```
 
@@ -95,39 +101,40 @@ If you need more control over the HTTP request handling, you can directly extend
 
 ```typescript
 export class CustomMcpServer extends McpServerDO<Env> {
-  // Required abstract method implementations
-  getImplementation(): Implementation {
-    return {
-      name: 'CustomMcpServer',
-      version: '1.0.0',
-    };
-  }
-  
-  configureServer(server: McpServer): void {
-    setupServerTools(server);
-    setupServerResources(server);
-    setupServerPrompts(server);
-  }
-  
-  // Override the fetch method for complete control over routing
-  async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const path = url.pathname;
-    
-    // Handle custom routes
-    if (path === '/api/custom') {
-      return new Response(JSON.stringify({ custom: true }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Pass through MCP-related requests to the parent implementation
-    return super.fetch(request);
-  }
+	// Required abstract method implementations
+	getImplementation(): Implementation {
+		return {
+			name: 'CustomMcpServer',
+			version: '1.0.0',
+		};
+	}
+
+	configureServer(server: McpServer): void {
+		setupServerTools(server);
+		setupServerResources(server);
+		setupServerPrompts(server);
+	}
+
+	// Override the fetch method for complete control over routing
+	async fetch(request: Request): Promise<Response> {
+		const url = new URL(request.url);
+		const path = url.pathname;
+
+		// Handle custom routes
+		if (path === '/api/custom') {
+			return new Response(JSON.stringify({ custom: true }), {
+				headers: { 'Content-Type': 'application/json' },
+			});
+		}
+
+		// Pass through MCP-related requests to the parent implementation
+		return super.fetch(request);
+	}
 }
 ```
 
 This approach is useful when you need to:
+
 - Handle specific routes with custom logic
 - Implement complex middleware or authentication
 - Intercept or modify requests before they reach the MCP handler
@@ -139,20 +146,20 @@ The main server implementation is in `src/server.ts` and extends `McpHonoServerD
 
 ```typescript
 export class ExampleMcpServer extends McpHonoServerDO<Env> {
-  // Required abstract method implementation
-  getImplementation(): Implementation {
-    return {
-      name: 'ExampleMcpServer',
-      version: '1.0.0',
-    };
-  }
+	// Required abstract method implementation
+	getImplementation(): Implementation {
+		return {
+			name: 'ExampleMcpServer',
+			version: '1.0.0',
+		};
+	}
 
-  // Configure server by adding tools, resources, and prompts
-  configureServer(server: McpServer): void {
-    setupServerTools(server);
-    setupServerResources(server);
-    setupServerPrompts(server);
-  }
+	// Configure server by adding tools, resources, and prompts
+	configureServer(server: McpServer): void {
+		setupServerTools(server);
+		setupServerResources(server);
+		setupServerPrompts(server);
+	}
 }
 ```
 
@@ -162,24 +169,25 @@ To add functionality, use the following modules:
 
 ```typescript
 export function setupServerTools(server: McpServer) {
-  server.tool(
-    'tool_name',           // Name of the tool
-    'Tool description',    // Description
-    {                      // Parameters schema using zod
-      param1: z.string().describe('Parameter description'),
-    },       
-    async ({ param1 }) => {
-      // Tool implementation
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Result: ${param1}`
-          }
-        ]
-      };
-    }
-  );
+	server.tool(
+		'tool_name', // Name of the tool
+		'Tool description', // Description
+		{
+			// Parameters schema using zod
+			param1: z.string().describe('Parameter description'),
+		},
+		async ({ param1 }) => {
+			// Tool implementation
+			return {
+				content: [
+					{
+						type: 'text',
+						text: `Result: ${param1}`,
+					},
+				],
+			};
+		},
+	);
 }
 ```
 
@@ -187,21 +195,17 @@ export function setupServerTools(server: McpServer) {
 
 ```typescript
 export function setupServerResources(server: McpServer) {
-  server.resource(
-    'resource_name',
-    'resource://path/{id}',
-    async (uri: URL) => {
-      // Resource implementation
-      return {
-        contents: [
-          {
-            text: `Resource data`,
-            uri: uri.href
-          }
-        ]
-      };
-    }
-  );
+	server.resource('resource_name', 'resource://path/{id}', async (uri: URL) => {
+		// Resource implementation
+		return {
+			contents: [
+				{
+					text: `Resource data`,
+					uri: uri.href,
+				},
+			],
+		};
+	});
 }
 ```
 
@@ -209,27 +213,25 @@ export function setupServerResources(server: McpServer) {
 
 ```typescript
 export function setupServerPrompts(server: McpServer) {
-  server.prompt(
-    'prompt_name',
-    'Prompt description',
-    () => ({
-      messages: [{
-        role: 'assistant',
-        content: {
-          type: 'text',
-          text: `Your prompt text here`
-        }
-      }]
-    })
-  );
+	server.prompt('prompt_name', 'Prompt description', () => ({
+		messages: [
+			{
+				role: 'assistant',
+				content: {
+					type: 'text',
+					text: `Your prompt text here`,
+				},
+			},
+		],
+	}));
 }
 ```
 
 ### Examples
 
-* [CRUD MCP Example](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/crud-mcp) - Leverage D1 Database
-* [Expense MCP Example](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/expense-mcp) - Leveraging Workflows
-* [Dependent Agent](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/dependent-agent) - AI Agent with MCP dependencies
+- [CRUD MCP Example](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/crud-mcp) - Leverage D1 Database
+- [Expense MCP Example](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/expense-mcp) - Leveraging Workflows
+- [Dependent Agent](https://github.com/null-shot/typescript-agent-framework/tree/main/examples/dependent-agent) - AI Agent with MCP dependencies
 
 ## Related Resources
 
@@ -257,16 +259,19 @@ We welcome contributions to improve this template! Here's how you can contribute
 1. **Fork the repository**: Create a fork to make your changes
 
 2. **Create a branch**: Make your changes in a new branch
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 3. **Commit your changes**: Make meaningful commits
+
    ```bash
    git commit -m "Add feature: brief description"
    ```
 
 4. **Push to your fork**: Push your changes to your fork
+
    ```bash
    git push origin feature/your-feature-name
    ```
