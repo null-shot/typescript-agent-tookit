@@ -435,6 +435,28 @@ importers:
         specifier: 'catalog:'
         version: 4.33.1(@cloudflare/workers-types@4.20250829.0)
 
+  examples/queues-agent:
+    dependencies:
+      '@nullshot/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
+      ai:
+        specifier: 'catalog:'
+        version: 5.0.28(zod@4.1.8)
+      hono:
+        specifier: ^4.7.7
+        version: 4.9.4
+      workers-ai-provider:
+        specifier: 'catalog:'
+        version: 2.0.0(zod@4.1.8)
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.2
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.33.1(@cloudflare/workers-types@4.20250829.0)
+
   examples/simple-prompt-agent:
     dependencies:
       '@ai-sdk/anthropic':
@@ -7367,7 +7389,7 @@ packages:
   puppeteer@23.11.1:
     resolution: {integrity: sha512-53uIX3KR5en8l7Vd8n5DUv90Ae9QDQsyIthaUFVzwV6yU750RjqRznEtNMBT20VthqAdemnJN+hxVdmMHKt7Zw==}
     engines: {node: '>=18'}
-    deprecated: < 24.10.2 is no longer supported
+    deprecated: < 24.15.0 is no longer supported
     hasBin: true
 
   qs@6.13.0:
