@@ -1,0 +1,45 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "r2-bucket-mcp",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-04-17",
+	"observability": {
+		"enabled": true
+	},
+	"compatibility_flags": ["nodejs_compat"],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "IMAGE_MCP_SERVER",
+				"class_name": "ImageMcpServer"
+			}
+		]
+	},
+	"migrations": [
+		{ 
+			"tag": "v1",
+			 "new_sqlite_classes": [
+				"ExampleMcpServer"
+			]
+		},
+    {
+			"tag": "v2",
+			"renamed_classes": [
+				{
+					"from": "ExampleMcpServer",
+					"to": "ImageMcpServer"
+				}
+			]
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "mcp-images",
+			"binding": "IMAGE_BUCKET"
+		}
+	]
+}
