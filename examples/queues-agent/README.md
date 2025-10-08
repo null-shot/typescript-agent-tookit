@@ -20,28 +20,31 @@ Showcase of using Cloudflare Queues with the NullShot Agent Toolkit:
 
 - Node.js 18+
 - Wrangler CLI
-- Cloudflare account
+- Cloudflare account (optional for local mock; required for Workers AI and cloud)
 
 ### Setup
 
 Run modes
 
 - Local (Free): Uses Miniflare’s local queue simulation. Workers AI still requires login to produce real model output; without login you’ll see “Not logged in” in logs, but the queue flow runs end-to-end.
+  - Tip: Set `USE_MOCK_AI=true` in `.dev.vars` to run locally without a Cloudflare account. The agent returns a deterministic mock response.
 - Cloud (Paid): Uses real Cloudflare Queues and Workers AI on your account. Requires a paid Workers plan for Queues.
 
 1. Install deps
 
 ```bash
-yarn install
+pnpm install
 ```
 
-2. Create a Queue and (optionally) a DLQ (production)
+2. Create a Queue and (optionally) a DLQ (Cloud only, Paid)
+
+Cloud deployment only. Not required for local dev (--local). Requires a paid Workers plan and `npx wrangler login` first.
 
 ```bash
-# Create main queue
+# Create main queue (cloud)
 npx wrangler queues create request-queue
 
-# Optional: create a dead letter queue
+# Optional: create a dead letter queue (cloud)
 npx wrangler queues create request-queue-dlq
 ```
 
@@ -100,7 +103,7 @@ npx wrangler tail
 - `compatibility_date`: set to 2025-02-11 per repo rules
 - `compatibility_flags`: `["nodejs_compat"]`
 - Observability enabled with `head_sampling_rate = 1`
-- Uses Workers AI by default; adjust `AI_PROVIDER`/keys if you want another provider (OpenAI, Anthropic, etc.)
+- Uses Workers AI by default; set `USE_MOCK_AI=true` for zero‑auth local output.
 
 ### Retrieve results (optional KV persistence)
 
@@ -128,14 +131,13 @@ Returns:
 - Limits: model usage, queue throughput, DO CPU limits.
 
 Note: Workers AI requires Cloudflare auth even in local dev. Without login you’ll see “Not logged in” in logs.
+If you prefer zero-auth local output, set `USE_MOCK_AI=true` in `.dev.vars`.
 
 ### Example Payload
 
 ```json
 {
-  "sessionId": "demo-session-1",
-  "messages": [
-    { "role": "user", "content": "Summarize Cloudflare Queues in one line." }
-  ]
+	"sessionId": "demo-session-1",
+	"messages": [{ "role": "user", "content": "Summarize Cloudflare Queues in one line." }]
 }
 ```

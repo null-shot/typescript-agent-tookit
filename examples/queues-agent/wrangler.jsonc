@@ -1,58 +1,50 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "queues-agent",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-02-11",
-  "compatibility_flags": ["nodejs_compat"],
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1,
-  },
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "AGENT",
-        "class_name": "QueueAgent",
-      },
-    ],
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["QueueAgent"],
-    },
-  ],
-  "queues": {
-    "producers": [
-      {
-        "binding": "REQUEST_QUEUE",
-        "queue": "request-queue",
-      },
-    ],
-    "consumers": [
-      {
-        "queue": "request-queue",
-        "dead_letter_queue": "request-queue-dlq",
-        "retry_delay": 300,
-      },
-    ],
-  },
-  "ai": {
-    "binding": "AI",
-  },
-  "kv_namespaces": [
-    {
-      "binding": "RESULTS",
-      "id": "local-kv",
-      "preview_id": "local-kv",
-    },
-  ],
-  "vars": {
-    "AI_PROVIDER": "workers-ai",
-    "OPEN_AI_API_KEY": "",
-    "ANTHROPIC_API_KEY": "",
-    "DEEPSEEK_API_KEY": "",
-    "GOOGLE_API_KEY": "",
-    "GROK_API_KEY": "",
-  },
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "queues-agent",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-02-11",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "AGENT",
+				"class_name": "QueueAgent",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["QueueAgent"],
+		},
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "REQUEST_QUEUE",
+				"queue": "request-queue",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "request-queue",
+				"dead_letter_queue": "request-queue-dlq",
+				"retry_delay": 300,
+			},
+		],
+	},
+	"ai": {
+		"binding": "AI",
+	},
+	"kv_namespaces": [
+		{
+			"binding": "RESULTS_KV",
+			"id": "local-kv",
+			"preview_id": "local-kv",
+		},
+	],
 }
