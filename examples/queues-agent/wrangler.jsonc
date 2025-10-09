@@ -1,0 +1,50 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "queues-agent",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-02-11",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+	},
+	"vars": {
+		"USE_MOCK_AI": "true",
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "AGENT",
+				"class_name": "QueueAgent",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["QueueAgent"],
+		},
+	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "REQUEST_QUEUE",
+				"queue": "request-queue",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "request-queue",
+				"dead_letter_queue": "request-queue-dlq",
+				"retry_delay": 300,
+			},
+		],
+	},
+	"kv_namespaces": [
+		{
+			"binding": "RESULTS_KV",
+			"id": "local-kv",
+			"preview_id": "local-kv",
+		},
+	],
+}
