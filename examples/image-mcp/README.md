@@ -30,16 +30,22 @@ It demonstrates:
 
 ---
 
-## 🚀 **Quick Start Guide**
+# 🚀 **Quick Start Guide**
 
 Follow this guide to set up the server and test image storage.
+This quickstart will walk you through:
+- Setting up your local dev environment
+- Connecting to an R2 bucket
+- Running & testing with MCP Inspector
+- Deploying to Cloudflare
 
 ---
 
-### 🧱 **Prerequisites**
+## 🧑‍💻 **Local Development**
+
+### **Prerequisites**
 
 - Node.js 18+ and `pnpm`
-- Cloudflare Account with **R2** + **Workers** access  
 - Installed `wrangler` CLI (`npm install -g wrangler`)
 
 ---
@@ -107,10 +113,10 @@ Edit your `wrangler.jsonc` and add the R2 bucket binding:
 
 ### 🧠 **Step 4: Update TypeScript Env Types**
 
-If using Wrangler typegen:
+Remember to run `pnpm run cf-typegen` after you change the `wrangler.json` file
 
 ```bash
-pnpm wrangler types
+pnpm run cf-typegen
 ```
 
 This regenerates your `Env` types so `env.IMAGE_BUCKET` is recognized.
@@ -151,25 +157,7 @@ Run tools:
 
 ---
 
-### ☁️ **Step 7: Deploy to Production**
-
-```bash
-pnpm wrangler login
-pnpm wrangler deploy
-```
-
-Expected output:
-
-```
-SSE: https://<your-worker>.workers.dev/sse
-WebSocket: wss://<your-worker>.workers.dev/ws
-```
-
-Set the MCP Inspector URL to your deployed SSE endpoint for production testing.
-
----
-
-### 🧭 **Step 8: Common Pitfalls & Fixes**
+## 🧭 **Common Pitfalls & Fixes**
 
 #### ❗ Binding shows `[not connected]`
 Re-run `pnpm dev` and confirm SSE URL matches `:8787/sse`.
@@ -191,12 +179,36 @@ Ensure `bucket_name` in `wrangler.jsonc` matches your actual R2 bucket.
 Add `IMAGE_BUCKET: R2Bucket` to your `Env` interface and rerun:
 
 ```bash
-pnpm wrangler types
+pnpm run cf-typegen
 ```
 
 ---
 
-### ⚡ **One-Screen TL;DR**
+## ☁️ **Deployment**
+
+
+### **Deploy to Production**
+
+To deploy to Cloudflare Workers, you'll need:
+- Cloudflare Account with **R2** + **Workers** access
+
+```bash
+pnpm wrangler login
+pnpm wrangler deploy
+```
+
+Expected output:
+
+```
+SSE: https://<your-worker>.workers.dev/sse
+WebSocket: wss://<your-worker>.workers.dev/ws
+```
+
+Set the MCP Inspector URL to your deployed SSE endpoint for production testing.
+
+---
+
+## ⚡ **One-Screen TL;DR**
 
 ```bash
 pnpm wrangler r2 bucket create mcp-images
@@ -222,7 +234,6 @@ Inspector → `http://localhost:8787/sse`
 Run tools → `images_list`, `images_upload`, `image_retrieve`, `image_search`  
 Deploy → `pnpm wrangler deploy`
 
----
 
 ## 🧭 Project Structure
 
