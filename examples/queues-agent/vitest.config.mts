@@ -1,11 +1,6 @@
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+import { createMcpWorkersConfig } from '@nullshot/test-utils/vitest/mcpWorkersConfig';
 
-export default defineWorkersConfig({
-	test: {
-		poolOptions: {
-			workers: {
-				wrangler: { configPath: './wrangler.jsonc' },
-			},
-		},
-	},
+export default createMcpWorkersConfig({
+	wranglerConfigPath: './wrangler.jsonc',
+	includeAjvMock: true,
 });

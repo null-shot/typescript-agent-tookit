@@ -8,6 +8,9 @@
 		"enabled": true,
 		"head_sampling_rate": 1,
 	},
+	"vars": {
+		"USE_MOCK_AI": "true",
+	},
 	"durable_objects": {
 		"bindings": [
 			{
@@ -36,9 +39,6 @@
 				"retry_delay": 300,
 			},
 		],
-	},
-	"ai": {
-		"binding": "AI",
 	},
 	"kv_namespaces": [
 		{

@@ -12,7 +12,8 @@
 		"typescript": "catalog:",
 		"wrangler": "catalog:",
 		"vitest": "catalog:",
-		"@cloudflare/vitest-pool-workers": "catalog:"
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@nullshot/test-utils": "workspace:*"
 	},
 	"dependencies": {
 		"@nullshot/agent": "workspace:*",
