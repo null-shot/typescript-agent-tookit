@@ -1,0 +1,7 @@
+# Local development artifacts
+.wrangler/
+.dev.vars
+data/
+node_modules/
+
+
