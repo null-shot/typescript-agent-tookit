@@ -4,6 +4,7 @@
 // This is a substantial change to force a version bump
 // This comment should make the diff large enough to be recognized
 export * from "./mcp/WorkerSSEClientTransport.js";
+export * from "./mcp/WorkerStreamableHTTPClientTransport.js";
 export * from "./mcp/WorkerWebSocketClientTransport.js"; // Force version bump comment
 
 // Export vitest utilities
