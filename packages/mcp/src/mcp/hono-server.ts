@@ -19,6 +19,11 @@ export abstract class McpHonoServerDO<Env extends Record<string, any> = Record<s
 	 * Set up routes for the MCP server
 	 */
 	protected setupRoutes(app: Hono<{ Bindings: Env }>) {
+		// HTTP endpoint for Streamable HTTP transport
+		app.all('/mcp', async (c) => {
+			return await this.processHttpRequest(c.req.raw);
+		});
+
 		// WebSocket endpoint for direct connections
 		app.get('/ws', async (c) => {
 			// All WebSocket validation will be done in processWebSocketConnection

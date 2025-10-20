@@ -1,5 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { SSETransport } from './sse-transport';
 import { WebSocketTransport } from './websocket-transport';
 import { Implementation } from '@modelcontextprotocol/sdk/types.js';
@@ -23,7 +24,7 @@ interface WebSocketAttachment {
  */
 export abstract class McpServerDO<Env = unknown> extends DurableObject<Env> {
 	private server: IMcpServer;
-	private sessions: Map<string, SSETransport | WebSocketTransport> = new Map();
+	private sessions: Map<string, SSETransport | WebSocketTransport | StreamableHTTPServerTransport> = new Map();
 	protected ctx: DurableObjectState; // Make ctx accessible to subclasses
 
 	constructor(ctx: DurableObjectState, env: any, server?: IMcpServer) {
@@ -236,11 +237,124 @@ export abstract class McpServerDO<Env = unknown> extends DurableObject<Env> {
 	}
 
 	/**
+	 * Process HTTP requests using the StreamableHTTPServerTransport
+	 */
+	protected async processHttpRequest(request: Request): Promise<Response> {
+		// Create a transport instance for this request
+		const transport = new StreamableHTTPServerTransport({
+			sessionIdGenerator: () => crypto.randomUUID(),
+			// Enable JSON responses for simpler request/response scenarios
+			enableJsonResponse: true,
+		});
+
+		// Connect the transport to our server
+		this.server.connect(transport);
+
+		// Create adapters for Cloudflare Workers Request/Response to Node.js HTTP objects
+		const nodeReq = this.adaptRequest(request);
+		let nodeRes: any;
+		let responsePromise: Promise<Response>;
+
+		// Create a promise to capture the response
+		responsePromise = new Promise((resolve) => {
+			// Create a mock ServerResponse object that mimics Node.js HTTP response
+			nodeRes = {
+				statusCode: 200,
+				headers: {},
+				_body: null as string | Uint8Array | null,
+
+				writeHead: function (statusCode: number, headers?: any) {
+					this.statusCode = statusCode;
+					if (headers) {
+						this.headers = { ...this.headers, ...headers };
+					}
+					return this;
+				},
+
+				setHeader: function (name: string, value: string | string[]) {
+					this.headers[name.toLowerCase()] = Array.isArray(value) ? value.join(', ') : value;
+					return this;
+				},
+
+				getHeader: function (name: string) {
+					return this.headers[name.toLowerCase()] || null;
+				},
+
+				removeHeader: function (name: string) {
+					delete this.headers[name.toLowerCase()];
+					return this;
+				},
+
+				end: function (data?: string | Uint8Array) {
+					this._body = data || null;
+
+					// Convert to Cloudflare Response
+					const cfResponse = new Response(
+						this._body instanceof Uint8Array ? this._body : typeof this._body === 'string' ? this._body : null,
+						{
+							status: this.statusCode,
+							headers: this.headers,
+						},
+					);
+
+					resolve(cfResponse);
+					return this;
+				},
+			};
+		});
+
+		// Parse the request body if it's JSON
+		let parsedBody: any = undefined;
+		const contentType = request.headers.get('content-type');
+		if (contentType && contentType.includes('application/json')) {
+			try {
+				parsedBody = await request.json();
+			} catch (e) {
+				// If parsing fails, we'll pass undefined to the transport
+				console.warn('Failed to parse JSON body:', e);
+			}
+		}
+
+		// Handle the request using the SDK's transport
+		await transport.handleRequest(nodeReq, nodeRes, parsedBody);
+
+		return responsePromise;
+	}
+
+	/**
+	 * Adapts a Cloudflare Workers Request to a Node.js IncomingMessage-like object
+	 */
+	private adaptRequest(request: Request): any {
+		const url = new URL(request.url);
+
+		return {
+			method: request.method,
+			url: request.url,
+			headers: Object.fromEntries(request.headers.entries()),
+			// Add parsed URL components that Node.js requests have
+			protocol: url.protocol,
+			host: url.host,
+			hostname: url.hostname,
+			port: url.port,
+			pathname: url.pathname,
+			search: url.search,
+			query: Object.fromEntries(url.searchParams.entries()),
+			// Add auth property (though it's often empty)
+			auth: null,
+		};
+	}
+
+	/**
 	 * Main fetch handler
 	 */
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 		const path = url.pathname;
+
+		// Process HTTP requests for the /mcp endpoint
+		if (path.endsWith('/mcp')) {
+			return await this.processHttpRequest(request);
+		}
 
 		// Process WebSocket upgrade requests
 		if (path.endsWith(WEBSOCKET_ENDPOINT)) {
