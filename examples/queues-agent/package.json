@@ -1,0 +1,24 @@
+{
+	"name": "queues-agent",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"build": "wrangler build",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"typescript": "catalog:",
+		"wrangler": "catalog:",
+		"vitest": "catalog:",
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@nullshot/test-utils": "workspace:*"
+	},
+	"dependencies": {
+		"@nullshot/agent": "workspace:*",
+		"ai": "catalog:",
+		"hono": "^4.7.7",
+		"workers-ai-provider": "catalog:"
+	}
+}
