@@ -16,7 +16,7 @@ export function setupServerTools(server: McpServer, env: Env) {
 				content: [
 					{
 						type: 'text',
-						text: `You guessed ${guess}`,
+						text: `You guessed ${guess}: your guess was ${guessedCorrectedly}`,
 					},
 				],
 				correct: guessedCorrectedly,
