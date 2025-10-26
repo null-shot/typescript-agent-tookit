@@ -42,6 +42,11 @@
       "import": "./dist/vitest/ajv-mock.js",
       "default": "./dist/vitest/ajv-mock.js"
     },
+    "./vitest/setup-ajv-mock": {
+      "types": "./dist/vitest/setup-ajv-mock.d.ts",
+      "import": "./dist/vitest/setup-ajv-mock.js",
+      "default": "./dist/vitest/setup-ajv-mock.js"
+    },
     "./dist/vitest/mcpWorkersConfig.js": {
       "types": "./dist/vitest/mcpWorkersConfig.d.ts",
       "import": "./dist/vitest/mcpWorkersConfig.js",

@@ -81,6 +81,7 @@ describe("Todo MCP Client Integration Tests", () => {
 
     const transport = createTransport(ctx);
     await client.connect(transport);
+    console.log("Connected to transport");
 
     await waitOnExecutionContext(ctx);
     console.log(`Client connection test passed!`);
@@ -381,7 +382,7 @@ describe("Todo MCP Client Integration Tests", () => {
     } catch (error) {
       // If the resource is not available, create a manual test success
       console.log(
-        "listTodos resource not available, skipping detailed assertions"
+        "listTodos resource not available, skipping detailed assertions",
       );
       expect(pendingTodoResponse.todo?.status).toBe(TodoStatus.NOT_STARTED);
       expect(inProgressTodoResponse.todo?.status).toBe(TodoStatus.IN_PROGRESS);
@@ -427,7 +428,7 @@ describe("Todo MCP Client Integration Tests", () => {
     } catch (error) {
       // If resource approach fails, use the tool call approach as fallback
       console.log(
-        "d1://database/todos/stats resource not available, using tool instead"
+        "d1://database/todos/stats resource not available, using tool instead",
       );
       // Original tool approach
       const statsResponse = (await client.callTool({
@@ -527,7 +528,7 @@ describe("Todo MCP Client Integration Tests", () => {
     } catch (error) {
       // If the search resource is not available, we'll simply pass the test
       console.log(
-        "listTodos resource with search_text not available, skipping detailed assertions"
+        "listTodos resource with search_text not available, skipping detailed assertions",
       );
     }
 

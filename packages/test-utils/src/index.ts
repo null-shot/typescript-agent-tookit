@@ -10,3 +10,4 @@ export * from "./mcp/WorkerWebSocketClientTransport.js"; // Force version bump c
 // Export vitest utilities
 export * from "./vitest/ajv-mock.js";
 export * from "./vitest/mcpWorkersConfig.js";
+export * from "./vitest/setup-ajv-mock.js";
