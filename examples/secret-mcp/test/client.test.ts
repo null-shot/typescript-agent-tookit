@@ -116,7 +116,7 @@ describe('Secret MCP Client Integration Tests', () => {
 		expect(result).not.toBeUndefined();
 		expect(result.content).toHaveLength(1);
 		expect(result.content[0].type).toBe('text');
-		expect(result.content[0].text).toBe('You guessed 7');
+		expect(result.content[0].text).toBe('You guessed 7: your guess was true');
 		expect(result.correct).toBe(true);
 
 		await waitOnExecutionContext(ctx);
@@ -136,7 +136,7 @@ describe('Secret MCP Client Integration Tests', () => {
 		expect(result).not.toBeUndefined();
 		expect(result.content).toHaveLength(1);
 		expect(result.content[0].type).toBe('text');
-		expect(result.content[0].text).toBe('You guessed 5');
+		expect(result.content[0].text).toBe('You guessed 5: your guess was false');
 		expect(result.correct).toBe(false);
 
 		await waitOnExecutionContext(ctx);
@@ -163,7 +163,7 @@ describe('Secret MCP Client Integration Tests', () => {
 			expect(result).not.toBeUndefined();
 			expect(result.content).toHaveLength(1);
 			expect(result.content[0].type).toBe('text');
-			expect(result.content[0].text).toBe(`You guessed ${testCase.guess}`);
+			expect(result.content[0].text).toBe(`You guessed ${testCase.guess}: your guess was ${testCase.guess === 7}`);
 			expect(result.correct).toBe(testCase.expected);
 		}
 
@@ -190,7 +190,7 @@ describe('Secret MCP Client Integration Tests', () => {
 			expect(result).not.toBeUndefined();
 			expect(result.content).toHaveLength(1);
 			expect(result.content[0].type).toBe('text');
-			expect(result.content[0].text).toBe(`You guessed ${testCase.guess}`);
+			expect(result.content[0].text).toBe(`You guessed ${testCase.guess}: your guess was ${testCase.guess === 7}`);
 			expect(result.correct).toBe(testCase.expected);
 		}
 
