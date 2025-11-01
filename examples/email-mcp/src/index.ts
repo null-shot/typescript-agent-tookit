@@ -11,16 +11,21 @@ export default {
     _ctx: ExecutionContext,
   ): Promise<Response> {
     const url = new URL(request.url);
-    let sessionIdStr = url.searchParams.get("sessionId");
 
-    const id = sessionIdStr
-      ? env.EMAIL_MCP_SERVER.idFromString(sessionIdStr)
-      : env.EMAIL_MCP_SERVER.idFromName("default-email-session");
+    // Dynamically generate sessionId if it isn't provided to allocate a session
+    const sessionId =
+      request.headers.get("mcp-session-id") ?? crypto.randomUUID();
 
-    url.searchParams.set("sessionId", id.toString());
+    const reqClone = request.clone();
+
+    const json = await request.json();
+
+    console.log("Request:", { headers: request.headers, json });
+
+    const id = env.EMAIL_MCP_SERVER.idFromName(sessionId);
 
     return env.EMAIL_MCP_SERVER.get(id).fetch(
-      new Request(url.toString(), request.clone()),
+      new Request(url.toString(), reqClone),
     );
   },
 };

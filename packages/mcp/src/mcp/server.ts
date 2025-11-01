@@ -21,7 +21,7 @@ interface WebSocketAttachment {
 
 /**
  * McpDurableServer is a Durable Object implementation of an MCP server.
- * It supports SSE connections for event streaming and WebSocket connections with hibernation.
+ * It supports all transport connections for event streaming and WebSocket connections with hibernation.
  */
 export abstract class McpServerDO<Env = unknown> extends DurableObject<Env> {
 	private server: IMcpServer;

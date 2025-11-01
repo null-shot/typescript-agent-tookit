@@ -69,6 +69,7 @@ describe("Email MCP Client Integration Tests", () => {
 
     const transport = createTransport(ctx);
     await client.connect(transport);
+    console.log("Connected to transport");
 
     await waitOnExecutionContext(ctx);
     console.log(`Client connection test passed!`);
